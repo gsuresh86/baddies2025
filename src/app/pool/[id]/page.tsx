@@ -7,9 +7,7 @@ import { Pool, TournamentStandings } from '@/types';
 
 
 interface PoolPageProps {
-  params: {
-    id: string;
-  };
+  params: Promise<{ id: string }>;
 }
 
 export default function PoolPage({ params }: PoolPageProps) {
@@ -122,7 +120,7 @@ export default function PoolPage({ params }: PoolPageProps) {
                   type="text"
                   value={newTeamName}
                   onChange={(e) => setNewTeamName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                   placeholder="Enter team name"
                 />
               </div>
@@ -141,7 +139,7 @@ export default function PoolPage({ params }: PoolPageProps) {
                         updated[index] = e.target.value;
                         setNewTeamPlayers(updated);
                       }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                       placeholder={`Player ${index + 1}`}
                     />
                   ))}
@@ -177,7 +175,7 @@ export default function PoolPage({ params }: PoolPageProps) {
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id as "teams" | "matches" | "standings")}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
                 activeTab === tab.id
                   ? 'border-blue-500 text-blue-600'

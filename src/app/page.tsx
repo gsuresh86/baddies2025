@@ -21,7 +21,7 @@ export default function HomePage() {
       {/* Hero Section */}
       <div className="text-center">
         <h1 className="text-4xl font-bold text-gray-900 mb-4">
-          Badminton Tournament Scheduler
+          PBEL Badminton Tournament 2025 Scheduler
         </h1>
         <p className="text-xl text-gray-600 max-w-2xl mx-auto">
           Manage your badminton tournament with pools, teams, and automatic match scheduling.
@@ -38,7 +38,7 @@ export default function HomePage() {
             value={newPoolName}
             onChange={(e) => setNewPoolName(e.target.value)}
             placeholder="Enter pool name (e.g., Pool A, Pool B)"
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             onKeyPress={(e) => e.key === 'Enter' && handleCreatePool()}
           />
           <button

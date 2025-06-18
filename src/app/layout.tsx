@@ -23,7 +23,7 @@ export default function RootLayout({
               <div className="flex justify-between items-center py-6">
                 <div className="flex items-center">
                   <h1 className="text-2xl font-bold text-gray-900">
-                    🏸 Badminton Tournament
+                    🏸 PBEL Badminton Tournament 2025
                   </h1>
                 </div>
               </div>
