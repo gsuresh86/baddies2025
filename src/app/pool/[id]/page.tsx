@@ -2,66 +2,78 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { tournamentStore } from '@/lib/store';
-import { Pool, TournamentStandings } from '@/types';
+import { supabase } from '@/lib/store';
+import { Pool, Team, Player, Match } from '@/types';
 
-
-interface PoolPageProps {
-  params: Promise<{ id: string }>;
-}
-
-export default function PoolPage({ params }: PoolPageProps) {
+export default function PoolPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = React.use(params);
   const [pool, setPool] = useState<Pool | null>(null);
-  const [standings, setStandings] = useState<TournamentStandings[]>([]);
-  const [activeTab, setActiveTab] = useState<'teams' | 'matches' | 'standings'>('teams');
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'teams' | 'matches'>('teams');
   const [showAddTeam, setShowAddTeam] = useState(false);
   const [newTeamName, setNewTeamName] = useState('');
   const [newTeamPlayers, setNewTeamPlayers] = useState(['', '', '', '', '', '']);
+  const [addingTeam, setAddingTeam] = useState(false);
 
+  // Fetch pool, teams, and matches from Supabase
   useEffect(() => {
-    const poolData = tournamentStore.getPoolById(id);
-    if (poolData) {
-      setPool(poolData);
-      setStandings(tournamentStore.getPoolStandings(id));
+    async function fetchAll() {
+      setLoading(true);
+      // Fetch pool
+      const { data: poolData } = await supabase.from('pools').select('*').eq('id', id).single();
+      setPool(poolData as Pool);
+      // Fetch teams
+      const { data: teamData } = await supabase.from('teams').select('*').eq('pool_id', id);
+      let teamsWithPlayers: Team[] = [];
+      if (teamData && teamData.length > 0) {
+        // Fetch players for each team
+        for (const team of teamData) {
+          const { data: players } = await supabase.from('players').select('*').eq('team_id', team.id);
+          teamsWithPlayers.push({ ...team, players: players || [] });
+        }
+      }
+      setTeams(teamsWithPlayers);
+      // Fetch matches
+      const { data: matchData } = await supabase.from('matches').select('*').eq('pool_id', id);
+      setMatches(matchData || []);
+      setLoading(false);
     }
+    fetchAll();
   }, [id]);
 
-  const handleAddTeam = () => {
-    if (newTeamName.trim() && newTeamPlayers.every(p => p.trim())) {
-      const players = newTeamPlayers.map((name, index) => ({
-        id: `p-${Date.now()}-${index}`,
-        name: name.trim(),
-      }));
-      
-      const newTeam = tournamentStore.createTeam(newTeamName.trim(), players);
-      tournamentStore.addTeamToPool(newTeam.id, id);
-      
-      // Refresh pool data
-      const updatedPool = tournamentStore.getPoolById(id);
-      if (updatedPool) {
-        setPool(updatedPool);
-        setStandings(tournamentStore.getPoolStandings(id));
-      }
-      
-      // Reset form
-      setNewTeamName('');
-      setNewTeamPlayers(['', '', '', '', '', '']);
-      setShowAddTeam(false);
+  // Add a new team and its players
+  const handleAddTeam = async () => {
+    if (!newTeamName.trim() || newTeamPlayers.some(p => !p.trim())) return;
+    setAddingTeam(true);
+    // Insert team
+    const { data: team, error: teamError } = await supabase.from('teams').insert([
+      { id: `team-${Date.now()}`, name: newTeamName.trim(), pool_id: id }
+    ]).select().single();
+    if (teamError || !team) {
+      setAddingTeam(false);
+      return;
     }
+    // Insert players
+    const playersToInsert = newTeamPlayers.map((name, idx) => ({
+      id: `p-${Date.now()}-${idx}`,
+      name: name.trim(),
+      team_id: team.id
+    }));
+    await supabase.from('players').insert(playersToInsert);
+    // Refresh teams
+    const { data: players } = await supabase.from('players').select('*').eq('team_id', team.id);
+    setTeams([...teams, { ...team, players: players || [] }]);
+    setShowAddTeam(false);
+    setNewTeamName('');
+    setNewTeamPlayers(['', '', '', '', '', '']);
+    setAddingTeam(false);
   };
 
-  const handleGenerateMatches = () => {
-    if (pool && pool.teams.length >= 2) {
-      tournamentStore.generateMatchesForPool(id);
-      const updatedPool = tournamentStore.getPoolById(id);
-      if (updatedPool) {
-        setPool(updatedPool);
-        setActiveTab('matches');
-      }
-    }
-  };
-
+  if (loading) {
+    return <div className="text-center py-12"><p className="text-gray-500 text-lg">Loading...</p></div>;
+  }
   if (!pool) {
     return (
       <div className="text-center py-12">
@@ -83,24 +95,16 @@ export default function PoolPage({ params }: PoolPageProps) {
           </Link>
           <h1 className="text-3xl font-bold text-gray-900">{pool.name}</h1>
           <p className="text-gray-600 mt-1">
-            {pool.teams.length}/{pool.maxTeams} teams • {pool.matches.length} matches
+            {teams.length}/{pool.max_teams} teams • {matches.length} matches
           </p>
         </div>
         <div className="flex gap-3">
-          {pool.teams.length < pool.maxTeams && (
+          {teams.length < pool.max_teams && (
             <button
               onClick={() => setShowAddTeam(true)}
               className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
             >
               Add Team
-            </button>
-          )}
-          {pool.teams.length >= 2 && pool.matches.length === 0 && (
-            <button
-              onClick={handleGenerateMatches}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-            >
-              Generate Matches
             </button>
           )}
         </div>
@@ -149,15 +153,16 @@ export default function PoolPage({ params }: PoolPageProps) {
                 <button
                   onClick={() => setShowAddTeam(false)}
                   className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+                  disabled={addingTeam}
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleAddTeam}
-                  disabled={!newTeamName.trim() || newTeamPlayers.some(p => !p.trim())}
+                  disabled={!newTeamName.trim() || newTeamPlayers.some(p => !p.trim()) || addingTeam}
                   className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
                 >
-                  Add Team
+                  {addingTeam ? 'Adding...' : 'Add Team'}
                 </button>
               </div>
             </div>
@@ -169,13 +174,12 @@ export default function PoolPage({ params }: PoolPageProps) {
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
           {[
-            { id: 'teams', label: 'Teams', count: pool.teams.length },
-            { id: 'matches', label: 'Matches', count: pool.matches.length },
-            { id: 'standings', label: 'Standings', count: pool.teams.length },
+            { id: 'teams', label: 'Teams', count: teams.length },
+            { id: 'matches', label: 'Matches', count: matches.length },
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as "teams" | "matches" | "standings")}
+              onClick={() => setActiveTab(tab.id as 'teams' | 'matches')}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
                 activeTab === tab.id
                   ? 'border-blue-500 text-blue-600'
@@ -192,11 +196,11 @@ export default function PoolPage({ params }: PoolPageProps) {
       <div className="mt-6">
         {activeTab === 'teams' && (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {pool.teams.map((team) => (
+            {teams.map((team) => (
               <div key={team.id} className="bg-white rounded-lg shadow p-6">
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">{team.name}</h3>
                 <div className="space-y-2">
-                  {team.players.map((player, index) => (
+                  {team.players?.map((player, index) => (
                     <div key={player.id} className="flex items-center text-sm">
                       <span className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 mr-3">
                         {index + 1}
@@ -209,31 +213,20 @@ export default function PoolPage({ params }: PoolPageProps) {
             ))}
           </div>
         )}
-
         {activeTab === 'matches' && (
           <div className="space-y-4">
-            {pool.matches.length === 0 ? (
+            {matches.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-gray-500 text-lg mb-4">
-                  {pool.teams.length < 2 
+                  {teams.length < 2
                     ? 'Need at least 2 teams to generate matches'
-                    : 'No matches generated yet. Click "Generate Matches" to create the tournament schedule.'
-                  }
+                    : 'No matches generated yet.'}
                 </p>
-                {pool.teams.length >= 2 && (
-                  <button
-                    onClick={handleGenerateMatches}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                  >
-                    Generate Matches
-                  </button>
-                )}
               </div>
             ) : (
-              pool.matches.map((match) => {
-                const team1 = pool.teams.find(t => t.id === match.team1Id);
-                const team2 = pool.teams.find(t => t.id === match.team2Id);
-                
+              matches.map((match) => {
+                const team1 = teams.find(t => t.id === match.team1Id);
+                const team2 = teams.find(t => t.id === match.team2Id);
                 return (
                   <div key={match.id} className="bg-white rounded-lg shadow p-6">
                     <div className="flex items-center justify-between mb-4">
@@ -244,15 +237,14 @@ export default function PoolPage({ params }: PoolPageProps) {
                       </div>
                       <div className="flex items-center space-x-2">
                         <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                          match.completed 
-                            ? 'bg-green-100 text-green-800' 
+                          match.completed
+                            ? 'bg-green-100 text-green-800'
                             : 'bg-yellow-100 text-yellow-800'
                         }`}>
                           {match.completed ? 'Completed' : 'Pending'}
                         </span>
                       </div>
                     </div>
-                    
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div className="text-center">
                         <div className="text-2xl font-bold text-blue-600">{match.team1Score}</div>
@@ -263,102 +255,10 @@ export default function PoolPage({ params }: PoolPageProps) {
                         <div className="text-sm text-gray-600">Games Won</div>
                       </div>
                     </div>
-
-                    <div className="border-t pt-4">
-                      <h4 className="font-medium text-gray-900 mb-3">Games</h4>
-                      <div className="grid gap-2">
-                        {match.games.map((game, index) => (
-                          <div key={game.id} className="flex items-center justify-between text-sm">
-                            <span className="text-gray-600">
-                              Game {index + 1} ({game.type})
-                            </span>
-                            <div className="flex items-center space-x-2">
-                              <span className="text-blue-600">{game.team1Score}</span>
-                              <span className="text-gray-400">-</span>
-                              <span className="text-red-600">{game.team2Score}</span>
-                              {game.completed && (
-                                <span className={`px-2 py-1 rounded text-xs ${
-                                  game.winner === 'team1' 
-                                    ? 'bg-blue-100 text-blue-800' 
-                                    : 'bg-red-100 text-red-800'
-                                }`}>
-                                  {game.winner === 'team1' ? team1?.name : team2?.name}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
                   </div>
                 );
               })
             )}
-          </div>
-        )}
-
-        {activeTab === 'standings' && (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Position
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Team
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    MP
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    MW
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    ML
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    GW
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    GL
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Points
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {standings.map((standing, index) => (
-                  <tr key={standing.teamId} className={index < 2 ? 'bg-yellow-50' : ''}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {index + 1}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {standing.teamName}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {standing.matchesPlayed}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {standing.matchesWon}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {standing.matchesLost}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {standing.gamesWon}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {standing.gamesLost}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
-                      {standing.points}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         )}
       </div>

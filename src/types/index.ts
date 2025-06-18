@@ -41,7 +41,7 @@ export interface Pool {
   name: string;
   teams: Team[];
   matches: Match[];
-  maxTeams: number;
+  max_teams: number;
 }
 
 export interface TournamentStandings {

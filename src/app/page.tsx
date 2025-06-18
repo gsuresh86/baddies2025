@@ -1,17 +1,34 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { tournamentStore } from '@/lib/store';
+import { Pool } from '@/types';
 
 export default function HomePage() {
   const [newPoolName, setNewPoolName] = useState('');
-  const [pools, setPools] = useState(tournamentStore.getPools());
+  const [pools, setPools] = useState<Pool[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleCreatePool = () => {
+  useEffect(() => {
+    async function fetchPools() {
+      setLoading(true);
+      try {
+        const data = await tournamentStore.getPools();
+        setPools(data);
+      } catch (err) {
+        setPools([]);
+      }
+      setLoading(false);
+    }
+    fetchPools();
+  }, []);
+
+  const handleCreatePool = async () => {
     if (newPoolName.trim()) {
-      tournamentStore.createPool(newPoolName.trim());
-      setPools(tournamentStore.getPools());
+      await tournamentStore.createPool(newPoolName.trim());
+      const data = await tournamentStore.getPools();
+      setPools(data);
       setNewPoolName('');
     }
   };
@@ -57,7 +74,11 @@ export default function HomePage() {
           <h2 className="text-2xl font-semibold text-gray-900">Tournament Pools</h2>
         </div>
         <div className="p-6">
-          {pools.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500 text-lg">Loading pools...</p>
+            </div>
+          ) : pools.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-gray-500 text-lg">No pools created yet. Create your first pool above!</p>
             </div>
@@ -72,22 +93,22 @@ export default function HomePage() {
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-xl font-semibold text-gray-900">{pool.name}</h3>
                     <span className="text-sm text-gray-500">
-                      {pool.teams.length}/{pool.maxTeams} teams
+                      {(pool.teams?.length ?? 0)}/{pool.max_teams} teams
                     </span>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Teams:</span>
-                      <span className="font-medium">{pool.teams.length}</span>
+                      <span className="font-medium">{pool.teams?.length ?? 0}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Matches:</span>
-                      <span className="font-medium">{pool.matches.length}</span>
+                      <span className="font-medium">{pool.matches?.length ?? 0}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Completed:</span>
                       <span className="font-medium">
-                        {pool.matches.filter(m => m.completed).length}
+                        {pool.matches?.filter(m => m.completed).length ?? 0}
                       </span>
                     </div>
                   </div>
@@ -122,7 +143,7 @@ export default function HomePage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Teams</p>
               <p className="text-2xl font-semibold text-gray-900">
-                {pools.reduce((acc, pool) => acc + pool.teams.length, 0)}
+                {pools.reduce((acc, pool) => acc + (pool.teams?.length ?? 0), 0)}
               </p>
             </div>
           </div>
@@ -135,7 +156,7 @@ export default function HomePage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Matches</p>
               <p className="text-2xl font-semibold text-gray-900">
-                {pools.reduce((acc, pool) => acc + pool.matches.length, 0)}
+                {pools.reduce((acc, pool) => acc + (pool.matches?.length ?? 0), 0)}
               </p>
             </div>
           </div>
