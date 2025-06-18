@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { tournamentStore } from '@/lib/store';
 import { Pool, TournamentStandings } from '@/types';
+
 
 interface PoolPageProps {
   params: {
@@ -12,6 +13,7 @@ interface PoolPageProps {
 }
 
 export default function PoolPage({ params }: PoolPageProps) {
+  const { id } = React.use(params);
   const [pool, setPool] = useState<Pool | null>(null);
   const [standings, setStandings] = useState<TournamentStandings[]>([]);
   const [activeTab, setActiveTab] = useState<'teams' | 'matches' | 'standings'>('teams');
@@ -20,12 +22,12 @@ export default function PoolPage({ params }: PoolPageProps) {
   const [newTeamPlayers, setNewTeamPlayers] = useState(['', '', '', '', '', '']);
 
   useEffect(() => {
-    const poolData = tournamentStore.getPoolById(params.id);
+    const poolData = tournamentStore.getPoolById(id);
     if (poolData) {
       setPool(poolData);
-      setStandings(tournamentStore.getPoolStandings(params.id));
+      setStandings(tournamentStore.getPoolStandings(id));
     }
-  }, [params.id]);
+  }, [id]);
 
   const handleAddTeam = () => {
     if (newTeamName.trim() && newTeamPlayers.every(p => p.trim())) {
@@ -35,13 +37,13 @@ export default function PoolPage({ params }: PoolPageProps) {
       }));
       
       const newTeam = tournamentStore.createTeam(newTeamName.trim(), players);
-      tournamentStore.addTeamToPool(newTeam.id, params.id);
+      tournamentStore.addTeamToPool(newTeam.id, id);
       
       // Refresh pool data
-      const updatedPool = tournamentStore.getPoolById(params.id);
+      const updatedPool = tournamentStore.getPoolById(id);
       if (updatedPool) {
         setPool(updatedPool);
-        setStandings(tournamentStore.getPoolStandings(params.id));
+        setStandings(tournamentStore.getPoolStandings(id));
       }
       
       // Reset form
@@ -53,8 +55,8 @@ export default function PoolPage({ params }: PoolPageProps) {
 
   const handleGenerateMatches = () => {
     if (pool && pool.teams.length >= 2) {
-      tournamentStore.generateMatchesForPool(params.id);
-      const updatedPool = tournamentStore.getPoolById(params.id);
+      tournamentStore.generateMatchesForPool(id);
+      const updatedPool = tournamentStore.getPoolById(id);
       if (updatedPool) {
         setPool(updatedPool);
         setActiveTab('matches');
