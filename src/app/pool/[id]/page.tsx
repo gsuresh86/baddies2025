@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/store';
-import { Pool, Team, Player, Match } from '@/types';
+import { Pool, Team, Match } from '@/types';
 
 export default function PoolPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = React.use(params);
@@ -26,7 +26,7 @@ export default function PoolPage({ params }: { params: Promise<{ id: string }> }
       setPool(poolData as Pool);
       // Fetch teams
       const { data: teamData } = await supabase.from('teams').select('*').eq('pool_id', id);
-      let teamsWithPlayers: Team[] = [];
+      const teamsWithPlayers: Team[] = [];
       if (teamData && teamData.length > 0) {
         // Fetch players for each team
         for (const team of teamData) {

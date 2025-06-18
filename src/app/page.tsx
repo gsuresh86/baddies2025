@@ -17,6 +17,7 @@ export default function HomePage() {
         const data = await tournamentStore.getPools();
         setPools(data);
       } catch (err) {
+        console.error(err);
         setPools([]);
       }
       setLoading(false);

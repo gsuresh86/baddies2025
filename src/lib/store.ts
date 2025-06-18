@@ -1,4 +1,4 @@
-import { Pool, Team, Match, Game, TournamentStandings, Player } from '@/types';
+import { Pool } from '@/types';
 import { createClient } from '@supabase/supabase-js';
 
 // TODO: Replace with your actual Supabase URL and anon key
