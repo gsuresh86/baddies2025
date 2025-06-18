@@ -3,11 +3,11 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { tournamentStore, supabase } from '@/lib/store';
-import { Pool } from '@/types';
+import { Match, Pool } from '@/types';
 
 export default function HomePage() {
   const [newPoolName, setNewPoolName] = useState('');
-  const [pools, setPools] = useState<any[]>([]); // teamCount will be added
+  const [pools, setPools] = useState<Pool[]>([]); // teamCount will be added
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -114,13 +114,13 @@ export default function HomePage() {
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-xl font-semibold text-gray-900">{pool.name}</h3>
                     <span className="text-sm text-gray-500">
-                      {pool.teamCount}/{pool.max_teams} teams
+                      {pool.teams?.length}/{pool.max_teams} teams
                     </span>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Teams:</span>
-                      <span className="font-medium text-gray-500">{pool.teamCount}</span>
+                      <span className="font-medium text-gray-500">{pool.teams?.length}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Matches:</span>
@@ -129,7 +129,7 @@ export default function HomePage() {
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Completed:</span>
                       <span className="font-medium text-gray-500">
-                        {pool.matches?.filter(m => m.completed).length ?? 0}
+                        {pool.matches?.filter((m: Match) => m.completed).length ?? 0}
                       </span>
                     </div>
                   </div>
@@ -164,7 +164,7 @@ export default function HomePage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Teams</p>
               <p className="text-2xl font-semibold text-gray-900">
-                {pools.reduce((acc, pool) => acc + (pool.teamCount ?? 0), 0)}
+                {pools.reduce((acc, pool) => acc + (pool.teams?.length ?? 0), 0)}
               </p>
             </div>
           </div>
