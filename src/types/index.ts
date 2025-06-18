@@ -26,11 +26,15 @@ export interface Game {
 
 export interface Match {
   id: string;
-  team1Id: string;
-  team2Id: string;
-  games: Game[];
-  team1Score: number;
-  team2Score: number;
+  team1Id?: string;
+  team2Id?: string;
+  team1_id?: string;
+  team2_id?: string;
+  games?: Game[];
+  team1Score?: number;
+  team2Score?: number;
+  team1_score?: number;
+  team2_score?: number;
   winner?: 'team1' | 'team2';
   completed: boolean;
   scheduledDate?: string;

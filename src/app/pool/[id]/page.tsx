@@ -1,9 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/store';
-import { Pool, Team, Match } from '@/types';
+import { Pool, Team, Match, TournamentStandings } from '@/types';
+import TeamsTab from './TeamsTab';
+import MatchesTab from './MatchesTab';
+import StandingsTab from './StandingsTab';
 
 export default function PoolPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = React.use(params);
@@ -11,7 +14,7 @@ export default function PoolPage({ params }: { params: Promise<{ id: string }> }
   const [teams, setTeams] = useState<Team[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'teams' | 'matches'>('teams');
+  const [activeTab, setActiveTab] = useState<'teams' | 'matches' | 'standings'>('teams');
   const [showAddTeam, setShowAddTeam] = useState(false);
   const [newTeamName, setNewTeamName] = useState('');
   const [newTeamPlayers, setNewTeamPlayers] = useState(['', '', '', '', '', '']);
@@ -37,6 +40,7 @@ export default function PoolPage({ params }: { params: Promise<{ id: string }> }
       setTeams(teamsWithPlayers);
       // Fetch matches
       const { data: matchData } = await supabase.from('matches').select('*').eq('pool_id', id);
+      debugger;
       setMatches(matchData || []);
       setLoading(false);
     }
@@ -70,6 +74,76 @@ export default function PoolPage({ params }: { params: Promise<{ id: string }> }
     setNewTeamPlayers(['', '', '', '', '', '']);
     setAddingTeam(false);
   };
+
+  // Standings calculation
+  function calculateStandings(teams: Team[], matches: Match[]): TournamentStandings[] {
+    const standings: { [teamId: string]: TournamentStandings } = {};
+    teams.forEach(team => {
+      standings[team.id] = {
+        teamId: team.id,
+        teamName: team.name,
+        matchesPlayed: 0,
+        matchesWon: 0,
+        matchesLost: 0,
+        gamesWon: 0,
+        gamesLost: 0,
+        points: 0,
+      };
+    });
+    matches.forEach(match => {
+      if (!match.completed) return;
+      const team1 = standings[match.team1_id ?? ''];
+      const team2 = standings[match.team2_id ?? ''];
+      if (!team1 || !team2) return;
+      team1.matchesPlayed++;
+      team2.matchesPlayed++;
+      if ((match.team1_score ?? 0) > (match.team2_score ?? 0)) {
+        team1.matchesWon++;
+        team2.matchesLost++;
+      } else if ((match.team2_score ?? 0) > (match.team1_score ?? 0)) {
+        team2.matchesWon++;
+        team1.matchesLost++;
+      }
+      // If you have games, count them here
+      if (Array.isArray(match.games)) {
+        match.games.forEach(game => {
+          if (game.completed) {
+            if (game.winner === 'team1') {
+              team1.gamesWon++;
+              team2.gamesLost++;
+            } else if (game.winner === 'team2') {
+              team2.gamesWon++;
+              team1.gamesLost++;
+            }
+          }
+        });
+      } else {
+        // If no games, use match scores as games won/lost
+        team1.gamesWon += match.team1_score || 0;
+        team1.gamesLost += match.team2_score || 0;
+        team2.gamesWon += match.team2_score || 0;
+        team2.gamesLost += match.team1_score || 0;
+      }
+    });
+    Object.values(standings).forEach(standing => {
+      standing.points = (standing.matchesWon * 2)
+    });
+    return Object.values(standings).sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      if (b.matchesWon !== a.matchesWon) return b.matchesWon - a.matchesWon;
+      // Game win percentage as tiebreaker
+      const aGames = a.gamesWon + a.gamesLost;
+      const bGames = b.gamesWon + b.gamesLost;
+      const aPct = aGames > 0 ? a.gamesWon / aGames : 0;
+      const bPct = bGames > 0 ? b.gamesWon / bGames : 0;
+      if (bPct !== aPct) return bPct - aPct;
+      return b.gamesWon - a.gamesWon;
+    });
+  }
+  const standings = useMemo(() => {
+    if (activeTab !== 'standings') return [];
+    return calculateStandings(teams, matches);
+  }, [activeTab, teams, matches]);
 
   if (loading) {
     return <div className="text-center py-12"><p className="text-gray-500 text-lg">Loading...</p></div>;
@@ -176,10 +250,11 @@ export default function PoolPage({ params }: { params: Promise<{ id: string }> }
           {[
             { id: 'teams', label: 'Teams', count: teams.length },
             { id: 'matches', label: 'Matches', count: matches.length },
+            { id: 'standings', label: 'Standings', count: teams.length },
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as 'teams' | 'matches')}
+              onClick={() => setActiveTab(tab.id as 'teams' | 'matches' | 'standings')}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
                 activeTab === tab.id
                   ? 'border-blue-500 text-blue-600'
@@ -195,71 +270,13 @@ export default function PoolPage({ params }: { params: Promise<{ id: string }> }
       {/* Tab Content */}
       <div className="mt-6">
         {activeTab === 'teams' && (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {teams.map((team) => (
-              <div key={team.id} className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">{team.name}</h3>
-                <div className="space-y-2">
-                  {team.players?.map((player, index) => (
-                    <div key={player.id} className="flex items-center text-sm">
-                      <span className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 mr-3">
-                        {index + 1}
-                      </span>
-                      <span className="text-gray-900">{player.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+          <TeamsTab teams={teams} />
         )}
         {activeTab === 'matches' && (
-          <div className="space-y-4">
-            {matches.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500 text-lg mb-4">
-                  {teams.length < 2
-                    ? 'Need at least 2 teams to generate matches'
-                    : 'No matches generated yet.'}
-                </p>
-              </div>
-            ) : (
-              matches.map((match) => {
-                const team1 = teams.find(t => t.id === match.team1Id);
-                const team2 = teams.find(t => t.id === match.team2Id);
-                return (
-                  <div key={match.id} className="bg-white rounded-lg shadow p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center space-x-4">
-                        <span className="text-lg font-semibold">{team1?.name}</span>
-                        <span className="text-2xl font-bold text-gray-400">vs</span>
-                        <span className="text-lg font-semibold">{team2?.name}</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                          match.completed
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {match.completed ? 'Completed' : 'Pending'}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">{match.team1Score}</div>
-                        <div className="text-sm text-gray-600">Games Won</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-red-600">{match.team2Score}</div>
-                        <div className="text-sm text-gray-600">Games Won</div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+          <MatchesTab matches={matches} teams={teams} />
+        )}
+        {activeTab === 'standings' && (
+          <StandingsTab standings={standings} />
         )}
       </div>
     </div>
