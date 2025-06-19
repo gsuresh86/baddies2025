@@ -102,22 +102,87 @@ export default function StandingsPage() {
   }, []);
 
   if (loading) {
-    return <div className="text-center py-12"><p className="text-gray-500 text-lg">Loading standings...</p></div>;
+    return (
+      <div className="text-center py-12">
+        <div className="animate-pulse">
+          <div className="text-4xl mb-4">🏆</div>
+          <p className="text-white text-xl font-semibold">Loading tournament standings...</p>
+          <div className="mt-4 w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto"></div>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-12 px-4">
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">Tournament Standings</h1>
+    <div className="max-w-6xl mx-auto py-12 px-4">
+      {/* Enhanced Header */}
+      <div className="text-center mb-12 animate-slide-in-up">
+        <div className="text-5xl mb-4 animate-float">🏆</div>
+        <h1 className="text-4xl md:text-5xl font-bold text-white text-glow-white mb-4">
+          Tournament Standings
+        </h1>
+        <p className="text-white/80 text-xl max-w-2xl mx-auto">
+          Track the performance and rankings of all teams across different pools
+        </p>
+      </div>
+
       {pools.length === 0 ? (
-        <div className="text-gray-500 text-lg">No pools found.</div>
-      ) : (
-        pools.map(pool => (
-          <div key={pool.id} className="mb-12">
-            <h2 className="text-2xl font-semibold text-blue-800 mb-4">{pool.name}</h2>
-            <StandingsTab standings={calculateStandings(teamsByPool[pool.id] || [], matchesByPool[pool.id] || [])} />
+        <div className="text-center py-12">
+          <div className="bg-gradient-to-r from-white/10 to-white/5 rounded-3xl p-8 backdrop-blur-md border border-white/20">
+            <div className="text-4xl mb-4">📊</div>
+            <p className="text-white text-lg">No pools found. Tournament standings will appear here once pools are created.</p>
           </div>
-        ))
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {pools.map((pool, index) => (
+            <div key={pool.id} className="animate-fade-in-scale" style={{animationDelay: `${index * 0.1}s`}}>
+              <div className="bg-gradient-to-r from-white/10 to-white/5 rounded-3xl p-8 backdrop-blur-md border border-white/20 shadow-2xl hover-lift">
+                <div className="flex items-center mb-6">
+                  <div className="text-3xl mr-4">🏊‍♂️</div>
+                  <h2 className="text-2xl font-bold text-white text-glow-white">{pool.name}</h2>
+                </div>
+                <div className="bg-white/5 rounded-2xl p-6 backdrop-blur-sm border border-white/10">
+                  <StandingsTab standings={calculateStandings(teamsByPool[pool.id] || [], matchesByPool[pool.id] || [])} />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
+
+      {/* Tournament Stats Summary */}
+      <div className="mt-12 bg-gradient-to-r from-white/10 to-white/5 rounded-3xl p-8 backdrop-blur-md border border-white/20 animate-fade-in-scale" style={{animationDelay: '0.5s'}}>
+        <div className="text-center mb-6">
+          <h3 className="text-2xl font-bold text-white text-glow-white mb-2">📈 Tournament Overview</h3>
+          <p className="text-white/80">Complete standings across all divisions</p>
+        </div>
+        
+        <div className="grid md:grid-cols-4 gap-6">
+          <div className="text-center p-4 rounded-2xl bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-200/30">
+            <div className="text-3xl font-bold text-blue-300 mb-2">{pools.length}</div>
+            <div className="text-white/80 text-sm">Active Pools</div>
+          </div>
+          <div className="text-center p-4 rounded-2xl bg-gradient-to-br from-green-500/20 to-green-600/20 border border-green-200/30">
+            <div className="text-3xl font-bold text-green-300 mb-2">
+              {Object.values(teamsByPool).reduce((acc, teams) => acc + teams.length, 0)}
+            </div>
+            <div className="text-white/80 text-sm">Total Teams</div>
+          </div>
+          <div className="text-center p-4 rounded-2xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-200/30">
+            <div className="text-3xl font-bold text-purple-300 mb-2">
+              {Object.values(matchesByPool).reduce((acc, matches) => acc + matches.length, 0)}
+            </div>
+            <div className="text-white/80 text-sm">Total Matches</div>
+          </div>
+          <div className="text-center p-4 rounded-2xl bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border border-yellow-200/30">
+            <div className="text-3xl font-bold text-yellow-300 mb-2">
+              {Object.values(matchesByPool).reduce((acc, matches) => acc + matches.filter(m => m.completed).length, 0)}
+            </div>
+            <div className="text-white/80 text-sm">Completed</div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 } 
