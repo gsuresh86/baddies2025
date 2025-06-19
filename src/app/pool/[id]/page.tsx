@@ -40,7 +40,7 @@ export default function PoolPage({ params }: { params: Promise<{ id: string }> }
       setTeams(teamsWithPlayers);
       // Fetch matches
       const { data: matchData } = await supabase.from('matches').select('*').eq('pool_id', id);
-      debugger;
+      
       setMatches(matchData || []);
       setLoading(false);
     }

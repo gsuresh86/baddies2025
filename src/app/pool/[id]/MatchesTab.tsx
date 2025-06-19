@@ -25,20 +25,29 @@ export default function MatchesTab({ matches, teams }: { matches: Match[]; teams
             <Link
               key={match.id}
               href={`/match/${match.id}`}
-              className="block rounded-xl border border-gray-200 bg-white hover:border-blue-400 transition-all px-8 py-4 shadow-md"
+              className="block rounded-xl border border-gray-200 bg-white hover:border-blue-400 transition-all px-8 py-8 shadow-md"
             >
-              <div className="flex items-center gap-6 text-sm w-full">
-                <span className={`truncate font-semibold max-w-[120px] ${team1Wins ? 'text-green-600' : 'text-gray-700'}`}>{team1?.name}</span>
-                <span className="text-base font-bold text-gray-400">vs</span>
-                <span className={`truncate font-semibold max-w-[120px] ${team2Wins ? 'text-green-600' : 'text-gray-700'}`}>{team2?.name}</span>
-                <span className="px-3 py-1 rounded bg-gray-100 text-xs font-medium text-gray-600 whitespace-nowrap">{courtNo}</span>
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between w-full gap-6 text-sm">
+                {/* Teams and VS */}
+                <div className="flex items-center gap-5 flex-shrink-0 min-w-0 w-64">
+                  <span className={`truncate font-semibold max-w-[200px] ${team1Wins ? 'text-green-600' : 'text-gray-700'}`}>{team1?.name}</span>
+                  <span className="text-base font-bold text-gray-400">vs</span>
+                  <span className={`truncate font-semibold max-w-[200px] ${team2Wins ? 'text-green-600' : 'text-gray-700'}`}>{team2?.name}</span>
+                </div>
+                {/* Court */}
+                <span className="px-3 py-1 rounded bg-gray-100 text-xs font-medium text-gray-600 whitespace-nowrap flex-shrink-0">{courtNo}</span>
+                {/* Score */}
+                <div className="flex items-center gap-2 flex-shrink-0">
                   <span className="text-lg text-blue-700 font-bold">{match.team1_score ?? 0}</span>
                   <span className="text-lg text-gray-400">-</span>
                   <span className="text-lg text-red-700 font-bold">{match.team2_score ?? 0}</span>
                 </div>
-                <span className="text-xs text-gray-500">Won</span>
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ml-auto ${
+                {/* Match date */}
+                <span className="text-xs text-gray-500 flex-shrink-0">
+                  {new Date().toLocaleDateString()}
+                </span>
+                {/* Status badge */}
+                <span className={`px-3 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
                   match.completed
                     ? 'bg-green-100 text-green-800'
                     : 'bg-yellow-100 text-yellow-800'

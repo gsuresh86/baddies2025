@@ -6,6 +6,19 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
+// --- Supabase Auth Helpers ---
+export async function signInWithEmail(email: string, password: string) {
+  return supabase.auth.signInWithPassword({ email, password });
+}
+
+export async function signOut() {
+  return supabase.auth.signOut();
+}
+
+export async function getUser() {
+  const { data } = await supabase.auth.getUser();
+  return data.user;
+}
 
 class TournamentStore {
   // Remove in-memory arrays
