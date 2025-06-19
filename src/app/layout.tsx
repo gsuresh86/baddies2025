@@ -14,6 +14,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 const PUBLIC_ROUTES = ['/', '/admin-login', '/standings', '/teams', '/rules'];
 
+/*
 function AdminAuthBar({ user }: { user: User | null }) {
   if (!user) return null;
   return (
@@ -27,7 +28,7 @@ function AdminAuthBar({ user }: { user: User | null }) {
       </button>
     </div>
   );
-}
+}*/
 
 function ClientAuthLayout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -62,9 +63,9 @@ function ClientAuthLayout({ children }: { children: React.ReactNode }) {
             draggable={false}
             priority
           />
-          {/* Enhanced gradient overlay for more attraction */}
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-900/70 via-purple-900/50 to-green-600/60 pointer-events-none" style={{zIndex:1}} />
-          {/* Badminton court pattern overlay */}
+          {/* Solid dark overlay for clarity */}
+          <div className="absolute inset-0 bg-black/85 pointer-events-none" style={{zIndex:1}} />
+          {/* Subtle badminton court pattern */}
           <div className="absolute inset-0 badminton-court opacity-20 pointer-events-none" style={{zIndex:2}} />
           {/* Animated floating elements */}
           <div className="absolute top-20 left-20 w-16 h-16 bg-white/10 rounded-full animate-float pointer-events-none" style={{zIndex:3}}></div>
@@ -86,23 +87,15 @@ function ClientAuthLayout({ children }: { children: React.ReactNode }) {
               />
             </div>
           </div>
-          <h1 className="text-5xl md:text-6xl font-extrabold text-white text-glow-white tracking-tight text-center mb-2">
-            PBEL Badminton 2025
+          <h1 className="text-3xl md:text-3xl font-extrabold text-white text-glow-white tracking-tight text-center mb-2">
+            PBEL Badminton Tournament 2025
           </h1>
-          <p className="text-xl text-white/90 text-center max-w-2xl px-4 mb-4">
-            Experience the thrill of competitive badminton with our premier tournament platform
-          </p>
+  
           
           {/* Tournament Branding */}
           <div className="text-center mb-6">
             <div className="bg-gradient-to-r from-blue-600/30 to-purple-600/30 rounded-full px-6 py-2 mb-3 inline-block">
               <span className="text-white font-bold text-lg">#PBELCityBT2025</span>
-            </div>
-            <div className="text-white/90 text-lg mb-2">
-              brought to you by
-            </div>
-            <div className="text-2xl font-bold text-white text-glow-white mb-4">
-              Badminton Baddies
             </div>
             
             {/* Tournament Dates */}
@@ -123,30 +116,26 @@ function ClientAuthLayout({ children }: { children: React.ReactNode }) {
         <div className="flex flex-wrap justify-center gap-6 mt-8 z-10 relative animate-slide-in-up" style={{animationDelay: '0.3s'}}>
           <a
             href="/standings"
-            className="group px-12 py-5 bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-2xl text-2xl font-bold shadow-2xl hover:from-blue-700 hover:to-blue-900 transition-all duration-300 border-2 border-white/30 backdrop-blur-md hover-lift relative overflow-hidden"
+            className="px-12 py-5 bg-black text-white rounded-2xl text-2xl font-bold shadow-2xl hover:bg-gray-900 transition-all duration-300 border-2 border-gray-800 hover-lift relative overflow-hidden"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
             <span className="relative">🏆 View Standings</span>
           </a>
           <a
             href="/tournaments"
-            className="group px-12 py-5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl text-2xl font-bold shadow-2xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 border-2 border-white/30 backdrop-blur-md hover-lift relative overflow-hidden"
+            className="px-12 py-5 bg-black text-white rounded-2xl text-2xl font-bold shadow-2xl hover:bg-gray-900 transition-all duration-300 border-2 border-gray-800 hover-lift relative overflow-hidden"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
             <span className="relative">📅 View Fixtures</span>
           </a>
           <a
             href="/teams"
-            className="group px-12 py-5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-2xl text-2xl font-bold shadow-2xl hover:from-green-700 hover:to-emerald-700 transition-all duration-300 border-2 border-white/30 backdrop-blur-md hover-lift relative overflow-hidden"
+            className="px-12 py-5 bg-black text-white rounded-2xl text-2xl font-bold shadow-2xl hover:bg-gray-900 transition-all duration-300 border-2 border-gray-800 hover-lift relative overflow-hidden"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
             <span className="relative">👥 View Teams</span>
           </a>
           <a
             href="/rules"
-            className="group px-12 py-5 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-2xl text-2xl font-bold shadow-2xl hover:from-yellow-600 hover:to-orange-600 transition-all duration-300 border-2 border-white/30 backdrop-blur-md hover-lift relative overflow-hidden"
+            className="px-12 py-5 bg-black text-white rounded-2xl text-2xl font-bold shadow-2xl hover:bg-gray-900 transition-all duration-300 border-2 border-gray-800 hover-lift relative overflow-hidden"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
             <span className="relative">📋 View Rules</span>
           </a>
         </div>
@@ -164,9 +153,9 @@ function ClientAuthLayout({ children }: { children: React.ReactNode }) {
         
         {/* Footer with tournament info */}
         <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 z-10 text-center">
-          <div className="bg-gradient-to-r from-white/10 to-white/5 rounded-2xl px-6 py-2 backdrop-blur-md border border-white/20">
+          <div className="bg-black/90 rounded-2xl px-6 py-2 border border-gray-800">
             <p className="text-white font-semibold text-sm">🏸 PBEL Badminton 2025</p>
-            <p className="text-white/70 text-xs mt-1">#PBELCityBT2025 • Badminton Baddies</p>
+            <p className="text-gray-300 text-xs mt-1">#PBELCityBT2025 • Badminton Baddies</p>
           </div>
         </div>
       </div>
@@ -201,10 +190,61 @@ function ClientAuthLayout({ children }: { children: React.ReactNode }) {
       </aside>
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-h-screen">
-        <header className="sticky top-0 bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-200 z-10 h-16 flex items-center px-6">
-          <h1 className="text-lg font-bold text-gray-900 tracking-tight">🏸 Baddies 2025 Admin</h1>
-          <AdminAuthBar user={user} />
+        <header className="w-full flex flex-col md:flex-row items-center justify-between px-4 pt-6 pb-2 z-10 relative max-w-7xl mx-auto">
+          <div className="flex items-center gap-4 w-full md:w-auto">
+            <div className="w-14 h-14 md:w-20 md:h-20 relative">
+              <Image
+                src="/baddies.png"
+                alt="Badminton Baddies Logo"
+                fill
+                style={{ objectFit: 'contain' }}
+                draggable={false}
+                priority
+              />
+            </div>
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-extrabold text-white tracking-tight m-0 p-0 whitespace-nowrap">
+              PBEL Badminton Tournament 2025
+            </h1>
+          </div>
+          {/* Dates/info right */}
+          <div className="flex flex-col items-end mt-4 md:mt-0 w-full md:w-auto">
+            <div className="flex flex-col md:items-end">
+              <div className="bg-gradient-to-r from-green-500/20 to-green-600/20 rounded-xl px-4 py-1 border border-green-200/30 mb-1">
+                <span className="text-white/80 text-xs md:text-sm">Tournament Dates: <span className="font-bold text-white">12th Jul - 10th Aug 2025</span></span>
+              </div>
+              <div className="bg-gradient-to-r from-red-500/20 to-red-600/20 rounded-xl px-4 py-1 border border-red-200/30">
+                <span className="text-white/80 text-xs md:text-sm">Registration Deadline: <span className="font-bold text-white">30 June 2025</span></span>
+              </div>
+            </div>
+          </div>
         </header>
+        {/* Navigation buttons row at the top */}
+        <nav className="w-full max-w-5xl mx-auto flex flex-wrap justify-center md:justify-start gap-3 md:gap-6 mt-4 mb-2 z-10 relative">
+          <a
+            href="/standings"
+            className="px-6 py-2 bg-black text-white rounded-xl text-base md:text-lg font-bold shadow hover:bg-gray-900 transition-all duration-200 border border-gray-800 hover-lift"
+          >
+            🏆 View Standings
+          </a>
+          <a
+            href="/tournaments"
+            className="px-6 py-2 bg-black text-white rounded-xl text-base md:text-lg font-bold shadow hover:bg-gray-900 transition-all duration-200 border border-gray-800 hover-lift"
+          >
+            📅 View Fixtures
+          </a>
+          <a
+            href="/teams"
+            className="px-6 py-2 bg-black text-white rounded-xl text-base md:text-lg font-bold shadow hover:bg-gray-900 transition-all duration-200 border border-gray-800 hover-lift"
+          >
+            👥 View Teams
+          </a>
+          <a
+            href="/rules"
+            className="px-6 py-2 bg-black text-white rounded-xl text-base md:text-lg font-bold shadow hover:bg-gray-900 transition-all duration-200 border border-gray-800 hover-lift"
+          >
+            📋 View Rules
+          </a>
+        </nav>
         <main className="flex-1 px-6 py-6 bg-gradient-to-br from-gray-50 to-gray-100 overflow-y-auto">
           {children}
         </main>
