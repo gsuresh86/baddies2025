@@ -1,5 +1,6 @@
 import React from 'react';
 import { Match, Team } from '@/types';
+import Link from 'next/link';
 
 export default function MatchesTab({ matches, teams }: { matches: Match[]; teams: Team[] }) {
   return (
@@ -13,40 +14,39 @@ export default function MatchesTab({ matches, teams }: { matches: Match[]; teams
           </p>
         </div>
       ) : (
-        matches.map((match) => {
+        matches.map((match, idx) => {
           const team1 = teams.find(t => t.id === match.team1_id);
           const team2 = teams.find(t => t.id === match.team2_id);
           const team1Wins = (match.team1_score ?? 0) > (match.team2_score ?? 0);
           const team2Wins = (match.team2_score ?? 0) > (match.team1_score ?? 0);
+          // Placeholder: alternate court numbers
+          const courtNo = idx % 2 === 0 ? 'Court 1' : 'Court 2';
           return (
-            <div key={match.id} className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-4">
-                  <span className={`text-lg font-semibold ${team1Wins ? 'text-green-600' : 'text-gray-500'}`}>{team1?.name}</span>
-                  <span className="text-2xl font-bold text-gray-400">vs</span>
-                  <span className={`text-lg font-semibold ${team2Wins ? 'text-green-600' : 'text-gray-500'}`}>{team2?.name}</span>
+            <Link
+              key={match.id}
+              href={`/match/${match.id}`}
+              className="block rounded-xl border border-gray-200 bg-white hover:border-blue-400 transition-all px-8 py-4 shadow-md"
+            >
+              <div className="flex items-center gap-6 text-sm w-full">
+                <span className={`truncate font-semibold max-w-[120px] ${team1Wins ? 'text-green-600' : 'text-gray-700'}`}>{team1?.name}</span>
+                <span className="text-base font-bold text-gray-400">vs</span>
+                <span className={`truncate font-semibold max-w-[120px] ${team2Wins ? 'text-green-600' : 'text-gray-700'}`}>{team2?.name}</span>
+                <span className="px-3 py-1 rounded bg-gray-100 text-xs font-medium text-gray-600 whitespace-nowrap">{courtNo}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg text-blue-700 font-bold">{match.team1_score ?? 0}</span>
+                  <span className="text-lg text-gray-400">-</span>
+                  <span className="text-lg text-red-700 font-bold">{match.team2_score ?? 0}</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    match.completed
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {match.completed ? 'Completed' : 'Pending'}
-                  </span>
-                </div>
+                <span className="text-xs text-gray-500">Won</span>
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ml-auto ${
+                  match.completed
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-yellow-100 text-yellow-800'
+                }`}>
+                  {match.completed ? 'Completed' : 'Pending'}
+                </span>
               </div>
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">{match.team1_score}</div>
-                  <div className="text-sm text-gray-600">Games Won</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-red-600">{match.team2_score}</div>
-                  <div className="text-sm text-gray-600">Games Won</div>
-                </div>
-              </div>
-            </div>
+            </Link>
           );
         })
       )}

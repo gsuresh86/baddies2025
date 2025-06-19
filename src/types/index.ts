@@ -37,6 +37,7 @@ export interface Match {
   team2_score?: number;
   winner?: 'team1' | 'team2';
   completed: boolean;
+  pool_id: string;
   scheduledDate?: string;
 }
 
@@ -45,6 +46,7 @@ export interface Pool {
   name: string;
   teams: Team[];
   matches: Match[];
+  teamCount: number;
   max_teams: number;
 }
 
