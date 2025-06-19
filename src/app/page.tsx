@@ -91,7 +91,7 @@ export default function LandingPage() {
               brought to you by
             </div>
             <div className="text-2xl font-bold text-white text-glow-white mb-4">
-              "Badminton Baddies"
+              Badminton Baddies
             </div>
           </div>
         </div>
@@ -128,7 +128,7 @@ export default function LandingPage() {
             <div className="text-3xl mb-3">⏰</div>
             <h3 className="text-lg font-bold text-white mb-2">Registration Deadline</h3>
             <p className="text-white/80 font-semibold">30 June 2025</p>
-            <p className="text-white/60 text-sm mt-1">Don't miss out!</p>
+            <p className="text-white/60 text-sm mt-1">Dont miss out!</p>
           </div>
         </div>
       </div>

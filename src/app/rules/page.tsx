@@ -30,9 +30,9 @@ const RulesPage = () => {
               <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-2xl p-6 border border-blue-200/30">
                 <h3 className="text-xl font-bold text-white mb-4">Open Categories</h3>
                 <ul className="space-y-2 text-white/90">
-                  <li>• Men's Team*</li>
-                  <li>• Women's Singles</li>
-                  <li>• Women's Doubles</li>
+                  <li>• Mens Team*</li>
+                  <li>• Womens Singles</li>
+                  <li>• Womens Doubles</li>
                   <li>• Mixed Doubles</li>
                   <li>• Family Mixed Doubles</li>
                 </ul>
@@ -53,7 +53,7 @@ const RulesPage = () => {
           <div className="bg-gradient-to-r from-white/10 to-white/5 rounded-3xl p-8 backdrop-blur-md border border-white/20 shadow-2xl animate-fade-in-scale" style={{animationDelay: '0.1s'}}>
             <div className="flex items-center mb-6">
               <div className="text-3xl mr-4">👥</div>
-              <h2 className="text-2xl font-bold text-white text-glow-white">Men's Team Category Rules</h2>
+              <h2 className="text-2xl font-bold text-white text-glow-white">Mens Team Category Rules</h2>
             </div>
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-3 text-white/90">

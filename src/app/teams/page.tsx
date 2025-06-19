@@ -17,9 +17,6 @@ export default function TeamsPage() {
         supabase.from('pools').select('*')
       ]);
       
-      console.log('Teams data:', teamData);
-      console.log('Pools data:', poolData);
-      
       setTeams(teamData || []);
       setPools(poolData || []);
       setLoading(false);
@@ -56,7 +53,7 @@ export default function TeamsPage() {
         <div className="text-center py-12">
           <div className="bg-gradient-to-r from-white/10 to-white/5 rounded-3xl p-8 backdrop-blur-md border border-white/20">
             <div className="text-4xl mb-4">🏸</div>
-            <p className="text-white text-lg">No teams registered yet. Teams will appear here once they are added to the tournament.</p>
+            <p className="text-white text-lg">No teams registered yet. Teams will appear here once they&apos;re added to the tournament.</p>
           </div>
         </div>
       ) : (
@@ -91,8 +88,6 @@ export default function TeamsPage() {
             const poolTeams = teams.filter(team => 
               team.poolId === pool.id || (team as any).pool_id === pool.id
             );
-            console.log(`Pool ${pool.name} (${pool.id}):`, poolTeams.length, 'teams');
-            console.log('All teams:', teams.map(t => ({ name: t.name, poolId: t.poolId, pool_id: (t as any).pool_id })));
             
             return (
               <div key={pool.id} className="animate-fade-in-scale" style={{animationDelay: `${poolIndex * 0.1}s`}}>

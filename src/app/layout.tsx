@@ -102,7 +102,7 @@ function ClientAuthLayout({ children }: { children: React.ReactNode }) {
               brought to you by
             </div>
             <div className="text-2xl font-bold text-white text-glow-white mb-4">
-              "Badminton Baddies"
+              Badminton Baddies
             </div>
             
             {/* Tournament Dates */}
