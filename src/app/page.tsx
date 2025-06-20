@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/store';
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export default function LandingPage() {
   const [stats, setStats] = useState({ pools: 0, teams: 0, players: 0, categories: 0 });
