@@ -19,8 +19,9 @@ function calculateStandings(teams: Team[], matches: Match[]): TournamentStanding
       points: 0,
     };
   });
+  debugger
   matches.forEach(match => {
-    if (!match.completed) return;
+    if (match.status !== 'completed') return;
     const team1 = standings[match.team1_id ?? match.team1_id ?? ''];
     const team2 = standings[match.team2_id ?? match.team2_id ?? ''];
     if (!team1 || !team2) return;

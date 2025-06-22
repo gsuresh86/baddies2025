@@ -27,6 +27,11 @@ export default function AdminMatchesPage() {
   const [team2Score, setTeam2Score] = useState('');
   const [matchStatus, setMatchStatus] = useState('scheduled');
 
+  // Add this derived variable for modal team filtering
+  const teamsInSelectedModalPool = newMatchPool
+    ? teams.filter(team => team.pool_id === newMatchPool)
+    : [];
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -207,10 +212,6 @@ export default function AdminMatchesPage() {
     ? matches 
     : matches.filter(match => match.pool_id === selectedPool);
 
-  const teamsInPool = selectedPool === 'all' 
-    ? teams 
-    : teams.filter(team => team.pool_id === selectedPool);
-
   return (
     <div className="max-w-7xl mx-auto">
       <div className="mb-8">
@@ -366,6 +367,13 @@ export default function AdminMatchesPage() {
                       >
                         Delete
                       </button>
+                      <a
+                        href={`/admin/matches/${match.id}/manage`}
+                        className="px-3 py-2 bg-gray-200 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors"
+                        style={{ textDecoration: 'none' }}
+                      >
+                        Manage Lineup
+                      </a>
                     </div>
                   </div>
                   
@@ -411,7 +419,11 @@ export default function AdminMatchesPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Pool *</label>
                 <select
                   value={newMatchPool}
-                  onChange={(e) => setNewMatchPool(e.target.value)}
+                  onChange={(e) => {
+                    setNewMatchPool(e.target.value);
+                    setNewMatchTeam1(''); // Reset team selections when pool changes
+                    setNewMatchTeam2('');
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                 >
                   <option value="">Select Pool</option>
@@ -428,9 +440,10 @@ export default function AdminMatchesPage() {
                   value={newMatchTeam1}
                   onChange={(e) => setNewMatchTeam1(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                  disabled={!newMatchPool}
                 >
                   <option value="">Select Team 1</option>
-                  {teamsInPool.map((team) => (
+                  {teamsInSelectedModalPool.map((team) => (
                     <option key={team.id} value={team.id}>
                       {team.name}
                     </option>
@@ -443,9 +456,10 @@ export default function AdminMatchesPage() {
                   value={newMatchTeam2}
                   onChange={(e) => setNewMatchTeam2(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                  disabled={!newMatchPool}
                 >
                   <option value="">Select Team 2</option>
-                  {teamsInPool.map((team) => (
+                  {teamsInSelectedModalPool.map((team) => (
                     <option key={team.id} value={team.id}>
                       {team.name}
                     </option>
