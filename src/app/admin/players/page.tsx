@@ -344,7 +344,7 @@ export default function AdminPlayersPage() {
                                     await tournamentStore.removePlayerFromTeam(team.id, player.id);
                                     fetchData();
                                   } catch (error) {
-                                    alert('Error unassigning player from team');
+                                    alert(`Error unassigning player from team ${error}`);
                                   }
                                 }}
                                 className="px-3 py-1 bg-orange-600 text-white rounded text-sm font-medium hover:bg-orange-700"
@@ -510,7 +510,7 @@ export default function AdminPlayersPage() {
                     setSelectedTeamId('');
                     fetchData();
                   } catch (error) {
-                    alert('Error assigning player to team');
+                    alert(`Error assigning player from team ${error}`);
                   }
                 }}
                 disabled={!selectedTeamId}
