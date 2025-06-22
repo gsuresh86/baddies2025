@@ -25,6 +25,11 @@ export default function AdminPlayersPage() {
   const [editPlayerEmail, setEditPlayerEmail] = useState('');
   const [editPlayerPhone, setEditPlayerPhone] = useState('');
 
+  // Add state for assign-to-team modal
+  const [showAssignTeam, setShowAssignTeam] = useState(false);
+  const [assignPlayer, setAssignPlayer] = useState<Player | null>(null);
+  const [selectedTeamId, setSelectedTeamId] = useState<string>('');
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -318,6 +323,35 @@ export default function AdminPlayersPage() {
                             >
                               Delete
                             </button>
+                            {getPlayerTeams(player.id).length === 0 ? (
+                              <button
+                                onClick={() => {
+                                  setAssignPlayer(player);
+                                  setShowAssignTeam(true);
+                                  setSelectedTeamId('');
+                                }}
+                                className="px-3 py-1 bg-purple-600 text-white rounded text-sm font-medium hover:bg-purple-700"
+                              >
+                                Assign to Team
+                              </button>
+                            ) : (
+                              <button
+                                onClick={async () => {
+                                  const team = getPlayerTeams(player.id)[0];
+                                  if (!team) return;
+                                  if (!confirm(`Unassign ${player.name} from team ${team.name}?`)) return;
+                                  try {
+                                    await tournamentStore.removePlayerFromTeam(team.id, player.id);
+                                    fetchData();
+                                  } catch (error) {
+                                    alert('Error unassigning player from team');
+                                  }
+                                }}
+                                className="px-3 py-1 bg-orange-600 text-white rounded text-sm font-medium hover:bg-orange-700"
+                              >
+                                Unassign
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -435,6 +469,60 @@ export default function AdminPlayersPage() {
                 onClick={() => {
                   setShowEditPlayer(false);
                   setSelectedPlayer(null);
+                }}
+                className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-400"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Assign to Team Modal */}
+      {showAssignTeam && assignPlayer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Assign {assignPlayer.name} to a Team</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Select Team</label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                  value={selectedTeamId}
+                  onChange={e => setSelectedTeamId(e.target.value)}
+                >
+                  <option value="">-- Select a team --</option>
+                  {teams.map(team => (
+                    <option key={team.id} value={team.id}>{team.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={async () => {
+                  if (!selectedTeamId) return;
+                  try {
+                    await tournamentStore.addPlayerToTeam(selectedTeamId, assignPlayer.id);
+                    setShowAssignTeam(false);
+                    setAssignPlayer(null);
+                    setSelectedTeamId('');
+                    fetchData();
+                  } catch (error) {
+                    alert('Error assigning player to team');
+                  }
+                }}
+                disabled={!selectedTeamId}
+                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Assign
+              </button>
+              <button
+                onClick={() => {
+                  setShowAssignTeam(false);
+                  setAssignPlayer(null);
+                  setSelectedTeamId('');
                 }}
                 className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-400"
               >
