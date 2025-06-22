@@ -18,8 +18,8 @@ export default function AdminLoginPage() {
     if (error) {
       setError(error.message);
     } else {
-      // Force reload to update layout user state
-      window.location.href = '/tournaments';
+      // Force reload to update layout user state and redirect to admin dashboard
+      window.location.href = '/admin';
     }
   }
 

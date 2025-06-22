@@ -154,7 +154,7 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ id: str
         </div>
         <div className="flex gap-6 text-sm text-gray-500 mb-2">
           <span>Match ID: {match.id}</span>
-          {match.scheduledDate && <span>Scheduled: {new Date(match.scheduledDate).toLocaleString()}</span>}
+          {match.scheduled_date && <span>Scheduled: {new Date(match.scheduled_date).toLocaleString()}</span>}
           <span>Status: {match.completed ? "Completed" : "Pending"}</span>
         </div>
         <div className="flex gap-6 text-sm text-gray-500 mb-2">

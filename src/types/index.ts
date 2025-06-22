@@ -2,13 +2,24 @@ export interface Player {
   id: string;
   name: string;
   email?: string;
+  phone?: string;
+  category?: string;
+  level?: string;
+  flat_no?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Team {
   id: string;
   name: string;
-  players: Player[];
-  poolId?: string;
+  pool_id?: string;
+  created_at?: string;
+  updated_at?: string;
+  // Joined data
+  players?: Player[];
+  pool?: Pool;
+  teamCount?: number;
 }
 
 export interface Game {
@@ -26,28 +37,35 @@ export interface Game {
 
 export interface Match {
   id: string;
-  team1Id?: string;
-  team2Id?: string;
-  team1_id?: string;
-  team2_id?: string;
-  games?: Game[];
-  team1Score?: number;
-  team2Score?: number;
+  team1_id: string;
+  team2_id: string;
   team1_score?: number;
   team2_score?: number;
   winner?: 'team1' | 'team2';
-  completed: boolean;
+  status?: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   pool_id: string;
-  scheduledDate?: string;
+  scheduled_date?: string;
+  court?: string;
+  created_at?: string;
+  updated_at?: string;
+  // Joined data from Supabase queries
+  team1?: Team;
+  team2?: Team;
+  pool?: Pool;
+  games?: Game[];
+  completed?: boolean;
 }
 
 export interface Pool {
   id: string;
   name: string;
-  teams: Team[];
-  matches: Match[];
-  teamCount: number;
   max_teams: number;
+  created_at?: string;
+  updated_at?: string;
+  // Joined data
+  teams?: Team[];
+  matches?: Match[];
+  teamCount?: number;
 }
 
 export interface TournamentStandings {
@@ -66,4 +84,54 @@ export interface GameResult {
   team1Score: number;
   team2Score: number;
   winner: 'team1' | 'team2';
+}
+
+// Database table interfaces for Supabase
+export interface PlayerTable {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  category?: string;
+  level?: string;
+  flat_no?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TeamTable {
+  id: string;
+  name: string;
+  pool_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PoolTable {
+  id: string;
+  name: string;
+  max_teams: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MatchTable {
+  id: string;
+  team1_id?: string;
+  team2_id?: string;
+  team1_score?: number;
+  team2_score?: number;
+  winner?: 'team1' | 'team2';
+  completed: boolean;
+  pool_id: string;
+  scheduled_date?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TeamPlayerTable {
+  id: string;
+  team_id: string;
+  player_id: string;
+  created_at: string;
 } 

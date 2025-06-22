@@ -86,7 +86,7 @@ export default function TeamsPage() {
           {/* Teams by Pool */}
           {pools.map((pool, poolIndex) => {
             const poolTeams = teams.filter(team => 
-              team.poolId === pool.id || (team as any).pool_id === pool.id
+              team.pool_id === pool.id || (team as any).pool_id === pool.id
             );
             
             return (

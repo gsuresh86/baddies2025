@@ -21,15 +21,15 @@ function calculateStandings(teams: Team[], matches: Match[]): TournamentStanding
   });
   matches.forEach(match => {
     if (!match.completed) return;
-    const team1 = standings[match.team1_id ?? match.team1Id ?? ''];
-    const team2 = standings[match.team2_id ?? match.team2Id ?? ''];
+    const team1 = standings[match.team1_id ?? match.team1_id ?? ''];
+    const team2 = standings[match.team2_id ?? match.team2_id ?? ''];
     if (!team1 || !team2) return;
     team1.matchesPlayed++;
     team2.matchesPlayed++;
-    if ((match.team1_score ?? match.team1Score ?? 0) > (match.team2_score ?? match.team2Score ?? 0)) {
+    if ((match.team1_score ?? match.team1_score ?? 0) > (match.team2_score ?? match.team2_score ?? 0)) {
       team1.matchesWon++;
       team2.matchesLost++;
-    } else if ((match.team2_score ?? match.team2Score ?? 0) > (match.team1_score ?? match.team1Score ?? 0)) {
+    } else if ((match.team2_score ?? match.team2_score ?? 0) > (match.team1_score ?? match.team1_score ?? 0)) {
       team2.matchesWon++;
       team1.matchesLost++;
     }
@@ -48,10 +48,10 @@ function calculateStandings(teams: Team[], matches: Match[]): TournamentStanding
       });
     } else {
       // If no games, use match scores as games won/lost
-      team1.gamesWon += match.team1_score || match.team1Score || 0;
-      team1.gamesLost += match.team2_score || match.team2Score || 0;
-      team2.gamesWon += match.team2_score || match.team2Score || 0;
-      team2.gamesLost += match.team1_score || match.team1Score || 0;
+      team1.gamesWon += match.team1_score || match.team1_score || 0;
+      team1.gamesLost += match.team2_score || match.team2_score || 0;
+      team2.gamesWon += match.team2_score || match.team2_score || 0;
+      team2.gamesLost += match.team1_score || match.team1_score || 0;
     }
   });
   Object.values(standings).forEach(standing => {
