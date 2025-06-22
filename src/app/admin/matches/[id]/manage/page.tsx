@@ -435,32 +435,43 @@ export default function AdminManageMatchPage() {
                     )}
                   </div>
                 </div>
-                {/* Winner display for completed games (always visible) */}
-                {game.completed && (() => {
-                  const s1 = Number(game.team1_score);
-                  const s2 = Number(game.team2_score);
-                  if (!isNaN(s1) && !isNaN(s2) && s1 !== s2 && game.team1_score !== null && game.team2_score !== null) {
-                    let winner = '';
-                    if (s1 === 30 && s2 !== 30) {
-                      winner = team1!.name;
-                    } else if (s2 === 30 && s1 !== 30) {
-                      winner = team2!.name;
-                    } else if (s1 > s2) {
-                      winner = team1!.name;
-                    } else if (s2 > s1) {
-                      winner = team2!.name;
-                    }
-                    if (winner) {
-                      return (
-                        <div className="flex items-center gap-2 mt-4 text-lg font-semibold text-green-700">
-                          <span>🏆</span>
-                          <span>{winner} wins</span>
-                        </div>
-                      );
-                    }
-                  }
-                  return null;
-                })()}
+                {/* Score and Winner display for completed games */}
+                {game.completed && (
+                  <div className="mt-4 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="text-center">
+                        <div className="text-sm text-gray-600">{team1!.name}</div>
+                        <div className="text-2xl font-bold text-gray-900">{game.team1_score}</div>
+                      </div>
+                      <div className="text-2xl font-light text-gray-400">-</div>
+                      <div className="text-center">
+                        <div className="text-sm text-gray-600">{team2!.name}</div>
+                        <div className="text-2xl font-bold text-gray-900">{game.team2_score}</div>
+                      </div>
+                    </div>
+                    {(() => {
+                      const s1 = Number(game.team1_score);
+                      const s2 = Number(game.team2_score);
+                      if (!isNaN(s1) && !isNaN(s2) && s1 !== s2 && game.team1_score !== null && game.team2_score !== null) {
+                        let winner = '';
+                        if (s1 === 30 && s2 !== 30) winner = team1!.name;
+                        else if (s2 === 30 && s1 !== 30) winner = team2!.name;
+                        else if (s1 > s2) winner = team1!.name;
+                        else if (s2 > s1) winner = team2!.name;
+
+                        if (winner) {
+                          return (
+                            <div className="flex items-center gap-2 text-lg font-semibold text-green-700">
+                              <span>🏆</span>
+                              <span>{winner} wins</span>
+                            </div>
+                          );
+                        }
+                      }
+                      return null;
+                    })()}
+                  </div>
+                )}
                 {/* Score and Winner Inputs */}
                 {!game.completed && (
                   <div className="mt-3 flex flex-row items-center gap-3">

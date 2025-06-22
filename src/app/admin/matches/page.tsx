@@ -149,20 +149,6 @@ export default function AdminMatchesPage() {
     }
   };
 
-  const handleDeleteMatch = async (matchId: string) => {
-    if (!confirm('Are you sure you want to delete this match? This action cannot be undone.')) {
-      return;
-    }
-    
-    try {
-      await tournamentStore.deleteMatch(matchId);
-      fetchData();
-    } catch (error) {
-      console.error('Error deleting match:', error);
-      alert('Error deleting match');
-    }
-  };
-
   const generateMatchesForPool = async (poolId: string) => {
     try {
       await tournamentStore.generateMatchesForPool(poolId);
@@ -336,74 +322,80 @@ export default function AdminMatchesPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredMatches.map((match) => (
-                <div key={match.id} className="border border-gray-200 rounded-lg p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">{getStatusIcon(match.status || 'scheduled')}</span>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-800">
-                          {getTeamName(match.team1_id)} vs {getTeamName(match.team2_id)}
-                        </h3>
+              {filteredMatches.map((match) => {
+                const isCompleted = match.status === 'completed';
+                const team1Score = match.team1_score;
+                const team2Score = match.team2_score;
+                const team1Wins = isCompleted && typeof team1Score === 'number' && typeof team2Score === 'number' && team1Score > team2Score;
+                const team2Wins = isCompleted && typeof team1Score === 'number' && typeof team2Score === 'number' && team2Score > team1Score;
+
+                return (
+                  <div key={match.id} className="border border-gray-200 rounded-lg p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">{getStatusIcon(match.status || 'scheduled')}</span>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-800">
+                            {getTeamName(match.team1_id)} vs {getTeamName(match.team2_id)}
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            Pool: {getPoolName(match.pool_id)}
+                            {match.court && ` • Court: ${match.court}`}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(match.status || 'scheduled')}`}>
+                          {match.status?.replace('_', ' ') || 'scheduled'}
+                        </span>
+                        <button
+                          onClick={() => openUpdateScoreModal(match)}
+                          className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                        >
+                          Update Score
+                        </button>
+                        <a
+                          href={`/admin/matches/${match.id}/manage`}
+                          className="px-3 py-2 bg-gray-200 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors"
+                          style={{ textDecoration: 'none' }}
+                        >
+                          Manage Lineup
+                        </a>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-gray-800">
+                          {match.team1_score !== null ? match.team1_score : '-'}
+                        </div>
+                        <div className={`text-sm ${team1Wins ? 'font-bold text-green-600' : 'text-gray-600'}`}>
+                          {getTeamName(match.team1_id)}
+                        </div>
+                      </div>
+                      <div className="text-center flex items-center justify-center">
+                        <div className="text-lg font-medium text-gray-500">VS</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-gray-800">
+                          {match.team2_score !== null ? match.team2_score : '-'}
+                        </div>
+                        <div className={`text-sm ${team2Wins ? 'font-bold text-green-600' : 'text-gray-600'}`}>
+                          {getTeamName(match.team2_id)}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {match.scheduled_date && (
+                      <div className="mt-4 text-center">
                         <p className="text-sm text-gray-600">
-                          Pool: {getPoolName(match.pool_id)}
-                          {match.court && ` • Court: ${match.court}`}
+                          Scheduled: {new Date(match.scheduled_date).toLocaleString()}
                         </p>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(match.status || 'scheduled')}`}>
-                        {match.status?.replace('_', ' ') || 'scheduled'}
-                      </span>
-                      <button
-                        onClick={() => openUpdateScoreModal(match)}
-                        className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-                      >
-                        Update Score
-                      </button>
-                      <button
-                        onClick={() => handleDeleteMatch(match.id)}
-                        className="px-3 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
-                      >
-                        Delete
-                      </button>
-                      <a
-                        href={`/admin/matches/${match.id}/manage`}
-                        className="px-3 py-2 bg-gray-200 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors"
-                        style={{ textDecoration: 'none' }}
-                      >
-                        Manage Lineup
-                      </a>
-                    </div>
+                    )}
                   </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-gray-800">
-                        {match.team1_score !== null ? match.team1_score : '-'}
-                      </div>
-                      <div className="text-sm text-gray-600">{getTeamName(match.team1_id)}</div>
-                    </div>
-                    <div className="text-center flex items-center justify-center">
-                      <div className="text-lg font-medium text-gray-500">VS</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-gray-800">
-                        {match.team2_score !== null ? match.team2_score : '-'}
-                      </div>
-                      <div className="text-sm text-gray-600">{getTeamName(match.team2_id)}</div>
-                    </div>
-                  </div>
-                  
-                  {match.scheduled_date && (
-                    <div className="mt-4 text-center">
-                      <p className="text-sm text-gray-600">
-                        Scheduled: {new Date(match.scheduled_date).toLocaleString()}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
