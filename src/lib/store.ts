@@ -25,7 +25,7 @@ class TournamentStore {
   async getPlayers(): Promise<Player[]> {
     console.log('Fetching players...');
     const { data, error } = await supabase
-      .from('players')
+      .from('t_players')
       .select('*')
       .order('name');
     if (error) {
@@ -38,7 +38,7 @@ class TournamentStore {
 
   async getPlayerById(id: string): Promise<Player | null> {
     const { data, error } = await supabase
-      .from('players')
+      .from('t_players')
       .select('*')
       .eq('id', id)
       .single();
@@ -48,7 +48,7 @@ class TournamentStore {
 
   async createPlayer(player: Omit<Player, 'id' | 'created_at' | 'updated_at'>): Promise<Player> {
     const { data, error } = await supabase
-      .from('players')
+      .from('t_players')
       .insert([player])
       .select()
       .single();
@@ -58,7 +58,7 @@ class TournamentStore {
 
   async updatePlayer(id: string, updates: Partial<Player>): Promise<Player> {
     const { data, error } = await supabase
-      .from('players')
+      .from('t_players')
       .update(updates)
       .eq('id', id)
       .select()
@@ -69,7 +69,7 @@ class TournamentStore {
 
   async deletePlayer(id: string): Promise<void> {
     const { error } = await supabase
-      .from('players')
+      .from('t_players')
       .delete()
       .eq('id', id);
     if (error) throw error;
@@ -77,7 +77,7 @@ class TournamentStore {
 
   async searchPlayers(query: string): Promise<Player[]> {
     const { data, error } = await supabase
-      .from('players')
+      .from('t_players')
       .select('*')
       .or(`name.ilike.%${query}%,email.ilike.%${query}%`)
       .order('name');
@@ -129,7 +129,7 @@ class TournamentStore {
           const { data: playersData, error: playersError } = await supabase
             .from('team_players')
             .select(`
-              player:players(*)
+              player:t_players(*)
             `)
             .eq('team_id', team.id);
           
@@ -205,7 +205,7 @@ class TournamentStore {
       const { data: playersData, error: playersError } = await supabase
         .from('team_players')
         .select(`
-          player:players(*)
+          player:t_players(*)
         `)
         .eq('team_id', id);
       
@@ -267,7 +267,7 @@ class TournamentStore {
           const { data: playersData, error: playersError } = await supabase
             .from('team_players')
             .select(`
-              player:players(*)
+              player:t_players(*)
             `)
             .eq('team_id', team.id);
           
@@ -435,7 +435,7 @@ class TournamentStore {
             .select(`
               *,
               players:team_players(
-                player:players(*)
+                player:t_players(*)
               )
             `)
             .eq('pool_id', pool.id);
@@ -503,7 +503,7 @@ class TournamentStore {
         .select(`
           *,
           players:team_players(
-            player:players(*)
+            player:t_players(*)
           )
         `)
         .eq('pool_id', id);

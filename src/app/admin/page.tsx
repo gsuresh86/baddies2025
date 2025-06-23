@@ -17,7 +17,7 @@ export default function AdminDashboard() {
       const [{ count: pools }, { count: teams }, { count: players }, { count: categories }] = await Promise.all([
         supabase.from('pools').select('*', { count: 'exact', head: true }),
         supabase.from('teams').select('*', { count: 'exact', head: true }),
-        supabase.from('players').select('*', { count: 'exact', head: true }),
+        supabase.from('t_players').select('*', { count: 'exact', head: true }),
         supabase.from('categories').select('*', { count: 'exact', head: true })
       ]);
       setStats({

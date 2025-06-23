@@ -33,7 +33,7 @@ export default function PoolPage({ params }: { params: Promise<{ id: string }> }
       if (teamData && teamData.length > 0) {
         // Fetch players for each team
         for (const team of teamData) {
-          const { data: players } = await supabase.from('players').select('*').eq('team_id', team.id);
+          const { data: players } = await supabase.from('t_players').select('*').eq('team_id', team.id);
           teamsWithPlayers.push({ ...team, players: players || [] });
         }
       }
@@ -65,9 +65,9 @@ export default function PoolPage({ params }: { params: Promise<{ id: string }> }
       name: name.trim(),
       team_id: team.id
     }));
-    await supabase.from('players').insert(playersToInsert);
+    await supabase.from('t_players').insert(playersToInsert);
     // Refresh teams
-    const { data: players } = await supabase.from('players').select('*').eq('team_id', team.id);
+    const { data: players } = await supabase.from('t_players').select('*').eq('team_id', team.id);
     setTeams([...teams, { ...team, players: players || [] }]);
     setShowAddTeam(false);
     setNewTeamName('');

@@ -41,7 +41,7 @@ export default function AdminPoolsPage() {
       const [poolsResult, teamsResult, playersResult] = await Promise.all([
         supabase.from('pools').select('*').order('name'),
         supabase.from('teams').select('*').order('name'),
-        supabase.from('players').select('*').order('name')
+        supabase.from('t_players').select('*').order('name')
       ]);
       
       console.log('Pools result:', poolsResult);
