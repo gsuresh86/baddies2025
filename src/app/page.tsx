@@ -3,20 +3,15 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/store';
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { Player } from '@/types';
+import Image from 'next/image';
 
 export default function LandingPage() {
   const [, setStats] = useState({ pools: 0, teams: 0, players: 0, categories: 0 });
-  const [loading, setLoading] = useState(true);
-  const [playerStats, setPlayerStats] = useState({
-    totalRegistrations: 0,
-    uniqueParticipants: 0,
-    playersByCategory: {} as Record<string, number>,
-  });
+  // Timer state for registration deadline
+  const [timeLeft, setTimeLeft] = useState<{days:number, hours:number, minutes:number, seconds:number}>({days:0, hours:0, minutes:0, seconds:0});
 
   useEffect(() => {
     async function fetchStats() {
-      setLoading(true);
       const [poolsRes, teamsRes, playersRes, categoriesRes] = await Promise.all([
         supabase.from('pools').select('*', { count: 'exact', head: true }),
         supabase.from('teams').select('*', { count: 'exact', head: true }),
@@ -33,94 +28,105 @@ export default function LandingPage() {
         players,
         categories: typeof categories === 'number' ? categories : 0,
       });
-
-      // Calculate player stats
-      const allPlayers = Array.isArray(playersRes.data) ? playersRes.data : [];
-      // Unique by name or email
-      const uniqueSet = new Set();
-      allPlayers.forEach((p: Player) => {
-        if (p.email) {
-          uniqueSet.add(p.email.toLowerCase());
-        } else if (p.name) {
-          uniqueSet.add(p.name.trim().toLowerCase());
-        }
-      });
-      // Players by category
-      const byCategory: Record<string, number> = {};
-      allPlayers.forEach((p: Player) => {
-        if (p.category) {
-          byCategory[p.category] = (byCategory[p.category] || 0) + 1;
-        } else {
-          byCategory['Unspecified'] = (byCategory['Unspecified'] || 0) + 1;
-        }
-      });
-      setPlayerStats({
-        totalRegistrations: allPlayers.length,
-        uniqueParticipants: uniqueSet.size,
-        playersByCategory: byCategory,
-      });
-      setLoading(false);
     }
     fetchStats();
   }, []);
 
-  // Short category label mapping
-  const categoryLabels: Record<string, string> = {
-    "Men's Singles & Doubles (Team Event)": "Men's Team",
-    "Women's Singles": "Women Singles",
-    "Boys under 13 (Born on/after July 1st 2012)": "Boys U13",
-    "Girls under 13 (Born on/after July 1st 2012)": "Girls U13",
-    "Family Mixed Doubles (Wife-Husband, Father-Daughter, Mother-Son, Brother-Sister)": "Family Mixed",
-    "Girls under 18 (Born on/after July 1st 2007)": "Girls U18",
-    "Mixed Doubles": "Mixed Doubles",
-  };
-  const orderedCategories = [
-    "Men's Singles & Doubles (Team Event)",
-    "Women's Singles",
-    "Boys under 13 (Born on/after July 1st 2012)",
-    "Girls under 13 (Born on/after July 1st 2012)",
-    "Family Mixed Doubles (Wife-Husband, Father-Daughter, Mother-Son, Brother-Sister)",
-    "Girls under 18 (Born on/after July 1st 2007)",
-    "Mixed Doubles",
-  ];
+  useEffect(() => {
+    const deadline = new Date('2025-06-30T23:59:59');
+    const interval = setInterval(() => {
+      const now = new Date();
+      const diff = deadline.getTime() - now.getTime();
+      if (diff > 0) {
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+        const minutes = Math.floor((diff / (1000 * 60)) % 60);
+        const seconds = Math.floor((diff / 1000) % 60);
+        setTimeLeft({ days, hours, minutes, seconds });
+      } else {
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="w-full max-w-6xl mt-8 px-2 sm:px-4 mx-auto">
-      {/* Stats Section: Registrants and Unique */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-4 md:gap-6 mb-8">
-        {/* Total Registrations */}
-        <div className="bg-gradient-to-r from-white/10 to-white/5 rounded-3xl p-8 backdrop-blur-md border border-white/20 shadow-2xl hover-lift animate-fade-in-scale">
-          <div className="relative z-10 flex flex-col items-center w-full">
-            <div className="text-7xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-200 to-indigo-100 text-center mb-2 text-glow-white">
-              {loading ? '...' : playerStats.totalRegistrations}
-            </div>
-            <div className="text-lg sm:text-xl font-bold text-white text-center tracking-tight">Total Registrations</div>
-          </div>
+      {/* Tournament Info Section */}
+      <div className="bg-gradient-to-r from-blue-900/40 to-green-900/40 rounded-3xl p-8 mb-10 border border-white/20 shadow-2xl animate-fade-in-scale">
+        <div className="text-center mb-6">
+          <div className="text-5xl mb-4">🏸</div>
+          <h1 className="text-4xl md:text-5xl font-bold text-white text-glow-white mb-4">
+            PBEL City Badminton Tournament - 2025
+          </h1>
+          <p className="text-white/80 text-lg max-w-2xl mx-auto mb-4">
+            Join us for an exciting, fun-filled badminton tournament open to all skill levels! Compete, connect, and celebrate the spirit of sportsmanship in our vibrant community event.
+          </p>
         </div>
-        {/* Unique Participants */}
-        <div className="bg-gradient-to-r from-white/10 to-white/5 rounded-3xl p-8 backdrop-blur-md border border-white/20 shadow-2xl hover-lift animate-fade-in-scale">
-          <div className="relative z-10 flex flex-col items-center w-full">
-            <div className="text-7xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-200 to-green-100 text-center mb-2 text-glow-white">
-              {loading ? '...' : playerStats.uniqueParticipants}
-            </div>
-            <div className="text-lg sm:text-xl font-bold text-white text-center tracking-tight">Total Unique Players</div>
+        <div className="grid md:grid-cols-2 gap-6 text-white/90">
+          <div className="bg-white/5 rounded-xl p-6 text-center">
+            <div className="text-2xl mb-2">📍</div>
+            <div className="font-bold mb-1">Location</div>
+            <div>Badminton Club, PBEL City Clubhouse</div>
+          </div>
+          <div className="bg-white/5 rounded-xl p-6 text-center">
+            <div className="text-2xl mb-2">📅</div>
+            <div className="font-bold mb-1">Tournament Dates</div>
+            <div>12th Jul - 10th Aug 2025<br/><span className='text-white/60 text-sm'>(Weekend matches)</span></div>
           </div>
         </div>
       </div>
-      {/* Individual Category Stats Cards - 2 rows, 4 columns on desktop */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-8">
-        {orderedCategories.map((cat, index) => (
-          <div key={cat} className="bg-gradient-to-r from-white/10 to-white/5 rounded-3xl p-6 backdrop-blur-md border border-white/20 shadow-2xl hover-lift transition-all duration-300 animate-fade-in-scale" style={{animationDelay: `${index * 0.1}s`}}>
-            <div className="relative z-10 w-full flex flex-col items-center">
-              <div className="text-xs text-white/80 font-semibold text-center mb-1 tracking-tight leading-tight">
-                {categoryLabels[cat]}
+
+      {/* Registration Deadline Section with Timer */}
+      <div className="mb-8 grid grid-cols-1 md:grid-cols-1 gap-4">
+        <div className="bg-gradient-to-r from-red-500/20 to-red-600/20 rounded-2xl p-6 border border-red-200/30 text-center">
+          <div className="text-3xl mb-3">⏰</div>
+          <h3 className="text-lg font-bold text-white mb-2">Registration Deadline</h3>
+          <p className="text-white/80 font-semibold mb-2">30 June 2025, 11:59 PM</p>
+          <div className="flex justify-center gap-6 mb-4">
+            <div className="px-6 py-4 flex gap-6 items-center">
+              <div className="flex flex-col items-center">
+                <span className="font-extrabold text-4xl sm:text-5xl md:text-6xl text-white drop-shadow-lg animate-pulse">{timeLeft.days}</span>
+                <span className="text-xs sm:text-sm text-white/80 mt-1 tracking-wide">days</span>
               </div>
-              <div className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-white/80 text-center mb-0 text-glow-white">
-                {loading ? '...' : (playerStats.playersByCategory[cat] || 0)}
+              <div className="flex flex-col items-center">
+                <span className="font-extrabold text-4xl sm:text-5xl md:text-6xl text-white drop-shadow-lg animate-pulse">{timeLeft.hours}</span>
+                <span className="text-xs sm:text-sm text-white/80 mt-1 tracking-wide">hrs</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <span className="font-extrabold text-4xl sm:text-5xl md:text-6xl text-white drop-shadow-lg animate-pulse">{timeLeft.minutes}</span>
+                <span className="text-xs sm:text-sm text-white/80 mt-1 tracking-wide">min</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <span className="font-extrabold text-4xl sm:text-5xl md:text-6xl text-white drop-shadow-lg animate-pulse">{timeLeft.seconds}</span>
+                <span className="text-xs sm:text-sm text-white/80 mt-1 tracking-wide">sec</span>
               </div>
             </div>
           </div>
-        ))}
+          <a
+            href="https://docs.google.com/forms/d/e/1FAIpQLSc8U4-KqWzDRl-n_afvn14LpMhdM5_qr3d-xVF9IxOhCBRh8Q/viewform"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white font-bold py-3 px-8 rounded-xl text-lg shadow-lg mb-3 transition-all duration-200"
+          >
+            Register Now
+          </a>
+          <p className="text-white/60 text-sm mt-1">Don&apos;t miss out!</p>
+        </div>
+      </div>
+
+      {/* Important Format & Highlights Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-8">
+        <div className="text-center p-6 rounded-2xl bg-gradient-to-br from-green-500/20 to-green-600/20 border border-green-200/30 hover-lift">
+          <div className="text-4xl mb-3">🎮</div>
+          <h3 className="text-xl font-bold text-white mb-2">Format</h3>
+          <p className="text-white/80">Women&apos;s, Mixed, and Junior events<br/>Team & Individual categories</p>
+        </div>
+        <div className="text-center p-6 rounded-2xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-200/30 hover-lift">
+          <div className="text-4xl mb-3">✨</div>
+          <h3 className="text-xl font-bold text-white mb-2">Highlights</h3>
+          <p className="text-white/80">Medals, food stalls, and lots of fun!</p>
+        </div>
       </div>
 
       {/* Enhanced Tournament Info Section */}
@@ -144,19 +150,68 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* Important Dates */}
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-gradient-to-r from-green-500/20 to-green-600/20 rounded-2xl p-6 border border-green-200/30 text-center">
-          <div className="text-3xl mb-3">📅</div>
-          <h3 className="text-lg font-bold text-white mb-2">Tournament Dates</h3>
-          <p className="text-white/80 font-semibold">12th Jul - 10th Aug 2025</p>
-          <p className="text-white/60 text-sm mt-1">Weekend matches</p>
-        </div>
-        <div className="bg-gradient-to-r from-red-500/20 to-red-600/20 rounded-2xl p-6 border border-red-200/30 text-center">
-          <div className="text-3xl mb-3">⏰</div>
-          <h3 className="text-lg font-bold text-white mb-2">Registration Deadline</h3>
-          <p className="text-white/80 font-semibold">30 June 2025</p>
-          <p className="text-white/60 text-sm mt-1">Dont miss out!</p>
+      {/* Sponsors Section */}
+      <div className="mt-8">
+        <div className="bg-gradient-to-r from-white/10 to-white/5 rounded-3xl p-8 backdrop-blur-md border border-white/20 shadow-2xl animate-fade-in-scale">
+          <div className="text-center mb-8">
+            <div className="text-4xl mb-4">🌟</div>
+            <h2 className="text-3xl font-bold text-white text-glow-white mb-2">Our Sponsors</h2>
+            <p className="text-white/80 text-lg">Proudly supported by leading organizations</p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Planet Green */}
+            <div className="bg-gradient-to-br from-green-500/20 to-emerald-600/20 rounded-2xl p-6 border border-green-200/30 hover-lift transition-all duration-300">
+              <div className="text-center flex flex-col items-center">
+                <Image
+                  src="/planet-green-logo.png"
+                  alt="Planet Green Logo"
+                  width={180}
+                  height={64}
+                  className="h-16 mb-4 w-auto"
+                  style={{ maxWidth: '180px' }}
+                />
+                <a 
+                  href="https://www.planetgreen.co.in/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-block bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:from-green-700 hover:to-emerald-700 transition-all duration-300"
+                >
+                  Visit Website
+                </a>
+              </div>
+            </div>
+
+            {/* Badminton Association */}
+            <div className="bg-gradient-to-br from-blue-500/20 to-indigo-600/20 rounded-2xl p-6 border border-blue-200/30 hover-lift transition-all duration-300">
+              <div className="text-center">
+                <div className="text-4xl mb-4">🏸</div>
+                <h3 className="text-xl font-bold text-white mb-2">Badminton Association</h3>
+                <p className="text-white/80 text-sm mb-4">Promoting Sports Excellence</p>
+                <div className="inline-block bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                  Official Partner
+                </div>
+              </div>
+            </div>
+
+            {/* Sports Equipment */}
+            <div className="bg-gradient-to-br from-purple-500/20 to-pink-600/20 rounded-2xl p-6 border border-purple-200/30 hover-lift transition-all duration-300">
+              <div className="text-center">
+                <div className="text-4xl mb-4">🎾</div>
+                <h3 className="text-xl font-bold text-white mb-2">Sports Equipment</h3>
+                <p className="text-white/80 text-sm mb-4">Premium Gear Provider</p>
+                <div className="inline-block bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                  Equipment Partner
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-center mt-8 pt-6 border-t border-white/10">
+            <p className="text-white/60 text-sm">
+              Interested in becoming a sponsor? Contact us for partnership opportunities.
+            </p>
+          </div>
         </div>
       </div>
 
@@ -164,23 +219,23 @@ export default function LandingPage() {
       <div className="mt-8 mb-24 bg-black/80 rounded-2xl p-4 sm:p-6 border border-gray-800 animate-fade-in-scale" style={{animationDelay: '0.6s'}}>
         <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-4 sm:gap-8 text-white">
           <div className="text-center min-w-[80px] flex-1">
-            <div className="text-xl sm:text-2xl font-bold text-glow-white">🎯</div>
+            <div className="text-xl sm:text-2xl font-bold">🎯</div>
             <div className="text-xs sm:text-sm opacity-80">Precision</div>
           </div>
           <div className="text-center min-w-[80px] flex-1">
-            <div className="text-xl sm:text-2xl font-bold text-glow-white">💪</div>
+            <div className="text-xl sm:text-2xl font-bold">💪</div>
             <div className="text-xs sm:text-sm opacity-80">Strength</div>
           </div>
           <div className="text-center min-w-[80px] flex-1">
-            <div className="text-xl sm:text-2xl font-bold text-glow-white">🧠</div>
+            <div className="text-xl sm:text-2xl font-bold">🧠</div>
             <div className="text-xs sm:text-sm opacity-80">Strategy</div>
           </div>
           <div className="text-center min-w-[80px] flex-1">
-            <div className="text-xl sm:text-2xl font-bold text-glow-white">⚡</div>
+            <div className="text-xl sm:text-2xl font-bold">⚡</div>
             <div className="text-xs sm:text-sm opacity-80">Speed</div>
           </div>
           <div className="text-center min-w-[80px] flex-1">
-            <div className="text-xl sm:text-2xl font-bold text-glow-white">🏆</div>
+            <div className="text-xl sm:text-2xl font-bold">🏆</div>
             <div className="text-xs sm:text-sm opacity-80">Victory</div>
           </div>
         </div>

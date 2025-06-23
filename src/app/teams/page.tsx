@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/store';
 import { Team, Pool } from '@/types';
+import Link from 'next/link';
 
 export default function TeamsPage() {
   const [teams, setTeams] = useState<Team[]>([]);
@@ -108,40 +109,45 @@ export default function TeamsPage() {
                   ) : (
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {poolTeams.map((team, teamIndex) => (
-                        <div 
-                          key={team.id} 
-                          className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/20 hover-lift transition-all duration-300"
-                          style={{animationDelay: `${(poolIndex * 0.1) + (teamIndex * 0.05)}s`}}
+                        <Link 
+                          key={team.id}
+                          href={`/teams/${team.id}`}
+                          className="block"
                         >
-                          <div className="flex items-center mb-4">
-                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-4 text-white font-bold text-lg">
-                              {team.name.charAt(0).toUpperCase()}
+                          <div 
+                            className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/20 hover-lift transition-all duration-300 cursor-pointer"
+                            style={{animationDelay: `${(poolIndex * 0.1) + (teamIndex * 0.05)}s`}}
+                          >
+                            <div className="flex items-center mb-4">
+                              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-4 text-white font-bold text-lg">
+                                {team.name.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <h4 className="text-white font-bold text-lg">{team.name}</h4>
+                                <p className="text-white/60 text-sm">Team #{team.id.slice(0, 8)}</p>
+                              </div>
                             </div>
-                            <div>
-                              <h4 className="text-white font-bold text-lg">{team.name}</h4>
-                              <p className="text-white/60 text-sm">Team #{team.id.slice(0, 8)}</p>
+                            
+                            <div className="space-y-2">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-white/70">Pool:</span>
+                                <span className="text-white font-medium">{pool.name}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-white/70">Status:</span>
+                                <span className="text-green-300 font-medium">Active</span>
+                              </div>
                             </div>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-white/70">Pool:</span>
-                              <span className="text-white font-medium">{pool.name}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-white/70">Status:</span>
-                              <span className="text-green-300 font-medium">Active</span>
-                            </div>
-                          </div>
-                          
-                          <div className="mt-4 pt-4 border-t border-white/10">
-                            <div className="flex justify-center">
-                              <div className="bg-gradient-to-r from-blue-600/30 to-purple-600/30 rounded-lg px-3 py-1">
-                                <span className="text-white text-sm font-medium">View Details</span>
+                            
+                            <div className="mt-4 pt-4 border-t border-white/10">
+                              <div className="flex justify-center">
+                                <div className="bg-gradient-to-r from-blue-600/30 to-purple-600/30 rounded-lg px-3 py-1">
+                                  <span className="text-white text-sm font-medium">View Details</span>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
+                        </Link>
                       ))}
                     </div>
                   )}

@@ -7,23 +7,25 @@ import { Team, Player, Pool } from '@/types';
 export default function AdminTeamsPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [pools, setPools] = useState<Pool[]>([]);
-  const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   
   // Form states
   const [newTeamName, setNewTeamName] = useState('');
-  const [newPlayerName, setNewPlayerName] = useState('');
-  const [newPlayerEmail, setNewPlayerEmail] = useState('');
-  const [newPlayerPhone, setNewPlayerPhone] = useState('');
   
   // Modal states
   const [showCreateTeam, setShowCreateTeam] = useState(false);
-  const [showCreatePlayer, setShowCreatePlayer] = useState(false);
   const [showAssignPool, setShowAssignPool] = useState(false);
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [availablePlayers, setAvailablePlayers] = useState<Player[]>([]);
+  const [addPlayerSearchTerm, setAddPlayerSearchTerm] = useState('');
+
+  // Calculate stats for Men's teams only
+  const [mensTeamPlayerCount, setMensTeamPlayerCount] = useState(0);
+  const [playersByLevel, setPlayersByLevel] = useState<Record<string, number>>({});
+  const [mensTeamPlayers, setMensTeamPlayers] = useState<Player[]>([]);
+  const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -47,7 +49,31 @@ export default function AdminTeamsPage() {
       
       setTeams(teamsResult.data || []);
       setPools(poolsResult.data || []);
-      setPlayers(playersResult.data || []);
+      
+      // Calculate Men's team players count
+      try {
+        // Get all players with Men's category from t_players table
+        const { data: mensPlayersData, error: mensPlayersError } = await supabase
+          .from('t_players')
+          .select('*')
+          .eq('category', "Men's Singles & Doubles (Team Event)");
+        
+        if (!mensPlayersError && mensPlayersData) {
+          setMensTeamPlayerCount(mensPlayersData.length);
+          setMensTeamPlayers(mensPlayersData);
+          
+          // Count by level
+          const levelCounts = mensPlayersData.reduce((acc, player) => {
+            const level = player.level || 'Unspecified';
+            acc[level] = (acc[level] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>);
+          
+          setPlayersByLevel(levelCounts);
+        }
+      } catch (error) {
+        console.error('Error calculating Men\'s team stats:', error);
+      }
       
       // Try to get detailed data with relationships
       try {
@@ -75,26 +101,6 @@ export default function AdminTeamsPage() {
     } catch (error) {
       console.error('Error creating team:', error);
       alert('Error creating team');
-    }
-  };
-
-  const handleCreatePlayer = async () => {
-    if (!newPlayerName.trim()) return;
-    
-    try {
-      await tournamentStore.createPlayer({
-        name: newPlayerName.trim(),
-        email: newPlayerEmail.trim() || undefined,
-        phone: newPlayerPhone.trim() || undefined
-      });
-      setNewPlayerName('');
-      setNewPlayerEmail('');
-      setNewPlayerPhone('');
-      setShowCreatePlayer(false);
-      fetchData();
-    } catch (error) {
-      console.error('Error creating player:', error);
-      alert('Error creating player');
     }
   };
 
@@ -154,10 +160,13 @@ export default function AdminTeamsPage() {
   const openAddPlayerModal = async (team: Team) => {
     setSelectedTeam(team);
     try {
-      // Get all players not in this team
+      // Get all players not in this team and with Men's team category
       const allPlayers = await tournamentStore.getPlayers();
       const teamPlayerIds = team.players?.map(p => p.id) || [];
-      const availablePlayersData = allPlayers.filter(p => !teamPlayerIds.includes(p.id));
+      const availablePlayersData = allPlayers.filter(p => 
+        !teamPlayerIds.includes(p.id) && 
+        p.category === "Men's Singles & Doubles (Team Event)"
+      );
       setAvailablePlayers(availablePlayersData);
       setShowAddPlayer(true);
     } catch (error) {
@@ -193,11 +202,11 @@ export default function AdminTeamsPage() {
         <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Players</p>
-              <p className="text-3xl font-bold text-purple-600">{players.length}</p>
+              <p className="text-sm font-medium text-gray-600">Men&apos;s Team Players</p>
+              <p className="text-3xl font-bold text-blue-600">{mensTeamPlayerCount}</p>
             </div>
-            <div className="p-3 bg-purple-100 rounded-lg">
-              <span className="text-2xl">🏸</span>
+            <div className="p-3 bg-blue-100 rounded-lg">
+              <span className="text-2xl">🏆</span>
             </div>
           </div>
         </div>
@@ -206,16 +215,62 @@ export default function AdminTeamsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Assigned Teams</p>
-              <p className="text-3xl font-bold text-blue-600">
+              <p className="text-3xl font-bold text-orange-600">
                 {teams.filter(team => team.pool).length}
               </p>
             </div>
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <span className="text-2xl">🏆</span>
+            <div className="p-3 bg-orange-100 rounded-lg">
+              <span className="text-2xl">🎯</span>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Men's Team Players by Level */}
+      {mensTeamPlayerCount > 0 && (
+        <div className="bg-white rounded-xl shadow-lg border border-gray-200 mb-8">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-xl font-semibold text-gray-800">Men&apos;s Team Players by Level</h2>
+            <p className="text-gray-600 mt-1">Breakdown of players by their skill level</p>
+          </div>
+          <div className="p-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+              {Object.entries(playersByLevel).map(([level, count]) => (
+                <div 
+                  key={level} 
+                  className={`text-center p-4 rounded-lg cursor-pointer transition-colors ${
+                    selectedLevel === level 
+                      ? 'bg-blue-100 border-2 border-blue-300' 
+                      : 'bg-gray-50 hover:bg-gray-100'
+                  }`}
+                  onClick={() => setSelectedLevel(selectedLevel === level ? null : level)}
+                >
+                  <div className="text-2xl font-bold text-blue-600">{count}</div>
+                  <div className="text-sm text-gray-600 mt-1">{level}</div>
+                </div>
+              ))}
+            </div>
+            
+            {/* Players List for Selected Level */}
+            {selectedLevel && (
+              <div className="border-t border-gray-200 pt-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                  Players - {selectedLevel} Level ({playersByLevel[selectedLevel]} players)
+                </h3>
+                <div className="grid gap-3 max-h-60 overflow-y-auto">
+                  {mensTeamPlayers
+                    .filter(player => (player.level || 'Unspecified') === selectedLevel)
+                    .map((player) => (
+                      <div key={player.id} className="p-3 bg-gray-50 rounded-lg">
+                        <div className="font-medium text-gray-800">{player.name}</div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Search and Actions */}
       <div className="flex flex-col md:flex-row gap-4 mb-8">
@@ -234,12 +289,6 @@ export default function AdminTeamsPage() {
             className="px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
           >
             ➕ Create Team
-          </button>
-          <button
-            onClick={() => setShowCreatePlayer(true)}
-            className="px-6 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors"
-          >
-            ➕ Add Player
           </button>
         </div>
       </div>
@@ -315,9 +364,6 @@ export default function AdminTeamsPage() {
                             <div key={player.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                               <div>
                                 <div className="text-sm font-medium text-gray-800">{player.name}</div>
-                                {player.email && (
-                                  <div className="text-xs text-gray-600">{player.email}</div>
-                                )}
                               </div>
                               <button
                                 onClick={() => handleRemovePlayerFromTeam(team.id, player.id)}
@@ -365,62 +411,6 @@ export default function AdminTeamsPage() {
               </button>
               <button
                 onClick={() => setShowCreateTeam(false)}
-                className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-400"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Create Player Modal */}
-      {showCreatePlayer && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Create New Player</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Player Name *</label>
-                <input
-                  type="text"
-                  value={newPlayerName}
-                  onChange={(e) => setNewPlayerName(e.target.value)}
-                  placeholder="Player name"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <input
-                  type="email"
-                  value={newPlayerEmail}
-                  onChange={(e) => setNewPlayerEmail(e.target.value)}
-                  placeholder="player@example.com"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                <input
-                  type="tel"
-                  value={newPlayerPhone}
-                  onChange={(e) => setNewPlayerPhone(e.target.value)}
-                  placeholder="+1234567890"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                />
-              </div>
-            </div>
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={handleCreatePlayer}
-                disabled={!newPlayerName.trim()}
-                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Create Player
-              </button>
-              <button
-                onClick={() => setShowCreatePlayer(false)}
                 className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-400"
               >
                 Cancel
@@ -483,26 +473,53 @@ export default function AdminTeamsPage() {
             <h3 className="text-lg font-semibold text-gray-800 mb-4">
               Add Player to {selectedTeam.name}
             </h3>
+            
+            {/* Search Input */}
+            <div className="mb-4">
+              <input
+                type="text"
+                placeholder="Search players..."
+                value={addPlayerSearchTerm}
+                onChange={(e) => setAddPlayerSearchTerm(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+              />
+            </div>
+            
             {availablePlayers.length === 0 ? (
               <p className="text-gray-600 mb-4">No available players to add</p>
             ) : (
               <div className="space-y-2 max-h-60 overflow-y-auto">
-                {availablePlayers.map((player) => (
-                  <div key={player.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <div className="font-medium text-gray-800">{player.name}</div>
-                      {player.email && (
-                        <div className="text-sm text-gray-600">{player.email}</div>
-                      )}
+                {availablePlayers
+                  .filter(player => 
+                    player.name.toLowerCase().includes(addPlayerSearchTerm.toLowerCase()) ||
+                    (player.email && player.email.toLowerCase().includes(addPlayerSearchTerm.toLowerCase()))
+                  )
+                  .map((player) => (
+                    <div key={player.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-800">{player.name}</div>
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          {player.email && (
+                            <span>{player.email}</span>
+                          )}
+                          {player.level && (
+                            <>
+                              <span>•</span>
+                              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                                {player.level}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleAddPlayerToTeam(selectedTeam.id, player.id)}
+                        className="px-3 py-1 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 ml-3"
+                      >
+                        Add
+                      </button>
                     </div>
-                    <button
-                      onClick={() => handleAddPlayerToTeam(selectedTeam.id, player.id)}
-                      className="px-3 py-1 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700"
-                    >
-                      Add
-                    </button>
-                  </div>
-                ))}
+                  ))}
               </div>
             )}
             <div className="mt-6">
@@ -510,6 +527,7 @@ export default function AdminTeamsPage() {
                 onClick={() => {
                   setShowAddPlayer(false);
                   setSelectedTeam(null);
+                  setAddPlayerSearchTerm('');
                 }}
                 className="w-full px-4 py-2 bg-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-400"
               >

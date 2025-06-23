@@ -24,58 +24,87 @@ const RulesPage = () => {
               <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-2xl p-6 border border-blue-200/30">
                 <h3 className="text-xl font-bold text-white mb-4">Open Categories</h3>
                 <ul className="space-y-2 text-white/90">
-                  <li>• Mens Team*</li>
-                  <li>• Womens Singles</li>
-                  <li>• Womens Doubles</li>
+                  <li>• Men&apos;s Team*</li>
+                  <li>• Women&apos;s Singles</li>
+                  <li>• Women&apos;s Doubles</li>
                   <li>• Mixed Doubles</li>
-                  <li>• Family Mixed Doubles</li>
+                  <li>• Family Mixed Doubles (Wife-Husband, Father-Daughter, Mother-Son, Brother-Sister)</li>
                 </ul>
               </div>
               <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-2xl p-6 border border-green-200/30">
                 <h3 className="text-xl font-bold text-white mb-4">Age Limited Categories</h3>
                 <ul className="space-y-2 text-white/90">
-                  <li>• Girls under 18 (Born on/after Jul 1st 2007)</li>
+                  <li>• Girls under 18 (Born on/after Jul 1st 2007 and on/before Jul 1st 2012)</li>
                   <li>• Girls under 13 (Born on/after Jul 1st 2012)</li>
-                  <li>• Boys under 18 (Born on/after Jul 1st 2007)</li>
+                  <li>• Boys under 18 (Born on/after Jul 1st 2007 and on/before Jul 1st 2012)</li>
                   <li>• Boys under 13 (Born on/after Jul 1st 2012)</li>
                 </ul>
               </div>
             </div>
+            <div className="mt-6 p-4 bg-yellow-500/20 rounded-2xl border border-yellow-200/30">
+              <div className="flex items-start">
+                <span className="text-yellow-400 mr-3 text-lg">⚠️</span>
+                <div className="text-white/90">
+                  <p className="font-semibold mb-2">Important:</p>
+                  <ul className="space-y-1 text-sm">
+                    <li>• One player is allowed in maximum of 3 categories only</li>
+                    <li>• Only valid DoB proof are Aadhar card, Passport and DoB Certificate issued by State Govts.</li>
+                    <li>• Only the residents of PBEL City are allowed to participate in the tournament. Any violation found to this rule will result in disqualification</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Men's Team Rules */}
+          {/* Men&apos;s Team Rules */}
           <div className="bg-gradient-to-r from-white/10 to-white/5 rounded-3xl p-8 backdrop-blur-md border border-white/20 shadow-2xl animate-fade-in-scale" style={{animationDelay: '0.1s'}}>
             <div className="flex items-center mb-6">
               <div className="text-3xl mr-4">👥</div>
-              <h2 className="text-2xl font-bold text-white text-glow-white">Mens Team Category Rules</h2>
+              <h2 className="text-2xl font-bold text-white text-glow-white">Men&apos;s Team Category Rules</h2>
             </div>
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-3 text-white/90">
                 <div className="flex items-start">
                   <span className="text-yellow-400 mr-3">•</span>
-                  <span>Teams formed randomly and placed in pools</span>
+                  <span>Players divided into teams purely on random basis</span>
                 </div>
                 <div className="flex items-start">
                   <span className="text-yellow-400 mr-3">•</span>
-                  <span>Top two teams from each pool advance</span>
+                  <span>Teams placed in pools, competing against other teams in same pool</span>
                 </div>
                 <div className="flex items-start">
                   <span className="text-yellow-400 mr-3">•</span>
-                  <span>Each match has 5 games (singles & doubles)</span>
+                  <span>Top two teams from each pool advance to next round</span>
+                </div>
+                <div className="flex items-start">
+                  <span className="text-yellow-400 mr-3">•</span>
+                  <span>Tie-breaker: Games won difference, then point difference</span>
+                </div>
+                <div className="flex items-start">
+                  <span className="text-yellow-400 mr-3">•</span>
+                  <span>Each match comprises multiple singles and doubles games</span>
                 </div>
               </div>
               <div className="space-y-3 text-white/90">
                 <div className="flex items-start">
                   <span className="text-yellow-400 mr-3">•</span>
-                  <span>Winning team (3 out of 5) gets 2 points</span>
+                  <span>Team winning greater number of games gets 2 points</span>
                 </div>
                 <div className="flex items-start">
                   <span className="text-yellow-400 mr-3">•</span>
-                  <span>Each player must play 1-2 games maximum</span>
+                  <span>Each player must participate in at least one game per team match</span>
                 </div>
                 <div className="flex items-start">
                   <span className="text-yellow-400 mr-3">•</span>
-                  <span>Match forfeited if criteria not met</span>
+                  <span>Player can play maximum 2 games per team match</span>
+                </div>
+                <div className="flex items-start">
+                  <span className="text-yellow-400 mr-3">•</span>
+                  <span>Games forfeited if criteria not met</span>
+                </div>
+                <div className="flex items-start">
+                  <span className="text-yellow-400 mr-3">•</span>
+                  <span>Players must declare names before each match</span>
                 </div>
               </div>
             </div>
@@ -117,11 +146,12 @@ const RulesPage = () => {
             <div className="space-y-4 text-white/90">
               <div className="flex items-center">
                 <span className="text-green-400 mr-3">1.</span>
-                <a href="https://forms.gle/7re3kC6XKK339piU6" className="text-blue-300 underline hover:text-blue-200 transition-colors" target="_blank">Register via Google Form</a>
+                <a href="https://docs.google.com/forms/d/e/1FAIpQLSc8U4-KqWzDRl-n_afvn14LpMhdM5_qr3d-xVF9IxOhCBRh8Q/viewform" className="text-blue-300 underline hover:text-blue-200 transition-colors" target="_blank">Register via Google Form</a>
+                <span className="ml-2 text-white/70">(Register separately for each category)</span>
               </div>
               <div className="flex items-start">
                 <span className="text-green-400 mr-3">2.</span>
-                <span>Have payment UPI ID, DOB proof, emergency contact, and T-shirt size ready</span>
+                <span>Have ready: categories, UPI transaction ID, T-shirt size, name, flat#, contact#, emergency contact#, valid DOB proof</span>
               </div>
               <div className="flex items-center">
                 <span className="text-green-400 mr-3">3.</span>
@@ -140,21 +170,33 @@ const RulesPage = () => {
               <div className="space-y-3 text-white/90">
                 <div className="flex items-start">
                   <span className="text-red-400 mr-3">•</span>
-                  <span>Stay away from playing area</span>
+                  <span>Stay away from playing area - tight facility space</span>
                 </div>
                 <div className="flex items-start">
                   <span className="text-red-400 mr-3">•</span>
-                  <span>Parents must watch children</span>
+                  <span>Parents must watch children - prevent running around playing areas</span>
                 </div>
                 <div className="flex items-start">
                   <span className="text-red-400 mr-3">•</span>
-                  <span>Warm up properly and stay hydrated</span>
+                  <span>Warm up properly to prevent injuries</span>
+                </div>
+                <div className="flex items-start">
+                  <span className="text-red-400 mr-3">•</span>
+                  <span>Stay hydrated to prevent fatigue and cramps</span>
                 </div>
               </div>
               <div className="space-y-3 text-white/90">
                 <div className="flex items-start">
                   <span className="text-red-400 mr-3">•</span>
                   <span>Wear eye protection – <a href="https://injuryprevention.bmj.com/content/29/2/116" target="_blank" className="text-blue-300 underline">article 1</a>, <a href="https://bmcophthalmol.biomedcentral.com/articles/10.1186/s12886-023-02972-8" target="_blank" className="text-blue-300 underline">article 2</a></span>
+                </div>
+                <div className="flex items-start">
+                  <span className="text-red-400 mr-3">•</span>
+                  <span>Provide emergency contact number</span>
+                </div>
+                <div className="flex items-start">
+                  <span className="text-red-400 mr-3">•</span>
+                  <span>Note: Tournament has no additional medical facility</span>
                 </div>
               </div>
             </div>
@@ -176,6 +218,10 @@ const RulesPage = () => {
                   <h3 className="text-lg font-bold text-white mb-2">⚖️ Conflict Resolution</h3>
                   <p className="text-white/80">Umpire decision is final. Organizers step in if required.</p>
                 </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white mb-2">⏰ Punctuality</h3>
+                  <p className="text-white/80">Be available 15 mins ahead of schedule. No rescheduling requests entertained.</p>
+                </div>
               </div>
             </div>
             
@@ -187,7 +233,11 @@ const RulesPage = () => {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-white mb-2">⏰ Match Timings</h3>
-                  <p className="text-white/80">Weekends: 8 AM–12 Noon and 4 PM–10 PM. Be there 15 minutes early.</p>
+                  <p className="text-white/80">Weekends: 8 AM–12 Noon and 4 PM–10 PM.</p>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white mb-2">👕 T-Shirt</h3>
+                  <p className="text-white/80">All players get one T-shirt (size provided during registration).</p>
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-white mb-2">🏅 Prize Distribution</h3>
@@ -207,7 +257,7 @@ const RulesPage = () => {
               <div className="text-center">
                 <div className="text-3xl mb-3">💬</div>
                 <h3 className="text-lg font-bold text-white mb-2">Communication</h3>
-                <a href="https://chat.whatsapp.com/D06juNcRmCE6QZbvcQMEFi" target="_blank" className="text-blue-300 underline hover:text-blue-200 transition-colors">Join WhatsApp Group</a>
+                <a href="https://chat.whatsapp.com/D06juNcRmCE6QZbvcQMEFi" target="_blank" className="text-blue-300 underline hover:text-blue-200 transition-colors">Join Players WhatsApp Group</a>
               </div>
               <div className="text-center">
                 <div className="text-3xl mb-3">🤝</div>

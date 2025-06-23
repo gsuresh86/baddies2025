@@ -44,7 +44,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
               priority
             />
           </div>
-          <span className="text-lg md:text-2xl font-extrabold text-white text-glow-white tracking-tight text-center sm:text-left">PBEL Badminton 2025</span>
+          <span className="text-lg md:text-2xl font-extrabold text-white text-glow-white tracking-tight text-center sm:text-left">PBEL City Badminton Tournament 2025</span>
         </Link>
         
         {/* Navigation - Second Row on Mobile */}
@@ -88,7 +88,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
       {/* Footer with tournament info */}
       <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 z-10 text-center">
         <div className="bg-black/90 rounded-2xl px-6 py-2 border border-gray-800">
-          <p className="text-white font-semibold text-sm">🏸 PBEL Badminton 2025</p>
+          <p className="text-white font-semibold text-sm">🏸 PBEL City Badminton Tournament 2025</p>
           <p className="text-gray-300 text-xs mt-1">#PBELCityBT2025 • Badminton Baddies</p>
         </div>
       </div>
