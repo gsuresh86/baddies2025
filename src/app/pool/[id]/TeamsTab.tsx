@@ -1,4 +1,3 @@
-import React from 'react';
 import { Team } from '@/types';
 
 export default function TeamsTab({ teams }: { teams: Team[] }) {

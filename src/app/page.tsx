@@ -3,78 +3,124 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/store';
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Player } from '@/types';
 
 export default function LandingPage() {
-  const [stats, setStats] = useState({ pools: 0, teams: 0, players: 0, categories: 0 });
+  const [, setStats] = useState({ pools: 0, teams: 0, players: 0, categories: 0 });
   const [loading, setLoading] = useState(true);
+  const [playerStats, setPlayerStats] = useState({
+    totalRegistrations: 0,
+    uniqueParticipants: 0,
+    playersByCategory: {} as Record<string, number>,
+  });
 
   useEffect(() => {
     async function fetchStats() {
       setLoading(true);
-      const [{ count: pools }, { count: teams }, { count: players }, { count: categories }] = await Promise.all([
+      const [poolsRes, teamsRes, playersRes, categoriesRes] = await Promise.all([
         supabase.from('pools').select('*', { count: 'exact', head: true }),
         supabase.from('teams').select('*', { count: 'exact', head: true }),
-        supabase.from('players').select('*', { count: 'exact', head: true }),
+        supabase.from('t_players').select('id,name,email,category'),
         supabase.from('categories').select('*', { count: 'exact', head: true })
       ]);
+      const pools = poolsRes.count;
+      const teams = teamsRes.count;
+      const players = Array.isArray(playersRes.data) ? playersRes.data.length : 0;
+      const categories = categoriesRes.count;
       setStats({
         pools: typeof pools === 'number' ? pools : 0,
         teams: typeof teams === 'number' ? teams : 0,
-        players: typeof players === 'number' ? players : 0,
+        players,
         categories: typeof categories === 'number' ? categories : 0,
+      });
+
+      // Calculate player stats
+      const allPlayers = Array.isArray(playersRes.data) ? playersRes.data : [];
+      // Unique by name or email
+      const uniqueSet = new Set();
+      allPlayers.forEach((p: Player) => {
+        if (p.email) {
+          uniqueSet.add(p.email.toLowerCase());
+        } else if (p.name) {
+          uniqueSet.add(p.name.trim().toLowerCase());
+        }
+      });
+      // Players by category
+      const byCategory: Record<string, number> = {};
+      allPlayers.forEach((p: Player) => {
+        if (p.category) {
+          byCategory[p.category] = (byCategory[p.category] || 0) + 1;
+        } else {
+          byCategory['Unspecified'] = (byCategory['Unspecified'] || 0) + 1;
+        }
+      });
+      setPlayerStats({
+        totalRegistrations: allPlayers.length,
+        uniqueParticipants: uniqueSet.size,
+        playersByCategory: byCategory,
       });
       setLoading(false);
     }
     fetchStats();
   }, []);
 
+  // Short category label mapping
+  const categoryLabels: Record<string, string> = {
+    "Men's Singles & Doubles (Team Event)": "Men's Team",
+    "Women's Singles": "Women Singles",
+    "Boys under 13 (Born on/after July 1st 2012)": "Boys U13",
+    "Girls under 13 (Born on/after July 1st 2012)": "Girls U13",
+    "Family Mixed Doubles (Wife-Husband, Father-Daughter, Mother-Son, Brother-Sister)": "Family Mixed",
+    "Girls under 18 (Born on/after July 1st 2007)": "Girls U18",
+    "Mixed Doubles": "Mixed Doubles",
+  };
+  const orderedCategories = [
+    "Men's Singles & Doubles (Team Event)",
+    "Women's Singles",
+    "Boys under 13 (Born on/after July 1st 2012)",
+    "Girls under 13 (Born on/after July 1st 2012)",
+    "Family Mixed Doubles (Wife-Husband, Father-Daughter, Mother-Son, Brother-Sister)",
+    "Girls under 18 (Born on/after July 1st 2007)",
+    "Mixed Doubles",
+  ];
+
   return (
     <div className="w-full max-w-6xl mt-8 px-2 sm:px-4 mx-auto">
-      {/* Enhanced Stats Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-8">
-        <div className="group bg-gradient-to-br from-blue-500/20 to-blue-600/30 rounded-3xl p-8 flex flex-col items-center shadow-2xl border border-blue-200/50 backdrop-blur-md hover-lift relative overflow-hidden animate-fade-in-scale" style={{animationDelay: '0.1s'}}>
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
-          <div className="relative z-10">
-            <div className="text-6xl font-black text-blue-700 drop-shadow-lg mb-3 animate-pulse-glow">
-              {loading ? '...' : stats.pools}
+      {/* Stats Section: Registrants and Unique */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-4 md:gap-6 mb-8">
+        {/* Total Registrations */}
+        <div className="bg-gradient-to-r from-white/10 to-white/5 rounded-3xl p-8 backdrop-blur-md border border-white/20 shadow-2xl hover-lift animate-fade-in-scale">
+          <div className="relative z-10 flex flex-col items-center w-full">
+            <div className="text-7xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-200 to-indigo-100 text-center mb-2 text-glow-white">
+              {loading ? '...' : playerStats.totalRegistrations}
             </div>
-            <div className="text-xl text-white font-bold text-center">🏊‍♂️ Pools</div>
-            <div className="text-sm text-white/80 text-center mt-1">Active Groups</div>
+            <div className="text-lg sm:text-xl font-bold text-white text-center tracking-tight">Total Registrations</div>
           </div>
         </div>
-        
-        <div className="group bg-gradient-to-br from-green-500/20 to-green-600/30 rounded-3xl p-8 flex flex-col items-center shadow-2xl border border-green-200/50 backdrop-blur-md hover-lift relative overflow-hidden animate-fade-in-scale" style={{animationDelay: '0.2s'}}>
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
-          <div className="relative z-10">
-            <div className="text-6xl font-black text-green-700 drop-shadow-lg mb-3 animate-pulse-glow">
-              {loading ? '...' : stats.teams}
+        {/* Unique Participants */}
+        <div className="bg-gradient-to-r from-white/10 to-white/5 rounded-3xl p-8 backdrop-blur-md border border-white/20 shadow-2xl hover-lift animate-fade-in-scale">
+          <div className="relative z-10 flex flex-col items-center w-full">
+            <div className="text-7xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-200 to-green-100 text-center mb-2 text-glow-white">
+              {loading ? '...' : playerStats.uniqueParticipants}
             </div>
-            <div className="text-xl text-white font-bold text-center">👥 Teams</div>
-            <div className="text-sm text-white/80 text-center mt-1">Registered</div>
+            <div className="text-lg sm:text-xl font-bold text-white text-center tracking-tight">Total Unique Players</div>
           </div>
         </div>
-        
-        <div className="group bg-gradient-to-br from-purple-500/20 to-purple-600/30 rounded-3xl p-8 flex flex-col items-center shadow-2xl border border-purple-200/50 backdrop-blur-md hover-lift relative overflow-hidden animate-fade-in-scale" style={{animationDelay: '0.3s'}}>
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
-          <div className="relative z-10">
-            <div className="text-6xl font-black text-purple-700 drop-shadow-lg mb-3 animate-pulse-glow">
-              {loading ? '...' : stats.players}
+      </div>
+      {/* Individual Category Stats Cards - 2 rows, 4 columns on desktop */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-8">
+        {orderedCategories.map((cat, index) => (
+          <div key={cat} className="bg-gradient-to-r from-white/10 to-white/5 rounded-3xl p-6 backdrop-blur-md border border-white/20 shadow-2xl hover-lift transition-all duration-300 animate-fade-in-scale" style={{animationDelay: `${index * 0.1}s`}}>
+            <div className="relative z-10 w-full flex flex-col items-center">
+              <div className="text-xs text-white/80 font-semibold text-center mb-1 tracking-tight leading-tight">
+                {categoryLabels[cat]}
+              </div>
+              <div className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-white/80 text-center mb-0 text-glow-white">
+                {loading ? '...' : (playerStats.playersByCategory[cat] || 0)}
+              </div>
             </div>
-            <div className="text-xl text-white font-bold text-center">🏸 Players</div>
-            <div className="text-sm text-white/80 text-center mt-1">Competing</div>
           </div>
-        </div>
-        
-        <div className="group bg-gradient-to-br from-yellow-500/20 to-orange-500/30 rounded-3xl p-8 flex flex-col items-center shadow-2xl border border-yellow-200/50 backdrop-blur-md hover-lift relative overflow-hidden animate-fade-in-scale" style={{animationDelay: '0.4s'}}>
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
-          <div className="relative z-10">
-            <div className="text-6xl font-black text-yellow-700 drop-shadow-lg mb-3 animate-pulse-glow">
-              {loading ? '...' : stats.categories}
-            </div>
-            <div className="text-xl text-white font-bold text-center">🏆 Categories</div>
-            <div className="text-sm text-white/80 text-center mt-1">Divisions</div>
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* Enhanced Tournament Info Section */}

@@ -1,12 +1,6 @@
-import React from 'react';
-import Head from 'next/head';
-
 const RulesPage = () => {
   return (
     <>
-      <Head>
-        <title>PBEL City BT 2025 – Tournament Rules</title>
-      </Head>
       <main className="max-w-6xl mx-auto py-12 px-4">
         {/* Enhanced Header */}
         <div className="text-center mb-12 animate-slide-in-up">

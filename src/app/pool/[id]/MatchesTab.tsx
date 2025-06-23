@@ -1,4 +1,3 @@
-import React from 'react';
 import { Match, Team } from '@/types';
 import Link from 'next/link';
 

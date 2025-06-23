@@ -19,7 +19,7 @@ function calculateStandings(teams: Team[], matches: Match[]): TournamentStanding
       points: 0,
     };
   });
-  debugger
+
   matches.forEach(match => {
     if (match.status !== 'completed') return;
     const team1 = standings[match.team1_id ?? match.team1_id ?? ''];
@@ -92,8 +92,8 @@ export default function StandingsPage() {
       const teamsByPool: { [poolId: string]: Team[] } = {};
       const matchesByPool: { [poolId: string]: Match[] } = {};
       (poolData as Pool[]).forEach(pool => {
-        teamsByPool[pool.id] = (teamData || []).filter((t: any) => t.pool_id === pool.id);
-        matchesByPool[pool.id] = (matchData || []).filter((m: any) => m.pool_id === pool.id);
+        teamsByPool[pool.id] = (teamData || []).filter((t: Team) => t.pool_id === pool.id);
+        matchesByPool[pool.id] = (matchData || []).filter((m: Match) => m.pool_id === pool.id);
       });
       setTeamsByPool(teamsByPool);
       setMatchesByPool(matchesByPool);

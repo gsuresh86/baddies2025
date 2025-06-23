@@ -30,10 +30,11 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
         <div className="absolute bottom-32 left-32 w-20 h-20 bg-green-400/20 rounded-full animate-float pointer-events-none" style={{zIndex:3, animationDelay: '2s'}}></div>
       </div>
       
-      {/* Enhanced Logo and Title */}
-      <div className="z-10 relative flex flex-col items-center mt-8 mb-6 animate-slide-in-up">
-        <div className="relative mb-4">
-          <div className="w-24 h-24 md:w-32 md:h-32 relative animate-float">
+      {/* Topbar with logo and navigation */}
+      <div className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 md:px-10 py-4 z-20 relative bg-black/80 border-b border-gray-800 shadow-lg animate-fade-in-scale">
+        {/* Logo and Title - First Row on Mobile */}
+        <Link href="/" className="flex items-center justify-center sm:justify-start gap-3 mb-3 sm:mb-0 hover:opacity-80 transition-opacity">
+          <div className="w-12 h-12 md:w-16 md:h-16 relative animate-float">
             <Image
               src="/baddies.png"
               alt="Badminton Baddies Logo"
@@ -43,63 +44,36 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
               priority
             />
           </div>
-        </div>
-        <h1 className="text-3xl md:text-3xl font-extrabold text-white text-glow-white tracking-tight text-center mb-2">
-          PBEL Badminton Tournament 2025
-        </h1>
-
-        {/* Tournament Branding */}
-        <div className="text-center mb-6">
-          <div className="bg-gradient-to-r from-blue-600/30 to-purple-600/30 rounded-full px-6 py-2 mb-3 inline-block">
-            <span className="text-white font-bold text-lg">#PBELCityBT2025</span>
-          </div>
-          
-          {/* Tournament Dates */}
-          <div className="grid md:grid-cols-2 gap-4 max-w-2xl mx-auto">
-            <div className="bg-gradient-to-r from-green-500/20 to-green-600/20 rounded-xl p-4 border border-green-200/30">
-              <div className="text-white/80 text-sm mb-1">Tournament Dates</div>
-              <div className="text-white font-bold">12th Jul - 10th Aug 2025</div>
-            </div>
-            <div className="bg-gradient-to-r from-red-500/20 to-red-600/20 rounded-xl p-4 border border-red-200/30">
-              <div className="text-white/80 text-sm mb-1">Registration Deadline</div>
-              <div className="text-white font-bold">30 June 2025</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* Enhanced navigation buttons for public pages */}
-      <div className="flex flex-wrap justify-center gap-6 mt-8 z-10 relative animate-slide-in-up" style={{animationDelay: '0.3s'}}>
-        <Link
-          href="/standings"
-          className="px-12 py-5 bg-black text-white rounded-2xl text-2xl font-bold shadow-2xl hover:bg-gray-900 transition-all duration-300 border-2 border-gray-800 hover-lift relative overflow-hidden"
-        >
-          <span className="relative">🏆 View Standings</span>
+          <span className="text-lg md:text-2xl font-extrabold text-white text-glow-white tracking-tight text-center sm:text-left">PBEL Badminton 2025</span>
         </Link>
-        <Link
-          href="/tournaments"
-          className="px-12 py-5 bg-black text-white rounded-2xl text-2xl font-bold shadow-2xl hover:bg-gray-900 transition-all duration-300 border-2 border-gray-800 hover-lift relative overflow-hidden"
-        >
-          <span className="relative">📅 View Tournaments</span>
-        </Link>
-        <Link
-          href="/teams"
-          className="px-12 py-5 bg-black text-white rounded-2xl text-2xl font-bold shadow-2xl hover:bg-gray-900 transition-all duration-300 border-2 border-gray-800 hover-lift relative overflow-hidden"
-        >
-          <span className="relative">👥 View Teams</span>
-        </Link>
-        <Link
-          href="/rules"
-          className="px-12 py-5 bg-black text-white rounded-2xl text-2xl font-bold shadow-2xl hover:bg-gray-900 transition-all duration-300 border-2 border-gray-800 hover-lift relative overflow-hidden"
-        >
-          <span className="relative">📋 View Rules</span>
-        </Link>
-        <Link
-          href="/admin-login"
-          className="px-12 py-5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl text-2xl font-bold shadow-2xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 border-2 border-blue-500 hover-lift relative overflow-hidden"
-        >
-          <span className="relative">🔐 Admin Login</span>
-        </Link>
+        
+        {/* Navigation - Second Row on Mobile */}
+        <nav className="flex flex-wrap justify-center sm:justify-end gap-2 md:gap-4">
+          <Link
+            href="/standings"
+            className="px-3 sm:px-5 py-2 bg-black text-white rounded-xl text-sm sm:text-lg font-bold shadow hover:bg-gray-900 transition border-2 border-gray-700 hover-lift relative overflow-hidden"
+          >
+            <span className="relative">🏆 Standings</span>
+          </Link>
+          <Link
+            href="/tournaments"
+            className="px-3 sm:px-5 py-2 bg-black text-white rounded-xl text-sm sm:text-lg font-bold shadow hover:bg-gray-900 transition border-2 border-gray-700 hover-lift relative overflow-hidden"
+          >
+            <span className="relative">📅 Fixtures</span>
+          </Link>
+          <Link
+            href="/teams"
+            className="px-3 sm:px-5 py-2 bg-black text-white rounded-xl text-sm sm:text-lg font-bold shadow hover:bg-gray-900 transition border-2 border-gray-700 hover-lift relative overflow-hidden"
+          >
+            <span className="relative">👥 Teams</span>
+          </Link>
+          <Link
+            href="/rules"
+            className="px-3 sm:px-5 py-2 bg-black text-white rounded-xl text-sm sm:text-lg font-bold shadow hover:bg-gray-900 transition border-2 border-gray-700 hover-lift relative overflow-hidden"
+          >
+            <span className="relative">📋 Rules</span>
+          </Link>
+        </nav>
       </div>
       
       <main className="flex-1 relative z-10 w-full flex flex-col items-center justify-center animate-fade-in-scale" style={{animationDelay: '0.6s'}}>

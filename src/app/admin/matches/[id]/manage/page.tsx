@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase, tournamentStore } from "@/lib/store";
 import { Match, Game as GameBase, Team } from "@/types";
@@ -14,6 +14,21 @@ type Game = GameBase & {
   team1_score?: number | null;
   team2_score?: number | null;
 };
+
+interface GameSelection {
+  player1Id: string;
+  player2Id: string;
+  player3Id: string;
+  player4Id: string;
+  [key: string]: string;
+}
+
+interface GameResult {
+  team1_score: string;
+  team2_score: string;
+  winner: string;
+  [key: string]: string;
+}
 
 const GAME_STRUCTURE = [
   { type: "singles" },
@@ -77,8 +92,8 @@ export default function AdminManageMatchPage() {
   const [saving, setSaving] = useState(false);
 
   // Local state for player selection
-  const [gameSelections, setGameSelections] = useState<any[]>([]);
-  const [resultInputs, setResultInputs] = useState<any[]>([]);
+  const [gameSelections, setGameSelections] = useState<GameSelection[]>([]);
+  const [resultInputs, setResultInputs] = useState<GameResult[]>([]);
 
   const [matchWinner, setMatchWinner] = useState<string | null>(null);
   const [matchScore, setMatchScore] = useState<{ team1: number; team2: number }>({ team1: 0, team2: 0 });
@@ -106,7 +121,7 @@ export default function AdminManageMatchPage() {
         setGames(mergedGames);
         // Set up local selection state
         setGameSelections(
-          mergedGames.map((game: any) => ({
+          mergedGames.map((game: Game) => ({
             player1Id: game.player1_id || "",
             player2Id: game.player2_id || "",
             player3Id: game.player3_id || "",
@@ -115,14 +130,15 @@ export default function AdminManageMatchPage() {
         );
         // Set up local result state
         setResultInputs(
-          mergedGames.map((game: any) => ({
-            team1_score: game.team1_score ?? "",
-            team2_score: game.team2_score ?? "",
+          mergedGames.map((game: Game) => ({
+            team1_score: game.team1_score?.toString() ?? "",
+            team2_score: game.team2_score?.toString() ?? "",
             winner: game.winner ?? "",
           }))
         );
-      } catch (err: any) {
-        setError(err.message || "Error loading match");
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        setError(errorMessage);
       }
       setLoading(false);
     }
@@ -205,7 +221,18 @@ export default function AdminManageMatchPage() {
     const selection = gameSelections[gameIdx];
     const result = resultInputs[gameIdx];
     // Prepare upsert data
-    const upsertData: any = {
+    const upsertData: {
+      match_id: string;
+      type: 'singles' | 'doubles';
+      player1_id: string | null;
+      player2_id: string | null;
+      player3_id: string | null;
+      player4_id: string | null;
+      team1_score: number | null;
+      team2_score: number | null;
+      winner: string | null;
+      id?: string;
+    } = {
       match_id: match.id,
       type: game.type,
       player1_id: selection.player1Id || null,
@@ -227,7 +254,7 @@ export default function AdminManageMatchPage() {
       const mergedGames = mergeGamesWithStructure(gamesData || []);
       setGames(mergedGames);
       setGameSelections(
-        mergedGames.map((game: any) => ({
+        mergedGames.map((game: Game) => ({
           player1Id: game.player1_id || "",
           player2Id: game.player2_id || "",
           player3Id: game.player3_id || "",
@@ -235,15 +262,16 @@ export default function AdminManageMatchPage() {
         }))
       );
       setResultInputs(
-        mergedGames.map((game: any) => ({
-          team1_score: game.team1_score ?? "",
-          team2_score: game.team2_score ?? "",
+        mergedGames.map((game: Game) => ({
+          team1_score: game.team1_score?.toString() ?? "",
+          team2_score: game.team2_score?.toString() ?? "",
           winner: game.winner ?? "",
         }))
       );
       alert("Game saved!");
-    } catch (err: any) {
-      alert("Error saving game: " + (err.message || err));
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      alert("Error saving game: " + errorMessage);
     }
     setSaving(false);
   };
@@ -260,7 +288,7 @@ export default function AdminManageMatchPage() {
       const mergedGames = mergeGamesWithStructure(gamesData || []);
       setGames(mergedGames);
       setGameSelections(
-        mergedGames.map((game: any) => ({
+        mergedGames.map((game: Game) => ({
           player1Id: game.player1_id || "",
           player2Id: game.player2_id || "",
           player3Id: game.player3_id || "",
@@ -268,15 +296,16 @@ export default function AdminManageMatchPage() {
         }))
       );
       setResultInputs(
-        mergedGames.map((game: any) => ({
-          team1_score: game.team1_score ?? "",
-          team2_score: game.team2_score ?? "",
+        mergedGames.map((game: Game) => ({
+          team1_score: game.team1_score?.toString() ?? "",
+          team2_score: game.team2_score?.toString() ?? "",
           winner: game.winner ?? "",
         }))
       );
       alert("Game marked as completed!");
-    } catch (err: any) {
-      alert("Error marking game as completed: " + (err.message || err));
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      alert("Error marking game as completed: " + errorMessage);
     }
     setSaving(false);
   };
