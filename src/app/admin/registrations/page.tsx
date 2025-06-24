@@ -18,6 +18,7 @@ export default function AdminRegistrationsPage() {
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     fetchRegistrations();
@@ -53,8 +54,12 @@ export default function AdminRegistrationsPage() {
     setUpdatingId(null);
   };
 
+  const filteredRegistrations = registrations.filter(reg =>
+    reg.name && reg.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="mx-auto">
       <div className="mb-6 sm:mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">
           Registrations
@@ -64,20 +69,32 @@ export default function AdminRegistrationsPage() {
         </p>
       </div>
       <div className="bg-white rounded-xl shadow-lg border border-gray-200">
-        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-800">
-            All Registrations
-          </h2>
-          <p className="text-sm text-gray-600 mt-1">
-            Showing {registrations.length} registrations
-          </p>
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-800">
+              All Registrations
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">
+              Showing {registrations.length} registrations
+            </p>
+          </div>
+          <div className="flex items-center space-x-2">
+            <input
+              type="text"
+              className="px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-800"
+              placeholder="Search by name, email, phone..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              style={{ minWidth: 180 }}
+            />
+          </div>
         </div>
         <div className="p-4 sm:p-6">
           {loading ? (
             <div className="text-center py-8">
               <p className="text-gray-500 text-lg">Loading registrations...</p>
             </div>
-          ) : registrations.length === 0 ? (
+          ) : filteredRegistrations.length === 0 ? (
             <div className="text-center py-8">
               <div className="text-4xl sm:text-6xl mb-4">📋</div>
               <h3 className="text-base sm:text-lg font-medium text-gray-800 mb-2">
@@ -102,13 +119,21 @@ export default function AdminRegistrationsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {registrations.map((reg) => (
+                  {filteredRegistrations.map((reg) => (
                     <tr key={reg.id} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="py-2 px-2 text-sm text-gray-800 font-medium">{reg.name}</td>
                       <td className="py-2 px-2 text-sm text-gray-600 hidden sm:table-cell">{reg.email || "-"}</td>
                       <td className="py-2 px-2 text-sm text-gray-600 hidden sm:table-cell">{reg.phone || "-"}</td>
                       <td className="py-2 px-2 text-sm text-gray-600 hidden sm:table-cell">{categoryLabels[reg.category || ""] || reg.category || "-"}</td>
-                      <td className="py-2 px-2 text-sm text-gray-600">{reg.paid_to || "-"}</td>
+                      <td className="py-2 px-2 text-sm text-gray-600">{
+                        reg.paid_to
+                          ? reg.paid_to.includes("Surya")
+                            ? "Surya"
+                            : reg.paid_to.includes("Vasu")
+                              ? "Vasu"
+                              : reg.paid_to
+                          : "-"
+                      }</td>
                       <td className="py-2 px-2 text-sm text-gray-600">{reg.paid_amt || "-"}</td>
                       <td className="py-2 px-2">
                         <button

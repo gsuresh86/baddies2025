@@ -139,7 +139,7 @@ export default function AdminPlayersPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="mx-auto">
       <div className="mb-6 sm:mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Player Management</h1>
         <p className="text-sm sm:text-base text-gray-600">Manage all tournament players by category</p>
