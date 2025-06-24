@@ -45,10 +45,11 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
 
   const navigationItems = [
     { href: '/admin', icon: '📊', label: 'Dashboard' },
-    { href: '/admin/pools', icon: '🏊‍♂️', label: 'Tournament Management' },
-    { href: '/admin/teams', icon: '👥', label: 'Team Management' },
-    { href: '/admin/matches', icon: '🏸', label: 'Match Management' },
-    { href: '/admin/players', icon: '🏸', label: 'Player Management' },
+    { href: '/admin/registrations', icon: '📝', label: 'Registrations' },
+    { href: '/admin/players', icon: '🏸', label: 'Players' },
+    { href: '/admin/pools', icon: '🏊‍♂️', label: 'Tournament' },
+    { href: '/admin/teams', icon: '👥', label: 'Teams' },
+    { href: '/admin/matches', icon: '🏸', label: 'Matches' },
   ];
 
   return (
@@ -112,6 +113,7 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
                     ${sidebarCollapsed ? 'justify-center px-2' : 'px-4'}
                   `}
                   title={sidebarCollapsed ? item.label : undefined}
+                  onClick={() => { if (mobileMenuOpen) setMobileMenuOpen(false); }}
                 >
                   <span className={`${sidebarCollapsed ? 'text-lg' : 'mr-3'}`}>{item.icon}</span>
                   {!sidebarCollapsed && <span>{item.label}</span>}
@@ -193,7 +195,7 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
           <nav className="w-full bg-gray-50 border-b border-gray-200 px-4 sm:px-6 py-3">
             <div className="flex flex-wrap gap-3">
               <Link
-                href="/tournaments"
+                href="/"
                 className="px-4 py-2 bg-white text-gray-700 rounded-lg text-sm font-medium shadow-sm hover:bg-gray-50 transition-all duration-200 border border-gray-200"
               >
                 👁️ Public View
