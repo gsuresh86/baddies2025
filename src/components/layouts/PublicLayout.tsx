@@ -31,20 +31,19 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
       </div>
       
       {/* Topbar with logo and navigation */}
-      <div className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 md:px-10 py-4 z-20 relative bg-black/80 border-b border-gray-800 shadow-lg animate-fade-in-scale">
+      <div className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 md:px-10 py-2 z-20 relative bg-black/80 border-b border-gray-800 shadow-lg animate-fade-in-scale">
         {/* Logo and Title - First Row on Mobile */}
-        <Link href="/" className="flex items-center justify-center sm:justify-start gap-3 mb-3 sm:mb-0 hover:opacity-80 transition-opacity">
-          <div className="w-12 h-12 md:w-16 md:h-16 relative animate-float">
+        <Link href="/" className="flex items-center justify-center sm:justify-start gap-3 mb-2 sm:mb-0 hover:opacity-80 transition-opacity">
+          <div className="w-14 h-14 md:w-20 md:h-20 relative animate-float">
             <Image
-              src="/baddies.png"
-              alt="Badminton Baddies Logo"
+              src="/pcbt.png"
+              alt="PBEL City Badminton Tournament Logo"
               fill
               style={{ objectFit: 'contain' }}
               draggable={false}
               priority
             />
           </div>
-          <span className="text-lg md:text-2xl font-extrabold text-white text-glow-white tracking-tight text-center sm:text-left">PBEL City Badminton Tournament 2025</span>
         </Link>
         
         {/* Navigation - Second Row on Mobile */}

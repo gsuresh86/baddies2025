@@ -140,7 +140,7 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
 
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col min-h-screen">
-          <header className="w-full flex flex-col md:flex-row items-center justify-between px-4 sm:px-6 pt-6 pb-4 z-10 relative bg-white shadow-sm">
+          <header className="w-full flex flex-col md:flex-row items-center justify-between px-4 sm:px-6 pt-3 pb-2 z-10 relative bg-white shadow-sm">
             <div className="flex items-center gap-4 w-full md:w-auto">
               {/* Mobile Menu Button */}
               <button
@@ -163,21 +163,15 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
                 </svg>
               </button>
 
-              <div className="w-14 h-14 md:w-16 md:h-16 relative">
+              <div className="w-14 h-14 md:w-20 md:h-20 relative">
                 <Image
-                  src="/baddies.png"
-                  alt="Badminton Baddies Logo"
+                  src="/pcbt.png"
+                  alt="PBEL City Badminton Tournament Logo"
                   fill
                   style={{ objectFit: 'contain' }}
                   draggable={false}
                   priority
                 />
-              </div>
-              <div>
-                <h1 className="text-xl md:text-2xl font-bold text-gray-800">
-                  PBEL Badminton Tournament 2025
-                </h1>
-                <p className="text-sm text-gray-600">Administration Panel</p>
               </div>
             </div>
             
