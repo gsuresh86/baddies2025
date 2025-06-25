@@ -55,10 +55,22 @@ export default function LandingPage() {
       {/* Tournament Info Section */}
       <div className="bg-gradient-to-r from-blue-900/40 to-green-900/40 rounded-3xl p-8 mb-10 border border-white/20 shadow-2xl animate-fade-in-scale">
         <div className="text-center mb-6">
-          <div className="text-5xl mb-4">🏸</div>
-          <h1 className="text-4xl md:text-5xl font-bold text-white text-glow-white mb-4">
-            PBEL City Badminton Tournament - 2025
+          <div className="flex flex-col items-center justify-center mb-4">
+            <Image
+              src="/planet-green-logo.png"
+              alt="Planet Green Title Sponsor Logo"
+              width={260}
+              height={90}
+              className="h-24 w-auto mb-2"
+              style={{ maxWidth: '260px' }}
+              priority
+            />
+            <span className="text-green-200 text-xs uppercase tracking-widest mb-2">Presents</span>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold text-white text-glow-white mb-1">
+            PBEL City Badminton Tournament
           </h1>
+          <div className="text-4xl md:text-5xl font-bold text-white text-glow-white mb-4">2025</div>
           <p className="text-white/80 text-lg max-w-2xl mx-auto mb-4">
             Join us for an exciting, fun-filled badminton tournament open to all skill levels! Compete, connect, and celebrate the spirit of sportsmanship in our vibrant community event.
           </p>
