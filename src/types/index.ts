@@ -8,6 +8,7 @@ export interface Player {
   flat_no?: string;
   created_at?: string;
   updated_at?: string;
+  partner_name?: string;
 }
 
 export interface Team {

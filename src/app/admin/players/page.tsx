@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { tournamentStore } from '@/lib/store';
 import { Player, Team } from '@/types';
+import { playerCategories, categoryLabels, PlayerCategory } from '@/lib/utils';
 
 export default function AdminPlayersPage() {
   const [players, setPlayers] = useState<Player[]>([]);
@@ -25,31 +26,6 @@ export default function AdminPlayersPage() {
   const [showAssignTeam, setShowAssignTeam] = useState(false);
   const [assignPlayer, setAssignPlayer] = useState<Player | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
-
-  // Player categories
-  const playerCategories = [
-    "Men's Singles & Doubles (Team Event)",
-    "Women's Singles",
-    "Women's Doubles",
-    "Mixed Doubles",
-    "Boys under 18 (Born on/after July 1st 2007)",
-    "Boys under 13 (Born on/after July 1st 2012)",
-    "Girls under 18 (Born on/after July 1st 2007)",
-    "Girls under 13 (Born on/after July 1st 2012)",
-    "Family Mixed Doubles (Wife-Husband, Father-Daughter, Mother-Son, Brother-Sister)",
-  ];
-
-  const categoryLabels: Record<string, { code: string; label: string }> = {
-    "Men's Singles & Doubles (Team Event)": { code: "MT", label: "Men's Team" },
-    "Women's Singles": { code: "WS", label: "Women Singles" },
-    "Women's Doubles": { code: "WD", label: "Women Doubles" },
-    "Boys under 13 (Born on/after July 1st 2012)": { code: "BU13", label: "Boys U13" },
-    "Girls under 13 (Born on/after July 1st 2012)": { code: "GU13", label: "Girls U13" },
-    "Family Mixed Doubles (Wife-Husband, Father-Daughter, Mother-Son, Brother-Sister)": { code: "FM", label: "Family Mixed" },
-    "Girls under 18 (Born on/after July 1st 2007)": { code: "GU18", label: "Girls U18" },
-    "Boys under 18 (Born on/after July 1st 2007)": { code: "BU18", label: "Boys U18" },
-    "Mixed Doubles": { code: "XD", label: "Mixed Doubles" },
-  };
 
   useEffect(() => {
     fetchData();
@@ -142,6 +118,10 @@ export default function AdminPlayersPage() {
     return category === "Men's Singles & Doubles (Team Event)";
   };
 
+  function isPlayerCategory(category: string): category is PlayerCategory {
+    return Object.values(PlayerCategory).includes(category as PlayerCategory);
+  }
+
   return (
     <div className="mx-auto">
       <div className="mb-6 sm:mb-8">
@@ -231,11 +211,11 @@ export default function AdminPlayersPage() {
               <table className="w-full min-w-full">
                 <thead className="bg-gray-50">
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-gray-800 text-xs sm:text-sm">Name</th>
-                    <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-gray-800 text-xs sm:text-sm hidden sm:table-cell">Email</th>
+                    <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-gray-800 text-xs sm:text-sm">Name & Partner Name</th>
+                    <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-gray-800 text-xs sm:text-sm hidden sm:table-cell">Skill Level</th>
                     <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-gray-800 text-xs sm:text-sm hidden md:table-cell">Phone</th>
                     <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-gray-800 text-xs sm:text-sm">Category</th>
-                    {activeTab === "Men's Singles & Doubles (Team Event)" && (
+                    {activeTab === PlayerCategory.MensTeam && (
                       <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-gray-800 text-xs sm:text-sm">Actions</th>
                     )}
                   </tr>
@@ -243,30 +223,35 @@ export default function AdminPlayersPage() {
                 <tbody>
                   {filteredPlayers.map((player) => {
                     const playerTeams = getPlayerTeams(player.id);
+                    const isDoubles = player.category === PlayerCategory.WomensDoubles || player.category === PlayerCategory.MixedDoubles || player.category === PlayerCategory.FamilyMixedDoubles;
                     return (
                       <tr key={player.id} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-2 sm:py-3 px-2 sm:px-4">
                           <div className="font-medium text-gray-800 text-sm">
-                            {player.name}
+                            {player.name}{isDoubles && player.partner_name ? ` / ${player.partner_name}` : ''}
                             <div className="text-xs text-gray-500 sm:hidden">
                               {player.phone && `${player.phone}`}
                             </div>
                           </div>
                         </td>
                         <td className="py-2 sm:py-3 px-2 sm:px-4 hidden sm:table-cell">
-                          <div className="text-gray-600 text-sm">{player.email || '-'}</div>
+                          <div className="text-gray-600 text-sm">{player.level || '-'}</div>
                         </td>
                         <td className="py-2 sm:py-3 px-2 sm:px-4 hidden md:table-cell">
                           <div className="text-gray-600 text-sm">{player.phone || '-'}</div>
                         </td>
                         <td className="py-2 sm:py-3 px-2 sm:px-4">
                           <div className="text-gray-600 text-xs sm:text-sm">
-                            <span title={categoryLabels[player.category || '']?.label || player.category || 'Unspecified'}>
-                              {categoryLabels[player.category || '']?.label || player.category || 'Unspecified'}
-                            </span>
+                            {isPlayerCategory(player.category || '') ? (
+                              <span title={categoryLabels[player.category as PlayerCategory].label}>
+                                {categoryLabels[player.category as PlayerCategory].label}
+                              </span>
+                            ) : (
+                              <span title={player.category || 'Unspecified'}>{player.category || 'Unspecified'}</span>
+                            )}
                           </div>
                         </td>
-                        {activeTab === "Men's Singles & Doubles (Team Event)" && (
+                        {activeTab === PlayerCategory.MensTeam && (
                           <td className="py-2 sm:py-3 px-2 sm:px-4">
                             <div className="flex gap-1 sm:gap-2">
                               {playerTeams.length === 0 ? (
