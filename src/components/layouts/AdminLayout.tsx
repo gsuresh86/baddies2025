@@ -57,7 +57,7 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          className="fixed inset-0 bg-gray-300/60 z-40 lg:hidden"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
@@ -182,13 +182,7 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
             </div>
             
             {/* Quick Stats */}
-            <div className="flex flex-col items-end mt-4 md:mt-0 w-full md:w-auto">
-              <div className="flex flex-col md:items-end">
-                <div className="bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-xl px-4 py-2 border border-blue-200/30">
-                  <span className="text-gray-700 text-sm">Admin: <span className="font-bold">{user.email}</span></span>
-                </div>
-              </div>
-            </div>
+            {/* Removed admin email container from topbar */}
           </header>
 
           {/* Quick Navigation */}

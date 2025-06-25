@@ -46,22 +46,26 @@ export default function StatsPage() {
     fetchStats();
   }, []);
 
-  const categoryLabels: Record<string, string> = {
-    "Men's Singles & Doubles (Team Event)": "Men's Team",
-    "Women's Singles": "Women Singles",
-    "Boys under 13 (Born on/after July 1st 2012)": "Boys U13",
-    "Girls under 13 (Born on/after July 1st 2012)": "Girls U13",
-    "Family Mixed Doubles (Wife-Husband, Father-Daughter, Mother-Son, Brother-Sister)": "Family Mixed",
-    "Girls under 18 (Born on/after July 1st 2007)": "Girls U18",
-    "Mixed Doubles": "Mixed Doubles",
+  const categoryLabels: Record<string, { code: string; label: string }> = {
+    "Men's Singles & Doubles (Team Event)": { code: "MT", label: "Men's Team" },
+    "Women's Singles": { code: "WS", label: "Women Singles" },
+    "Women's Doubles": { code: "WD", label: "Women Doubles" },
+    "Boys under 13 (Born on/after July 1st 2012)": { code: "BU13", label: "Boys U13" },
+    "Girls under 13 (Born on/after July 1st 2012)": { code: "GU13", label: "Girls U13" },
+    "Family Mixed Doubles (Wife-Husband, Father-Daughter, Mother-Son, Brother-Sister)": { code: "FM", label: "Family Mixed" },
+    "Girls under 18 (Born on/after July 1st 2007)": { code: "GU18", label: "Girls U18" },
+    "Boys under 18 (Born on/after July 1st 2007)": { code: "BU18", label: "Boys U18" },
+    "Mixed Doubles": { code: "XD", label: "Mixed Doubles" },
   };
   const orderedCategories = [
     "Men's Singles & Doubles (Team Event)",
     "Women's Singles",
+    "Women's Doubles",
     "Boys under 13 (Born on/after July 1st 2012)",
     "Girls under 13 (Born on/after July 1st 2012)",
     "Family Mixed Doubles (Wife-Husband, Father-Daughter, Mother-Son, Brother-Sister)",
     "Girls under 18 (Born on/after July 1st 2007)",
+    "Boys under 18 (Born on/after July 1st 2007)",
     "Mixed Doubles",
   ];
 
@@ -97,13 +101,13 @@ export default function StatsPage() {
           </div>
         </div>
       </div>
-      {/* Individual Category Stats Cards - 2 rows, 4 columns on desktop */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-8">
+      {/* Individual Category Stats Cards - 3 columns on desktop */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 mb-8">
         {orderedCategories.map((cat, index) => (
           <div key={cat} className="bg-gradient-to-r from-white/10 to-white/5 rounded-3xl p-6 backdrop-blur-md border border-white/20 shadow-2xl hover-lift transition-all duration-300 animate-fade-in-scale" style={{animationDelay: `${index * 0.1}s`}}>
             <div className="relative z-10 w-full flex flex-col items-center">
               <div className="text-xs text-white/80 font-semibold text-center mb-1 tracking-tight leading-tight">
-                {categoryLabels[cat]}
+                {categoryLabels[cat]?.label || cat}
               </div>
               <div className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-white/80 text-center mb-0">
                 {loading ? '...' : (playerStats.playersByCategory[cat] || 0)}

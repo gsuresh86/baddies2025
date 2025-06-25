@@ -30,21 +30,25 @@ export default function AdminPlayersPage() {
   const playerCategories = [
     "Men's Singles & Doubles (Team Event)",
     "Women's Singles",
+    "Women's Doubles",
+    "Mixed Doubles",
+    "Boys under 18 (Born on/after July 1st 2007)",
     "Boys under 13 (Born on/after July 1st 2012)",
+    "Girls under 18 (Born on/after July 1st 2007)",
     "Girls under 13 (Born on/after July 1st 2012)",
     "Family Mixed Doubles (Wife-Husband, Father-Daughter, Mother-Son, Brother-Sister)",
-    "Girls under 18 (Born on/after July 1st 2007)",
-    "Mixed Doubles",
   ];
 
-  const categoryLabels: Record<string, string> = {
-    "Men's Singles & Doubles (Team Event)": "Men's Team",
-    "Women's Singles": "Women Singles",
-    "Boys under 13 (Born on/after July 1st 2012)": "Boys U13",
-    "Girls under 13 (Born on/after July 1st 2012)": "Girls U13",
-    "Family Mixed Doubles (Wife-Husband, Father-Daughter, Mother-Son, Brother-Sister)": "Family Mixed",
-    "Girls under 18 (Born on/after July 1st 2007)": "Girls U18",
-    "Mixed Doubles": "Mixed Doubles",
+  const categoryLabels: Record<string, { code: string; label: string }> = {
+    "Men's Singles & Doubles (Team Event)": { code: "MT", label: "Men's Team" },
+    "Women's Singles": { code: "WS", label: "Women Singles" },
+    "Women's Doubles": { code: "WD", label: "Women Doubles" },
+    "Boys under 13 (Born on/after July 1st 2012)": { code: "BU13", label: "Boys U13" },
+    "Girls under 13 (Born on/after July 1st 2012)": { code: "GU13", label: "Girls U13" },
+    "Family Mixed Doubles (Wife-Husband, Father-Daughter, Mother-Son, Brother-Sister)": { code: "FM", label: "Family Mixed" },
+    "Girls under 18 (Born on/after July 1st 2007)": { code: "GU18", label: "Girls U18" },
+    "Boys under 18 (Born on/after July 1st 2007)": { code: "BU18", label: "Boys U18" },
+    "Mixed Doubles": { code: "XD", label: "Mixed Doubles" },
   };
 
   useEffect(() => {
@@ -153,27 +157,13 @@ export default function AdminPlayersPage() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search players by name, email, or phone..."
+              placeholder="Search players by name..."
               className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white text-sm sm:text-base"
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
             />
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <span className="text-gray-400">🔍</span>
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={handleSearch}
-              className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors text-sm"
-            >
-              Search
-            </button>
-            <button
-              onClick={() => setSearchQuery('')}
-              className="w-full px-4 py-3 bg-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-400 transition-colors text-sm"
-            >
-              Clear
-            </button>
           </div>
         </div>
       </div>
@@ -203,7 +193,9 @@ export default function AdminPlayersPage() {
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                {categoryLabels[category]} ({getTabCount(category)})
+                <span title={categoryLabels[category]?.label || category}>
+                  {categoryLabels[category]?.code || category}
+                </span> ({getTabCount(category)})
               </button>
             ))}
           </nav>
@@ -211,7 +203,7 @@ export default function AdminPlayersPage() {
 
         <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
           <h2 className="text-lg sm:text-xl font-semibold text-gray-800">
-            {activeTab === 'all' ? 'All Players' : categoryLabels[activeTab] || activeTab}
+            {activeTab === 'all' ? 'All Players' : categoryLabels[activeTab]?.label || activeTab}
           </h2>
           <p className="text-sm text-gray-600 mt-1">
             Showing {filteredPlayers.length} players
@@ -228,7 +220,7 @@ export default function AdminPlayersPage() {
             <div className="text-center py-8">
               <div className="text-4xl sm:text-6xl mb-4">🏸</div>
               <h3 className="text-base sm:text-lg font-medium text-gray-800 mb-2">
-                {searchQuery ? 'No players found' : `No players in ${activeTab === 'all' ? 'any category' : categoryLabels[activeTab] || activeTab}`}
+                {searchQuery ? 'No players found' : `No players in ${activeTab === 'all' ? 'any category' : categoryLabels[activeTab]?.label || activeTab}`}
               </h3>
               <p className="text-sm sm:text-base text-gray-600">
                 {searchQuery ? 'Try adjusting your search terms' : 'No players available'}
@@ -243,8 +235,6 @@ export default function AdminPlayersPage() {
                     <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-gray-800 text-xs sm:text-sm hidden sm:table-cell">Email</th>
                     <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-gray-800 text-xs sm:text-sm hidden md:table-cell">Phone</th>
                     <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-gray-800 text-xs sm:text-sm">Category</th>
-                    <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-gray-800 text-xs sm:text-sm">Teams</th>
-                    <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-gray-800 text-xs sm:text-sm">Status</th>
                     {activeTab === "Men's Singles & Doubles (Team Event)" && (
                       <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-gray-800 text-xs sm:text-sm">Actions</th>
                     )}
@@ -253,14 +243,13 @@ export default function AdminPlayersPage() {
                 <tbody>
                   {filteredPlayers.map((player) => {
                     const playerTeams = getPlayerTeams(player.id);
-                    const isEligibleForTeam = isTeamEligible(player.category || '');
                     return (
                       <tr key={player.id} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-2 sm:py-3 px-2 sm:px-4">
                           <div className="font-medium text-gray-800 text-sm">
                             {player.name}
                             <div className="text-xs text-gray-500 sm:hidden">
-                              {player.email && `${player.email}`}
+                              {player.phone && `${player.phone}`}
                             </div>
                           </div>
                         </td>
@@ -272,42 +261,10 @@ export default function AdminPlayersPage() {
                         </td>
                         <td className="py-2 sm:py-3 px-2 sm:px-4">
                           <div className="text-gray-600 text-xs sm:text-sm">
-                            {categoryLabels[player.category || ''] || player.category || 'Unspecified'}
-                          </div>
-                        </td>
-                        <td className="py-2 sm:py-3 px-2 sm:px-4">
-                          <div className="text-gray-600 text-xs sm:text-sm">
-                            {isEligibleForTeam ? (
-                              playerTeams.length > 0 ? (
-                                <div className="space-y-1">
-                                  {playerTeams.map(team => (
-                                    <div key={team.id} className="text-xs sm:text-sm">
-                                      {team.name}
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <span className="text-orange-600 text-xs sm:text-sm">Unassigned</span>
-                              )
-                            ) : (
-                              <span className="text-gray-400 text-xs sm:text-sm">N/A</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-2 sm:py-3 px-2 sm:px-4">
-                          {isEligibleForTeam ? (
-                            <span className={`inline-flex px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-medium rounded-full ${
-                              playerTeams.length > 0 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-orange-100 text-orange-800'
-                            }`}>
-                              {playerTeams.length > 0 ? 'Assigned' : 'Unassigned'}
+                            <span title={categoryLabels[player.category || '']?.label || player.category || 'Unspecified'}>
+                              {categoryLabels[player.category || '']?.label || player.category || 'Unspecified'}
                             </span>
-                          ) : (
-                            <span className="inline-flex px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
-                              Individual
-                            </span>
-                          )}
+                          </div>
                         </td>
                         {activeTab === "Men's Singles & Doubles (Team Event)" && (
                           <td className="py-2 sm:py-3 px-2 sm:px-4">
@@ -380,7 +337,9 @@ export default function AdminPlayersPage() {
                   <option value="">Select Category</option>
                   {playerCategories.map(category => (
                     <option key={category} value={category}>
-                      {categoryLabels[category]}
+                      <span title={categoryLabels[category]?.label || category}>
+                        {categoryLabels[category]?.code || category}
+                      </span>
                     </option>
                   ))}
                 </select>

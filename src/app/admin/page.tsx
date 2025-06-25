@@ -1,16 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase, signOut } from '@/lib/store';
+import { supabase } from '@/lib/store';
 import Link from 'next/link';
 import AuthGuard from '@/components/AuthGuard';
-import { useRouter } from 'next/navigation';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ pools: 0, teams: 0, players: 0, categories: 0 });
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
-
+  
   useEffect(() => {
     async function fetchStats() {
       setLoading(true);
@@ -31,11 +29,6 @@ export default function AdminDashboard() {
     fetchStats();
   }, []);
 
-  const handleLogout = async () => {
-    await signOut();
-    router.push('/login');
-  };
-
   return (
     <AuthGuard>
       <div className="mx-auto">
@@ -45,12 +38,6 @@ export default function AdminDashboard() {
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Admin Dashboard</h1>
               <p className="text-gray-600 text-sm sm:text-base">Manage your badminton tournament from here</p>
             </div>
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm sm:text-base w-full sm:w-auto"
-            >
-              Logout
-            </button>
           </div>
         </div>
 
