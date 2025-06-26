@@ -63,10 +63,13 @@ export interface Pool {
   max_teams: number;
   created_at?: string;
   updated_at?: string;
+  category_id?: string;
+  category?: Category;
   // Joined data
   teams?: Team[];
   matches?: Match[];
   teamCount?: number;
+  players?: Player[]; // For non-Men's Team pools
 }
 
 export interface TournamentStandings {
@@ -114,6 +117,7 @@ export interface PoolTable {
   max_teams: number;
   created_at: string;
   updated_at: string;
+  category_id?: string;
 }
 
 export interface MatchTable {
@@ -155,4 +159,20 @@ export interface Registration {
   paid_to?: string;
   paid_amt?: string;
   payment_status?: boolean;
+}
+
+export interface Category {
+  id: string;
+  code: string;
+  label: string;
+  description?: string;
+  created_at?: string;
+}
+
+export interface PoolPlayer {
+  id: string;
+  pool_id: string;
+  player_id: string;
+  created_at?: string;
+  player?: Player;
 } 

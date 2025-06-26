@@ -122,6 +122,21 @@ export default function AdminPlayersPage() {
     return Object.values(PlayerCategory).includes(category as PlayerCategory);
   }
 
+  // Utility to safely get category label from categoryLabels
+  function getCategoryLabel(key: string): string | undefined {
+    // Try to match by PlayerCategory enum value
+    if (Object.prototype.hasOwnProperty.call(categoryLabels, key)) {
+      return categoryLabels[key as PlayerCategory].label;
+    }
+    // Try to match by code
+    const byCode = Object.values(categoryLabels).find(v => v.code === key);
+    if (byCode) return byCode.label;
+    // Try to match by label
+    const byLabel = Object.values(categoryLabels).find(v => v.label === key);
+    if (byLabel) return byLabel.label;
+    return undefined;
+  }
+
   return (
     <div className="mx-auto">
       <div className="mb-6 sm:mb-8">
@@ -183,7 +198,7 @@ export default function AdminPlayersPage() {
 
         <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
           <h2 className="text-lg sm:text-xl font-semibold text-gray-800">
-            {activeTab === 'all' ? 'All Players' : categoryLabels[activeTab]?.label || activeTab}
+            {activeTab === 'all' ? 'All Players' : getCategoryLabel(activeTab) || activeTab}
           </h2>
           <p className="text-sm text-gray-600 mt-1">
             Showing {filteredPlayers.length} players
@@ -200,7 +215,7 @@ export default function AdminPlayersPage() {
             <div className="text-center py-8">
               <div className="text-4xl sm:text-6xl mb-4">🏸</div>
               <h3 className="text-base sm:text-lg font-medium text-gray-800 mb-2">
-                {searchQuery ? 'No players found' : `No players in ${activeTab === 'all' ? 'any category' : categoryLabels[activeTab]?.label || activeTab}`}
+                {searchQuery ? 'No players found' : `No players in ${activeTab === 'all' ? 'any category' : getCategoryLabel(activeTab) || activeTab}`}
               </h3>
               <p className="text-sm sm:text-base text-gray-600">
                 {searchQuery ? 'Try adjusting your search terms' : 'No players available'}

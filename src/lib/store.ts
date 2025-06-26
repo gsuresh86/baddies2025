@@ -1,4 +1,4 @@
-import { Pool, Team, Player, Match } from '@/types';
+import { Pool, Team, Player, Match, Category } from '@/types';
 import { createClient } from '@supabase/supabase-js';
 
 // TODO: Replace with your actual Supabase URL and anon key
@@ -407,71 +407,66 @@ class TournamentStore {
   // Pool management
   async getPools(): Promise<Pool[]> {
     console.log('Fetching pools...');
-    
-    // First, get basic pool data
+    // First, get basic pool data with category join
     const { data: poolsData, error: poolsError } = await supabase
       .from('pools')
-      .select('*')
+      .select('*, category:categories(*)')
       .order('name');
-    
     if (poolsError) {
       console.error('Error fetching basic pools:', poolsError);
       throw poolsError;
     }
-    
     console.log('Basic pools fetched:', poolsData);
-    
     if (!poolsData || poolsData.length === 0) {
       console.log('No pools found');
       return [];
     }
-    
-    // Then, get teams for each pool
-    const poolsWithTeams = await Promise.all(
+    // Then, get teams and/or players for each pool
+    const poolsWithDetails = await Promise.all(
       poolsData.map(async (pool) => {
         try {
+          let teams: any[] = [];
+          let players: any[] = [];
+          // Fetch teams for all pools
           const { data: teamsData, error: teamsError } = await supabase
             .from('teams')
-            .select(`
-              *,
-              players:team_players(
-                player:t_players(*)
-              )
-            `)
+            .select('*, players:team_players(player:t_players(*))')
             .eq('pool_id', pool.id);
-          
-          if (teamsError) {
-            console.error(`Error fetching teams for pool ${pool.id}:`, teamsError);
-            return {
-              ...pool,
-              teams: [],
-              teamCount: 0
-            };
+          if (!teamsError && teamsData) {
+            teams = teamsData.map((team: any) => ({
+              ...team,
+              players: team.players?.map((tp: any) => tp.player) || []
+            }));
           }
-          
-          const teams = (teamsData || []).map((team: any) => ({
-            ...team,
-            players: team.players?.map((tp: any) => tp.player) || []
-          }));
-          
+          // For non-Men's Team, fetch players directly assigned to pool
+          if (pool.category?.code !== 'MT') {
+            const { data: poolPlayers, error: poolPlayersError } = await supabase
+              .from('pool_players')
+              .select('*, player:t_players(*)')
+              .eq('pool_id', pool.id);
+            if (!poolPlayersError && poolPlayers) {
+              players = poolPlayers.map((pp: any) => pp.player).filter(Boolean);
+            }
+          }
           return {
             ...pool,
             teams,
-            teamCount: teams.length
+            teamCount: teams.length,
+            players,
           };
         } catch (error) {
           console.error(`Error processing pool ${pool.id}:`, error);
           return {
             ...pool,
             teams: [],
-            teamCount: 0
+            teamCount: 0,
+            players: [],
           };
         }
       })
     );
-    
-    console.log('Pools with teams:', poolsWithTeams);
-    return poolsWithTeams as Pool[];
+    console.log('Pools with details:', poolsWithDetails);
+    return poolsWithDetails as Pool[];
   }
 
   async getPoolById(id: string): Promise<Pool | null> {
@@ -540,37 +535,30 @@ class TournamentStore {
     }
   }
 
-  async createPool(name: string, maxTeams: number = 4): Promise<Pool> {
-    console.log('Creating pool:', { name, maxTeams });
-    
+  async createPool(name: string, maxTeams: number = 4, category_id?: string): Promise<Pool> {
+    console.log('Creating pool:', { name, maxTeams, category_id });
     // Check authentication first
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       console.error('Authentication error:', authError);
       throw new Error('User not authenticated. Please log in.');
     }
-    
     console.log('User authenticated:', user.email);
-    
     // First, let's check if the table exists and we have permissions
     const { error: tableError } = await supabase
       .from('pools')
       .select('count')
       .limit(1);
-    
     if (tableError) {
       console.error('Table access error:', tableError);
       throw new Error(`Cannot access pools table: ${tableError.message}`);
     }
-    
     console.log('Table access successful, proceeding with insert...');
-    
     const { data, error } = await supabase
       .from('pools')
-      .insert([{ name, max_teams: maxTeams }])
+      .insert([{ name, max_teams: maxTeams, category_id }])
       .select()
       .single();
-    
     if (error) {
       console.error('Error creating pool:', error);
       console.error('Error details:', {
@@ -581,9 +569,20 @@ class TournamentStore {
       });
       throw error;
     }
-    
     console.log('Pool created:', data);
     return data as Pool;
+  }
+
+  async getCategories(): Promise<Category[]> {
+    const { data, error } = await supabase
+      .from('categories')
+      .select('*')
+      .order('label');
+    if (error) {
+      console.error('Error fetching categories:', error);
+      throw error;
+    }
+    return data as Category[];
   }
 
   async updatePool(id: string, updates: Partial<Pool>): Promise<Pool> {
@@ -603,6 +602,28 @@ class TournamentStore {
       .delete()
       .eq('id', id);
     if (error) throw error;
+  }
+
+  async assignPlayerToPool(playerId: string, poolId: string): Promise<void> {
+    const { error } = await supabase
+      .from('pool_players')
+      .insert([{ player_id: playerId, pool_id: poolId }]);
+    if (error) {
+      console.error('Error assigning player to pool:', error);
+      throw error;
+    }
+  }
+
+  async removePlayerFromPool(playerId: string, poolId: string): Promise<void> {
+    const { error } = await supabase
+      .from('pool_players')
+      .delete()
+      .eq('player_id', playerId)
+      .eq('pool_id', poolId);
+    if (error) {
+      console.error('Error removing player from pool:', error);
+      throw error;
+    }
   }
 
   // Match scheduling
