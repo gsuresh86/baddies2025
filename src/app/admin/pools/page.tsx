@@ -1,29 +1,19 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { tournamentStore, supabase } from '@/lib/store';
 import { Pool, Team, Category, Player } from '@/types';
 import AuthGuard from '@/components/AuthGuard';
 import { categoryLabels } from '@/lib/utils';
-
-// Utility to safely get category label from categoryLabels
-function getCategoryLabel(key: string): string | undefined {
-  // Try to match by code
-  const byCode = Object.values(categoryLabels).find(v => v.code === key);
-  if (byCode) return byCode.label;
-  // Try to match by label
-  const byLabel = Object.values(categoryLabels).find(v => v.label === key);
-  if (byLabel) return byLabel.label;
-  // Try to match by PlayerCategory enum value
-  const byEnum = (categoryLabels as any)[key];
-  if (byEnum) return byEnum.label;
-  return undefined;
-}
+import { useToast } from '@/contexts/ToastContext';
 
 export default function AdminPoolsPage() {
+  const { showSuccess, showError } = useToast();
   const [pools, setPools] = useState<Pool[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
+  const [poolMatches, setPoolMatches] = useState<Record<string, number>>({}); // Track match count per pool
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all'); // Category filter
   
   // Form states
   const [newPoolName, setNewPoolName] = useState('');
@@ -41,37 +31,47 @@ export default function AdminPoolsPage() {
   const [showAssignPlayer, setShowAssignPlayer] = useState(false);
   const [selectedPlayerPool, setSelectedPlayerPool] = useState<Pool | null>(null);
   const [availablePlayers, setAvailablePlayers] = useState<Player[]>([]);
+  const [playerSearchTerm, setPlayerSearchTerm] = useState('');
 
-  useEffect(() => {
-    fetchData();
-    fetchCategories();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       console.log('Fetching data...');
       
       // Use simple queries like the dashboard first
-      const [poolsResult, teamsResult] = await Promise.all([
+      const [poolsResult, teamsResult, matchesResult] = await Promise.all([
         supabase.from('pools').select('*').order('name'),
-        supabase.from('teams').select('*').order('name')
+        supabase.from('teams').select('*').order('name'),
+        supabase.from('matches').select('pool_id').order('created_at')
       ]);
       
       console.log('Pools result:', poolsResult);
       console.log('Teams result:', teamsResult);
+      console.log('Matches result:', matchesResult);
       
       if (poolsResult.error) {
         console.error('Error fetching pools:', poolsResult.error);
-        alert(`Error fetching pools: ${poolsResult.error.message}`);
+        showError('Error fetching pools', poolsResult.error.message);
       }
       if (teamsResult.error) {
         console.error('Error fetching teams:', teamsResult.error);
+      }
+      if (matchesResult.error) {
+        console.error('Error fetching matches:', matchesResult.error);
       }
       
       // Set basic data first
       setPools(poolsResult.data || []);
       setTeams(teamsResult.data || []);
+      
+      // Calculate match count per pool
+      const matchCounts: Record<string, number> = {};
+      if (matchesResult.data) {
+        matchesResult.data.forEach((match: any) => {
+          matchCounts[match.pool_id] = (matchCounts[match.pool_id] || 0) + 1;
+        });
+      }
+      setPoolMatches(matchCounts);
       
       // Now try to get detailed data with relationships
       try {
@@ -94,9 +94,9 @@ export default function AdminPoolsPage() {
       console.error('Error fetching data:', err);
     }
     setLoading(false);
-  };
+  }, [showError]);
 
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       const cats = await tournamentStore.getCategories();
       setCategories(cats);
@@ -104,7 +104,12 @@ export default function AdminPoolsPage() {
     } catch (error) {
       console.error('Error fetching categories:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+    fetchCategories();
+  }, [fetchData, fetchCategories]);
 
   const handleCreatePool = async () => {
     if (!newPoolName.trim() || !selectedCategoryId) return;
@@ -114,10 +119,11 @@ export default function AdminPoolsPage() {
       setMaxTeams(4);
       setShowCreatePool(false);
       setSelectedCategoryId(categories[0]?.id || '');
+      showSuccess('Pool created successfully');
       fetchData();
     } catch (error) {
       console.error('Error creating pool:', error);
-      alert('Error creating pool');
+      showError('Error creating pool');
     }
   };
 
@@ -128,10 +134,11 @@ export default function AdminPoolsPage() {
       await tournamentStore.createTeam(newTeamName.trim());
       setNewTeamName('');
       setShowCreateTeam(false);
+      showSuccess('Team created successfully');
       fetchData();
     } catch (error) {
       console.error('Error creating team:', error);
-      alert('Error creating team');
+      showError('Error creating team');
     }
   };
 
@@ -142,10 +149,11 @@ export default function AdminPoolsPage() {
     
     try {
       await tournamentStore.deletePool(poolId);
+      showSuccess('Pool deleted successfully');
       fetchData();
     } catch (error) {
       console.error('Error deleting pool:', error);
-      alert('Error deleting pool');
+      showError('Error deleting pool');
     }
   };
 
@@ -156,10 +164,11 @@ export default function AdminPoolsPage() {
     
     try {
       await tournamentStore.deleteTeam(teamId);
+      showSuccess('Team deleted successfully');
       fetchData();
     } catch (error) {
       console.error('Error deleting team:', error);
-      alert('Error deleting team');
+      showError('Error deleting team');
     }
   };
 
@@ -168,20 +177,22 @@ export default function AdminPoolsPage() {
       await tournamentStore.assignTeamToPool(teamId, poolId);
       setShowAssignTeam(false);
       setSelectedPool(null);
+      showSuccess('Team assigned to pool successfully');
       fetchData();
     } catch (error) {
       console.error('Error assigning team to pool:', error);
-      alert('Error assigning team to pool');
+      showError('Error assigning team to pool');
     }
   };
 
   const handleRemoveTeamFromPool = async (teamId: string) => {
     try {
       await tournamentStore.removeTeamFromPool(teamId);
+      showSuccess('Team removed from pool successfully');
       fetchData();
     } catch (error) {
       console.error('Error removing team from pool:', error);
-      alert('Error removing team from pool');
+      showError('Error removing team from pool');
     }
   };
 
@@ -199,10 +210,19 @@ export default function AdminPoolsPage() {
   const generateMatchesForPool = async (poolId: string) => {
     try {
       await tournamentStore.generateMatchesForPool(poolId);
-      alert('Matches generated successfully!');
+      showSuccess('Matches generated successfully!');
+      // Refresh matches data to update the UI
+      const { data: matchesResult } = await supabase.from('matches').select('pool_id').order('created_at');
+      if (matchesResult) {
+        const matchCounts: Record<string, number> = {};
+        matchesResult.forEach((match: any) => {
+          matchCounts[match.pool_id] = (matchCounts[match.pool_id] || 0) + 1;
+        });
+        setPoolMatches(matchCounts);
+      }
     } catch (error) {
       console.error('Error generating matches:', error);
-      alert('Error generating matches');
+      showError('Error generating matches');
     }
   };
 
@@ -217,17 +237,23 @@ export default function AdminPoolsPage() {
       // Exclude already assigned
       const assignedIds = new Set((pool.players || []).map(p => p.id));
       let filtered = data.filter((p: Player) => !assignedIds.has(p.id));
-      // Filter by pool category (except Family Mixed, code 'FM')
-      if (pool.category && pool.category.code !== 'FM') {
-        // Resolve the code and description for the pool category using categoryLabels
-        const categoryCode = pool.category.code || getCategoryLabel(pool.category.code);
-        const categoryDescription = pool.category.description || pool.category.label;
-        filtered = filtered.filter((p: Player) =>
-          p.category === categoryCode ||
-          p.category === pool.category?.label ||
-          p.category === categoryDescription
-        );
+      
+      // Filter by pool category for all categories
+      if (pool.category) {
+        // Get the category information from categoryLabels
+        const categoryInfo = Object.values(categoryLabels).find(cat => cat.code === pool.category?.code);
+        
+        if (categoryInfo) {
+          // Filter by the category label that matches the pool category
+          filtered = filtered.filter((p: Player) => {
+            // Check if player's category matches the pool category
+            return p.category === categoryInfo.label || 
+                   p.category === pool.category?.label ||
+                   p.category === pool.category?.description;
+          });
+        }
       }
+      
       setAvailablePlayers(filtered);
     } else {
       setAvailablePlayers([]);
@@ -237,25 +263,77 @@ export default function AdminPoolsPage() {
 
   const handleAssignPlayerToPool = async (playerId: string, poolId: string) => {
     try {
-      await tournamentStore.assignPlayerToPool(playerId, poolId);
+      if (selectedPlayerPool?.category?.type === 'pair') {
+        // For pair categories, we need to assign the entire pair
+        // First, get the partner of the selected player
+        const { data: player, error: playerError } = await supabase
+          .from('t_players')
+          .select('partner_name')
+          .eq('id', playerId)
+          .single();
+        
+        if (playerError || !player.partner_name) {
+          showError('Player must have a partner for pair-based categories');
+          return;
+        }
+        
+        // Assign the pair to the pool
+        await tournamentStore.assignPairToPool(playerId, poolId);
+      } else {
+        // For individual categories, assign single player
+        await tournamentStore.assignPlayerToPool(playerId, poolId);
+      }
+      
       setShowAssignPlayer(false);
       setSelectedPlayerPool(null);
+      setPlayerSearchTerm('');
+      showSuccess('Player assigned to pool successfully');
       fetchData();
     } catch (error) {
       console.error('Error assigning player to pool:', error);
-      alert('Error assigning player to pool');
+      showError('Error assigning player to pool');
     }
   };
 
   const handleRemovePlayerFromPool = async (playerId: string, poolId: string) => {
     try {
-      await tournamentStore.removePlayerFromPool(playerId, poolId);
+      if (selectedPlayerPool?.category?.type === 'pair') {
+        // For pair categories, remove the entire pair
+        await tournamentStore.removePairFromPool(playerId, poolId);
+      } else {
+        // For individual categories, remove single player
+        await tournamentStore.removePlayerFromPool(playerId, poolId);
+      }
+      
+      showSuccess('Player removed from pool successfully');
       fetchData();
     } catch (error) {
       console.error('Error removing player from pool:', error);
-      alert('Error removing player from pool');
+      showError('Error removing player from pool');
     }
   };
+
+  // Helper function to check if pool has matches
+  const hasMatches = (poolId: string) => {
+    return (poolMatches[poolId] || 0) > 0;
+  };
+
+  // Filter available players based on search term
+  const filteredAvailablePlayers = availablePlayers.filter(player => {
+    if (!playerSearchTerm.trim()) return true;
+    
+    const searchLower = playerSearchTerm.toLowerCase();
+    const playerName = player.name.toLowerCase();
+    const partnerName = player.partner_name?.toLowerCase() || '';
+    
+    return playerName.includes(searchLower) || partnerName.includes(searchLower);
+  });
+
+  // Filter pools based on selected category
+  const filteredPools = pools.filter(pool => {
+    if (selectedCategoryFilter === 'all') return true;
+    return pool.category?.code === selectedCategoryFilter;
+  });
 
   return (
     <AuthGuard>
@@ -296,26 +374,62 @@ export default function AdminPoolsPage() {
         {/* Pools Section */}
         <div className="bg-white rounded-xl shadow-lg border border-gray-200 mb-6 sm:mb-8">
           <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Tournament Pools</h2>
-            <p className="text-gray-600 mt-1 text-sm sm:text-base">Manage pools and team assignments</p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Tournament Pools</h2>
+                <p className="text-gray-600 mt-1 text-sm sm:text-base">
+                  Manage pools and team assignments
+                  {selectedCategoryFilter !== 'all' && (
+                    <span className="ml-2 text-blue-600 font-medium">
+                      • Filtered by {categoryLabels[selectedCategoryFilter as keyof typeof categoryLabels]?.label || selectedCategoryFilter}
+                    </span>
+                  )}
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Filter by Category:</label>
+                  <select
+                    value={selectedCategoryFilter}
+                    onChange={(e) => setSelectedCategoryFilter(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white"
+                  >
+                    <option value="all">All Categories</option>
+                    <option value="MT">Men&apos;s Team</option>
+                    <option value="WS">Women&apos;s Singles</option>
+                    <option value="WD">Women&apos;s Doubles</option>
+                    <option value="XD">Mixed Doubles</option>
+                    <option value="BU18">Boys U18</option>
+                    <option value="BU13">Boys U13</option>
+                    <option value="GU18">Girls U18</option>
+                    <option value="GU13">Girls U13</option>
+                    <option value="FM">Family Mixed</option>
+                  </select>
+                </div>
+              </div>
+            </div>
           </div>
           <div className="p-4 sm:p-6">
             {loading ? (
               <div className="text-center py-8">
                 <p className="text-gray-500 text-base sm:text-lg">Loading pools...</p>
               </div>
-            ) : pools.length === 0 ? (
+            ) : filteredPools.length === 0 ? (
               <div className="text-center py-8">
                 <div className="text-4xl sm:text-6xl mb-4">🏊‍♂️</div>
-                <h3 className="text-base sm:text-lg font-medium text-gray-800 mb-2">No pools created yet</h3>
-                <p className="text-gray-600 text-sm sm:text-base">Create your first pool to get started</p>
+                <h3 className="text-base sm:text-lg font-medium text-gray-800 mb-2">
+                  {selectedCategoryFilter === 'all' ? 'No pools created yet' : `No pools in ${categoryLabels[selectedCategoryFilter as keyof typeof categoryLabels]?.label || selectedCategoryFilter}`}
+                </h3>
+                <p className="text-gray-600 text-sm sm:text-base">
+                  {selectedCategoryFilter === 'all' ? 'Create your first pool to get started' : 'Create a pool for this category to get started'}
+                </p>
               </div>
             ) : (
               <div className="space-y-4 sm:space-y-6">
-                {pools.map((pool) => (
+                {filteredPools.map((pool) => (
                   <div key={pool.id} className="border border-gray-200 rounded-lg p-4 sm:p-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4">
-                      <div>
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-4">
+                      <div className="flex-1">
                         <h3 className="text-base sm:text-lg font-semibold text-gray-800">{pool.name}</h3>
                         {pool.category && (
                           <div className="text-xs sm:text-sm text-blue-700 font-medium mb-1">{pool.category.label}</div>
@@ -323,38 +437,59 @@ export default function AdminPoolsPage() {
                         <p className="text-gray-600 text-xs sm:text-sm">
                           {pool.category && pool.category.code === 'MT'
                             ? `${pool.teamCount || 0} teams` 
+                            : pool.category?.type === 'pair'
+                            ? `${pool.players?.length || 0} pairs`
                             : `${pool.players?.length || 0} players`}
                         </p>
                       </div>
-                      <div className="flex flex-wrap gap-2">
-                        {pool.category && pool.category.code === 'MT' ? (
-                          <button
-                            onClick={() => openAssignTeamModal(pool)}
-                            className="px-2 sm:px-3 py-2 bg-blue-600 text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-700 transition-colors"
+                      
+                      {/* Matches Status - Top Right Corner */}
+                      {hasMatches(pool.id) && (
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 whitespace-nowrap">
+                            ✅ {poolMatches[pool.id]} matches
+                          </span>
+                          <Link
+                            href={`/admin/matches?pool=${pool.id}`}
+                            className="inline-flex items-center px-3 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors whitespace-nowrap"
                           >
-                            Assign Team
-                          </button>
-                        ) : (
+                            View Matches
+                          </Link>
+                        </div>
+                      )}
+                      
+                      {/* Action Buttons - Only show when no matches exist */}
+                      {!hasMatches(pool.id) && (
+                        <div className="flex flex-wrap gap-2">
+                          {pool.category && pool.category.code === 'MT' ? (
+                            <button
+                              onClick={() => openAssignTeamModal(pool)}
+                              className="px-2 sm:px-3 py-2 bg-blue-600 text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-700 transition-colors"
+                            >
+                              Assign Team
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => openAssignPlayerModal(pool)}
+                              className="px-2 sm:px-3 py-2 bg-blue-600 text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-700 transition-colors"
+                            >
+                              Assign Player
+                            </button>
+                          )}
                           <button
-                            onClick={() => openAssignPlayerModal(pool)}
-                            className="px-2 sm:px-3 py-2 bg-blue-600 text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-700 transition-colors"
+                            onClick={() => generateMatchesForPool(pool.id)}
+                            className="px-2 sm:px-3 py-2 bg-green-600 text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-green-700 transition-colors"
                           >
-                            Assign Player
+                            Generate Matches
                           </button>
-                        )}
-                        <button
-                          onClick={() => generateMatchesForPool(pool.id)}
-                          className="px-2 sm:px-3 py-2 bg-green-600 text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-green-700 transition-colors"
-                        >
-                          Generate Matches
-                        </button>
-                        <button
-                          onClick={() => handleDeletePool(pool.id)}
-                          className="px-2 sm:px-3 py-2 bg-red-600 text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-red-700 transition-colors"
-                        >
-                          Delete
-                        </button>
-                      </div>
+                          <button
+                            onClick={() => handleDeletePool(pool.id)}
+                            className="px-2 sm:px-3 py-2 bg-red-600 text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-red-700 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
                     </div>
                     
                     {pool.category && pool.category.code === 'MT' ? (
@@ -386,19 +521,28 @@ export default function AdminPoolsPage() {
                     ) : (
                       pool.players && pool.players.length > 0 ? (
                         <div>
-                          <h4 className="font-medium text-gray-800 mb-3 text-sm sm:text-base">Players in this Pool:</h4>
+                          <h4 className="font-medium text-gray-800 mb-3 text-sm sm:text-base">
+                            {pool.category?.type === 'pair' ? 'Pairs in this Pool:' : 'Players in this Pool:'}
+                          </h4>
                           <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                            {pool.players.map((player) => (
-                              <div key={player.id} className="p-3 bg-gray-50 rounded-lg flex items-center justify-between">
-                                <span className="font-medium text-gray-800 text-sm sm:text-base">{player.name}</span>
-                                <button
-                                  onClick={() => handleRemovePlayerFromPool(player.id, pool.id)}
-                                  className="text-red-600 hover:text-red-700 text-xs sm:text-sm"
-                                >
-                                  Remove
-                                </button>
-                              </div>
-                            ))}
+                            {pool.players.map((player) => {
+                              const isPairCategory = pool.category?.type === 'pair';
+                              const displayName = isPairCategory && player.partner_name 
+                                ? `${player.name} / ${player.partner_name}`
+                                : player.name;
+                              
+                              return (
+                                <div key={player.id} className="p-3 bg-gray-50 rounded-lg flex items-center justify-between">
+                                  <span className="font-medium text-gray-800 text-sm sm:text-base">{displayName}</span>
+                                  <button
+                                    onClick={() => handleRemovePlayerFromPool(player.id, pool.id)}
+                                    className="text-red-600 hover:text-red-700 text-xs sm:text-sm"
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       ) : (
@@ -594,23 +738,44 @@ export default function AdminPoolsPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl p-4 sm:p-6 w-full max-w-md">
               <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-4">
-                Assign Player to {selectedPlayerPool.name}
+                Assign {selectedPlayerPool.category?.type === 'pair' ? 'Pair' : 'Player'} to {selectedPlayerPool.name}
               </h3>
-              {availablePlayers.length === 0 ? (
-                <p className="text-gray-600 mb-4 text-sm sm:text-base">No available players to assign</p>
+              
+              {/* Search Input */}
+              <div className="mb-4">
+                <input
+                  type="text"
+                  value={playerSearchTerm}
+                  onChange={(e) => setPlayerSearchTerm(e.target.value)}
+                  placeholder={`Search ${selectedPlayerPool.category?.type === 'pair' ? 'players or partners' : 'players'}...`}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white text-sm sm:text-base"
+                />
+              </div>
+              
+              {filteredAvailablePlayers.length === 0 ? (
+                <p className="text-gray-600 mb-4 text-sm sm:text-base">
+                  {playerSearchTerm.trim() ? 'No players found matching your search' : 'No available players to assign'}
+                </p>
               ) : (
                 <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {availablePlayers.map((player) => (
-                    <div key={player.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <span className="font-medium text-gray-800 text-sm sm:text-base">{player.name}</span>
-                      <button
-                        onClick={() => handleAssignPlayerToPool(player.id, selectedPlayerPool.id)}
-                        className="px-3 py-1 bg-blue-600 text-white rounded text-xs sm:text-sm font-medium hover:bg-blue-700"
-                      >
-                        Assign
-                      </button>
-                    </div>
-                  ))}
+                  {filteredAvailablePlayers.map((player) => {
+                    const isPairCategory = selectedPlayerPool.category?.type === 'pair';
+                    const displayName = isPairCategory && player.partner_name 
+                      ? `${player.name} / ${player.partner_name}`
+                      : player.name;
+                    
+                    return (
+                      <div key={player.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <span className="font-medium text-gray-800 text-sm sm:text-base">{displayName}</span>
+                        <button
+                          onClick={() => handleAssignPlayerToPool(player.id, selectedPlayerPool.id)}
+                          className="px-3 py-1 bg-blue-600 text-white rounded text-xs sm:text-sm font-medium hover:bg-blue-700"
+                        >
+                          Assign
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
               <div className="mt-6">
@@ -618,6 +783,7 @@ export default function AdminPoolsPage() {
                   onClick={() => {
                     setShowAssignPlayer(false);
                     setSelectedPlayerPool(null);
+                    setPlayerSearchTerm('');
                   }}
                   className="w-full px-4 py-2 bg-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-400 text-sm sm:text-base"
                 >

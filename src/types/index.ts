@@ -167,12 +167,24 @@ export interface Category {
   label: string;
   description?: string;
   created_at?: string;
+  type: 'team' | 'player' | 'pair';
 }
 
 export interface PoolPlayer {
   id: string;
   pool_id: string;
   player_id: string;
+  pair_id?: string; // For pair-based categories
   created_at?: string;
   player?: Player;
+}
+
+export interface PoolPair {
+  id: string;
+  pool_id: string;
+  player1_id: string;
+  player2_id: string;
+  created_at?: string;
+  player1?: Player;
+  player2?: Player;
 } 

@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react';
 import { tournamentStore, supabase } from '@/lib/store';
 import { Team, Player, Pool } from '@/types';
+import { useToast } from '@/contexts/ToastContext';
 
 export default function AdminTeamsPage() {
+  const { showSuccess, showError } = useToast();
   const [teams, setTeams] = useState<Team[]>([]);
   const [pools, setPools] = useState<Pool[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,10 +99,11 @@ export default function AdminTeamsPage() {
       await tournamentStore.createTeam(newTeamName.trim());
       setNewTeamName('');
       setShowCreateTeam(false);
+      showSuccess('Team created successfully');
       fetchData();
     } catch (error) {
       console.error('Error creating team:', error);
-      alert('Error creating team');
+      showError('Error creating team');
     }
   };
 
@@ -111,10 +114,11 @@ export default function AdminTeamsPage() {
     
     try {
       await tournamentStore.deleteTeam(teamId);
+      showSuccess('Team deleted successfully');
       fetchData();
     } catch (error) {
       console.error('Error deleting team:', error);
-      alert('Error deleting team');
+      showError('Error deleting team');
     }
   };
 
@@ -123,10 +127,11 @@ export default function AdminTeamsPage() {
       await tournamentStore.assignTeamToPool(teamId, poolId);
       setShowAssignPool(false);
       setSelectedTeam(null);
+      showSuccess('Team assigned to pool successfully');
       fetchData();
     } catch (error) {
       console.error('Error assigning team to pool:', error);
-      alert('Error assigning team to pool');
+      showError('Error assigning team to pool');
     }
   };
 
@@ -135,20 +140,22 @@ export default function AdminTeamsPage() {
       await tournamentStore.addPlayerToTeam(teamId, playerId);
       setShowAddPlayer(false);
       setSelectedTeam(null);
+      showSuccess('Player added to team successfully');
       fetchData();
     } catch (error) {
       console.error('Error adding player to team:', error);
-      alert('Error adding player to team');
+      showError('Error adding player to team');
     }
   };
 
   const handleRemovePlayerFromTeam = async (teamId: string, playerId: string) => {
     try {
       await tournamentStore.removePlayerFromTeam(teamId, playerId);
+      showSuccess('Player removed from team successfully');
       fetchData();
     } catch (error) {
       console.error('Error removing player from team:', error);
-      alert('Error removing player from team');
+      showError('Error removing player from team');
     }
   };
 

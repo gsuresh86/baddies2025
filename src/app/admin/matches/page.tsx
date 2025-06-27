@@ -1,15 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { tournamentStore, supabase } from '@/lib/store';
-import { Match, Pool, Team } from '@/types';
+import { Match, Pool, Team, Player, Category } from '@/types';
+import { useToast } from '@/contexts/ToastContext';
 
 export default function AdminMatchesPage() {
+  const { showSuccess, showError } = useToast();
   const [matches, setMatches] = useState<Match[]>([]);
   const [pools, setPools] = useState<Pool[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPool, setSelectedPool] = useState<string>('all');
+  const [activeCategoryId, setActiveCategoryId] = useState<string>('all');
   
   // Form states
   const [newMatchTeam1, setNewMatchTeam1] = useState('');
@@ -32,11 +37,7 @@ export default function AdminMatchesPage() {
     ? teams.filter(team => team.pool_id === newMatchPool)
     : [];
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       console.log('Fetching matches data...');
@@ -48,23 +49,27 @@ export default function AdminMatchesPage() {
       
       if (basicMatchesTest.error) {
         console.error('Basic matches test error:', basicMatchesTest.error);
-        alert(`Error fetching matches: ${basicMatchesTest.error.message}`);
+        showError('Error fetching matches', basicMatchesTest.error.message);
       }
       
       // Use simple queries like the dashboard first
-      const [matchesResult, poolsResult, teamsResult] = await Promise.all([
+      const [matchesResult, poolsResult, teamsResult, playersResult, categoriesResult] = await Promise.all([
         supabase.from('matches').select('*').order('created_at', { ascending: false }),
         supabase.from('pools').select('*').order('name'),
-        supabase.from('teams').select('*').order('name')
+        supabase.from('teams').select('*').order('name'),
+        supabase.from('t_players').select('*').order('name'),
+        supabase.from('categories').select('*').order('label'),
       ]);
       
       console.log('Matches result:', matchesResult);
       console.log('Pools result:', poolsResult);
       console.log('Teams result:', teamsResult);
+      console.log('Players result:', playersResult);
+      console.log('Categories result:', categoriesResult);
       
       if (matchesResult.error) {
         console.error('Error fetching matches:', matchesResult.error);
-        alert(`Error fetching matches: ${matchesResult.error.message}`);
+        showError('Error fetching matches', matchesResult.error.message);
       }
       if (poolsResult.error) {
         console.error('Error fetching pools:', poolsResult.error);
@@ -72,10 +77,18 @@ export default function AdminMatchesPage() {
       if (teamsResult.error) {
         console.error('Error fetching teams:', teamsResult.error);
       }
+      if (playersResult.error) {
+        console.error('Error fetching players:', playersResult.error);
+      }
+      if (categoriesResult.error) {
+        console.error('Error fetching categories:', categoriesResult.error);
+      }
       
       setMatches(matchesResult.data || []);
       setPools(poolsResult.data || []);
       setTeams(teamsResult.data || []);
+      setPlayers(playersResult.data || []);
+      setCategories(categoriesResult.data || []);
       
       // Now try to get detailed data with relationships
       try {
@@ -90,7 +103,11 @@ export default function AdminMatchesPage() {
       console.error('Error fetching data:', err);
     }
     setLoading(false);
-  };
+  }, [showError]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleCreateMatch = async () => {
     if (!newMatchTeam1 || !newMatchTeam2 || !newMatchPool) return;
@@ -116,10 +133,11 @@ export default function AdminMatchesPage() {
       setNewMatchCourt('');
       setShowCreateMatch(false);
       
+      showSuccess('Match created successfully');
       fetchData();
     } catch (error) {
       console.error('Error creating match:', error);
-      alert('Error creating match');
+      showError('Error creating match');
     }
   };
 
@@ -142,21 +160,22 @@ export default function AdminMatchesPage() {
       setShowUpdateScore(false);
       setSelectedMatch(null);
       
+      showSuccess('Score updated successfully');
       fetchData();
     } catch (error) {
       console.error('Error updating score:', error);
-      alert('Error updating score');
+      showError('Error updating score');
     }
   };
 
   const generateMatchesForPool = async (poolId: string) => {
     try {
       await tournamentStore.generateMatchesForPool(poolId);
-      alert('Matches generated successfully!');
+      showSuccess('Matches generated successfully!');
       fetchData();
     } catch (error) {
       console.error('Error generating matches:', error);
-      alert('Error generating matches');
+      showError('Error generating matches');
     }
   };
 
@@ -194,9 +213,111 @@ export default function AdminMatchesPage() {
     }
   };
 
-  const filteredMatches = selectedPool === 'all' 
-    ? matches 
-    : matches.filter(match => match.pool_id === selectedPool);
+  const getCategoryForMatch = useCallback((match: Match) => {
+    const pool = pools.find(p => p.id === match.pool_id);
+    if (!pool) return undefined;
+    return categories.find(c => c.id === pool.category_id);
+  }, [pools, categories]);
+
+  const getPlayerName = (id: string) => players.find(p => p.id === id)?.name || '-';
+
+  const filteredMatches = useMemo(() => {
+    let ms = selectedPool === 'all' ? matches : matches.filter(match => match.pool_id === selectedPool);
+    if (activeCategoryId !== 'all') {
+      ms = ms.filter(match => getCategoryForMatch(match)?.id === activeCategoryId);
+    }
+    return ms;
+  }, [matches, selectedPool, activeCategoryId, getCategoryForMatch]);
+
+  function getStatusBorderColor(status: string) {
+    switch (status) {
+      case 'completed': return 'border-green-500';
+      case 'in_progress': return 'border-yellow-400';
+      case 'cancelled': return 'border-red-500';
+      default: return 'border-blue-400'; // scheduled or unknown
+    }
+  }
+
+  function renderUpdateScoreModal() {
+    if (!showUpdateScore || !selectedMatch) return null;
+    const matchCategory = getCategoryForMatch(selectedMatch);
+    const matchType = matchCategory?.type;
+    let participant1 = '', participant2 = '';
+    if (matchType === 'team') {
+      participant1 = getTeamName(selectedMatch.team1_id);
+      participant2 = getTeamName(selectedMatch.team2_id);
+    } else if (matchType === 'player') {
+      participant1 = getPlayerName((selectedMatch as any).player1_id);
+      participant2 = getPlayerName((selectedMatch as any).player2_id);
+    } else if (matchType === 'pair') {
+      participant1 = 'Pair 1';
+      participant2 = 'Pair 2';
+    }
+    
+    // Calculate wins for highlighting
+    const team1Wins = (selectedMatch.team1_score ?? 0) > (selectedMatch.team2_score ?? 0);
+    const team2Wins = (selectedMatch.team2_score ?? 0) > (selectedMatch.team1_score ?? 0);
+    
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-xl p-6 w-full max-w-md mx-auto flex flex-col items-center">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Update Match Score</h3>
+          <div className="flex items-center justify-center gap-2 w-full mb-6">
+            <span className={`font-semibold text-center ${team1Wins ? 'text-green-700 font-bold' : 'text-gray-800'}`} title={participant1}>{participant1}</span>
+            <span className="font-bold text-gray-500">vs</span>
+            <span className={`font-semibold text-center ${team2Wins ? 'text-green-700 font-bold' : 'text-gray-800'}`} title={participant2}>{participant2}</span>
+          </div>
+          <div className="flex items-center justify-center gap-4 w-full mb-6">
+            <input
+              type="number"
+              value={team1Score}
+              onChange={(e) => setTeam1Score(e.target.value)}
+              min="0"
+              className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white text-center"
+            />
+            <input
+              type="number"
+              value={team2Score}
+              onChange={(e) => setTeam2Score(e.target.value)}
+              min="0"
+              className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white text-center"
+            />
+          </div>
+          <div className="w-full mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select
+              value={matchStatus}
+              onChange={(e) => setMatchStatus(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+            >
+              <option value="scheduled">Scheduled</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+          <div className="flex gap-3 w-full">
+            <button
+              onClick={handleUpdateScore}
+              disabled={!team1Score || !team2Score}
+              className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Update Score
+            </button>
+            <button
+              onClick={() => {
+                setShowUpdateScore(false);
+                setSelectedMatch(null);
+              }}
+              className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-400"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto">
@@ -296,6 +417,22 @@ export default function AdminMatchesPage() {
         </div>
       </div>
 
+      {/* Category Selector */}
+      <div className="mb-6 flex flex-col sm:flex-row gap-4 items-center">
+        <label htmlFor="category-select" className="text-sm font-medium text-gray-700">Category:</label>
+        <select
+          id="category-select"
+          value={activeCategoryId}
+          onChange={e => setActiveCategoryId(e.target.value)}
+          className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+        >
+          <option value="all">All</option>
+          {categories.map(cat => (
+            <option key={cat.id} value={cat.id}>{cat.label}</option>
+          ))}
+        </select>
+      </div>
+
       {/* Matches List */}
       <div className="bg-white rounded-xl shadow-lg border border-gray-200">
         <div className="px-6 py-4 border-b border-gray-200">
@@ -323,78 +460,102 @@ export default function AdminMatchesPage() {
           ) : (
             <div className="space-y-4">
               {filteredMatches.map((match) => {
-                const isCompleted = match.status === 'completed';
-                const team1Score = match.team1_score;
-                const team2Score = match.team2_score;
-                const team1Wins = isCompleted && typeof team1Score === 'number' && typeof team2Score === 'number' && team1Score > team2Score;
-                const team2Wins = isCompleted && typeof team1Score === 'number' && typeof team2Score === 'number' && team2Score > team1Score;
-
-                return (
-                  <div key={match.id} className="border border-gray-200 rounded-lg p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">{getStatusIcon(match.status || 'scheduled')}</span>
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-800">
-                            {getTeamName(match.team1_id)} vs {getTeamName(match.team2_id)}
-                          </h3>
-                          <p className="text-sm text-gray-600">
-                            Pool: {getPoolName(match.pool_id)}
-                            {match.court && ` • Court: ${match.court}`}
-                          </p>
+                const matchCategory = getCategoryForMatch(match);
+                const matchType = matchCategory?.type;
+                const team1Wins = (match.team1_score ?? 0) > (match.team2_score ?? 0);
+                const team2Wins = (match.team2_score ?? 0) > (match.team1_score ?? 0);
+                // Team match card
+                if (matchType === 'team') {
+                  return (
+                    <div key={match.id} className={`flex flex-col sm:flex-row items-stretch rounded-xl shadow-sm border-l-8 ${getStatusBorderColor(match.status || '')} p-0 overflow-hidden gap-0`}> 
+                      {/* Participants and Scores */}
+                      <div className="flex flex-col items-center w-full py-4">
+                        <div className="flex items-center justify-center gap-2 w-full mb-2">
+                          <span className={`font-semibold text-center ${team1Wins ? 'text-green-700 font-bold' : 'text-gray-800'}`} title={getTeamName(match.team1_id)}>{getTeamName(match.team1_id)}</span>
+                        </div>
+                        <div className="flex items-center justify-center gap-4 w-full">
+                          <span className="text-2xl sm:text-3xl font-extrabold text-blue-700 drop-shadow">{match.team1_score ?? '-'}</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(match.status || 'scheduled')}`}>
-                          {match.status?.replace('_', ' ') || 'scheduled'}
-                        </span>
-                        <button
-                          onClick={() => openUpdateScoreModal(match)}
-                          className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-                        >
-                          Update Score
-                        </button>
-                        <a
-                          href={`/admin/matches/${match.id}/manage`}
-                          className="px-3 py-2 bg-gray-200 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors"
-                          style={{ textDecoration: 'none' }}
-                        >
-                          Manage Lineup
-                        </a>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-gray-800">
-                          {match.team1_score !== null ? match.team1_score : '-'}
+                      <div className="flex flex-col items-center w-full py-4">
+                        <div className="flex items-center justify-center gap-2 w-full mb-2">
+                          <span className={`font-semibold text-center ${team2Wins ? 'text-green-700 font-bold' : 'text-gray-800'}`} title={getTeamName(match.team2_id)}>{getTeamName(match.team2_id)}</span>
                         </div>
-                        <div className={`text-sm ${team1Wins ? 'font-bold text-green-600' : 'text-gray-600'}`}>
-                          {getTeamName(match.team1_id)}
+                        <div className="flex items-center justify-center gap-4 w-full">
+                          <span className="text-2xl sm:text-3xl font-extrabold text-red-700 drop-shadow">{match.team2_score ?? '-'}</span>
                         </div>
                       </div>
-                      <div className="text-center flex items-center justify-center">
-                        <div className="text-lg font-medium text-gray-500">VS</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-gray-800">
-                          {match.team2_score !== null ? match.team2_score : '-'}
+                      {/* Info and Actions */}
+                      <div className="flex flex-col gap-2 w-full sm:flex-row sm:items-center sm:justify-between bg-white/80 px-4 py-3 border-t sm:border-t-0 sm:border-l border-blue-100">
+                        {/* Pool and Category in a single row, left-aligned, with truncation */}
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <span className="text-lg font-bold text-gray-800 truncate max-w-[180px]" title={getPoolName(match.pool_id)}>{getPoolName(match.pool_id)}</span>
+                          <span className="mx-1 text-gray-400">•</span>
+                          <span className="text-lg font-bold text-blue-700 truncate max-w-[180px]" title={matchCategory?.label}>{matchCategory?.label}</span>
+                          <span className={`ml-3 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(match.status || 'scheduled')}`}>{getStatusIcon(match.status || 'scheduled')}</span>
                         </div>
-                        <div className={`text-sm ${team2Wins ? 'font-bold text-green-600' : 'text-gray-600'}`}>
-                          {getTeamName(match.team2_id)}
+                        {/* Actions aligned right on desktop, stacked on mobile */}
+                        <div className="flex flex-col sm:flex-row gap-2 mt-2 sm:mt-0 sm:ml-4 w-full sm:w-auto sm:justify-end">
+                          <button onClick={() => openUpdateScoreModal(match)} className="px-4 py-2 bg-blue-600 text-white rounded text-sm font-bold hover:bg-blue-700 w-full sm:w-auto">Score</button>
+                          {matchType === 'team' && (
+                            <a href={`/admin/matches/${match.id}/manage`} className="px-2 py-1 bg-gray-200 text-gray-800 rounded text-xs font-medium hover:bg-gray-300 w-full sm:w-auto text-center" style={{ textDecoration: 'none' }}>Lineup</a>
+                          )}
                         </div>
                       </div>
                     </div>
-                    
-                    {match.scheduled_date && (
-                      <div className="mt-4 text-center">
-                        <p className="text-sm text-gray-600">
-                          Scheduled: {new Date(match.scheduled_date).toLocaleString()}
-                        </p>
+                  );
+                }
+                // Player match card
+                if (matchType === 'player') {
+                  const player1Name = getPlayerName((match as any).player1_id);
+                  const player2Name = getPlayerName((match as any).player2_id);
+                  const player1Wins = (match.team1_score ?? 0) > (match.team2_score ?? 0);
+                  const player2Wins = (match.team2_score ?? 0) > (match.team1_score ?? 0);
+                  return (
+                    <div key={match.id} className={`flex flex-col sm:flex-row items-stretch rounded-xl shadow-sm border-l-8 ${getStatusBorderColor(match.status || '')} p-0 overflow-hidden gap-0`}> 
+                      {/* Participants and Scores */}
+                      <div className="flex flex-col items-center w-full py-4">
+                        <div className="flex items-center justify-center gap-2 w-full mb-2">
+                          <span className={`font-semibold text-center ${player1Wins ? 'text-green-700 font-bold' : 'text-gray-800'}`} title={player1Name}>{player1Name}</span>
+                        </div>
+                        <div className="flex items-center justify-center gap-4 w-full">
+                          <span className="text-2xl sm:text-3xl font-extrabold text-blue-700 drop-shadow">{match.team1_score ?? '-'}</span>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                );
+                      <div className="flex flex-col items-center w-full py-4">
+                        <div className="flex items-center justify-center gap-2 w-full mb-2">
+                          <span className={`font-semibold text-center ${player2Wins ? 'text-green-700 font-bold' : 'text-gray-800'}`} title={player2Name}>{player2Name}</span>
+                        </div>
+                        <div className="flex items-center justify-center gap-4 w-full">
+                          <span className="text-2xl sm:text-3xl font-extrabold text-red-700 drop-shadow">{match.team2_score ?? '-'}</span>
+                        </div>
+                      </div>
+                      {/* Info and Actions */}
+                      <div className="flex flex-col gap-2 w-full sm:flex-row sm:items-center sm:justify-between bg-white/80 px-4 py-3 border-t sm:border-t-0 sm:border-l border-blue-100">
+                        {/* Pool and Category in a single row, left-aligned, with truncation */}
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <span className="text-lg font-bold text-gray-800 truncate max-w-[180px]" title={getPoolName(match.pool_id)}>{getPoolName(match.pool_id)}</span>
+                          <span className="mx-1 text-gray-400">•</span>
+                          <span className="text-lg font-bold text-blue-700 truncate max-w-[180px]" title={matchCategory?.label}>{matchCategory?.label}</span>
+                          <span className={`ml-3 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(match.status || 'scheduled')}`}>{getStatusIcon(match.status || 'scheduled')}</span>
+                        </div>
+                        {/* Actions aligned right on desktop, stacked on mobile */}
+                        <div className="flex flex-col sm:flex-row gap-2 mt-2 sm:mt-0 sm:ml-4 w-full sm:w-auto sm:justify-end">
+                          <button onClick={() => openUpdateScoreModal(match)} className="px-4 py-2 bg-blue-600 text-white rounded text-sm font-bold hover:bg-blue-700 w-full sm:w-auto">Score</button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+                // Pair match card (placeholder)
+                if (matchType === 'pair') {
+                  return (
+                    <div key={match.id} className="border border-purple-200 rounded-lg p-6 bg-purple-50 text-center">
+                      <span className="text-purple-700">Pair match display not implemented yet.</span>
+                    </div>
+                  );
+                }
+                return null;
               })}
             </div>
           )}
@@ -509,77 +670,7 @@ export default function AdminMatchesPage() {
       )}
 
       {/* Update Score Modal */}
-      {showUpdateScore && selectedMatch && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Update Match Score</h3>
-            <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-4">
-                {getTeamName(selectedMatch.team1_id)} vs {getTeamName(selectedMatch.team2_id)}
-              </p>
-            </div>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {getTeamName(selectedMatch.team1_id)} Score
-                  </label>
-                  <input
-                    type="number"
-                    value={team1Score}
-                    onChange={(e) => setTeam1Score(e.target.value)}
-                    min="0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {getTeamName(selectedMatch.team2_id)} Score
-                  </label>
-                  <input
-                    type="number"
-                    value={team2Score}
-                    onChange={(e) => setTeam2Score(e.target.value)}
-                    min="0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select
-                  value={matchStatus}
-                  onChange={(e) => setMatchStatus(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                >
-                  <option value="scheduled">Scheduled</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="completed">Completed</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-              </div>
-            </div>
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={handleUpdateScore}
-                disabled={!team1Score || !team2Score}
-                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Update Score
-              </button>
-              <button
-                onClick={() => {
-                  setShowUpdateScore(false);
-                  setSelectedMatch(null);
-                }}
-                className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-400"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {renderUpdateScoreModal()}
     </div>
   );
 } 

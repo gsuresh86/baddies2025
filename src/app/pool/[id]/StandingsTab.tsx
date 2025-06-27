@@ -2,9 +2,9 @@ import { TournamentStandings } from '@/types';
 
 export default function StandingsTab({ standings }: { standings: TournamentStandings[] }) {
   return (
-    <div className="overflow-hidden rounded-2xl">
-      <div className="overflow-x-auto border border-white/10 rounded-lg scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
-        <table className="w-full min-w-[800px]">
+    <div>
+      <div className="overflow-x-auto border border-white/10 sm:rounded-2xl sm:bg-white/5 sm:backdrop-blur-sm sm:shadow-2xl sm:hover-lift scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
+        <table className="w-full min-w-[700px] sm:min-w-[800px]">
           <thead>
             <tr className="bg-gradient-to-r from-white/20 to-white/10 border-b border-white/20">
               <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-bold text-white uppercase tracking-wider w-16">#</th>
@@ -30,9 +30,6 @@ export default function StandingsTab({ standings }: { standings: TournamentStand
               >
                 <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap w-16">
                   <div className="flex items-center">
-                    {index === 0 && <span className="text-lg sm:text-2xl mr-1 sm:mr-2">🥇</span>}
-                    {index === 1 && <span className="text-lg sm:text-2xl mr-1 sm:mr-2">🥈</span>}
-                    {index === 2 && <span className="text-lg sm:text-2xl mr-1 sm:mr-2">🥉</span>}
                     <span className={`text-sm sm:text-lg font-bold ${
                       index === 0 ? 'text-yellow-300' :
                       index === 1 ? 'text-gray-300' :
@@ -78,7 +75,6 @@ export default function StandingsTab({ standings }: { standings: TournamentStand
           </tbody>
         </table>
       </div>
-      
       {standings.length === 0 && (
         <div className="text-center py-12">
           <div className="text-4xl mb-4">📊</div>

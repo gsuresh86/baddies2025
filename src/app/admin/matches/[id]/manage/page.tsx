@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { supabase, tournamentStore } from "@/lib/store";
+import { supabase } from "@/lib/store";
 import { Match, Game as GameBase, Team } from "@/types";
 import Link from "next/link";
+import { useToast } from '@/contexts/ToastContext';
 
 type Game = GameBase & {
   player1_id?: string;
@@ -77,6 +78,7 @@ function mergeGamesWithStructure(dbGames: Game[]): Game[] {
 }
 
 export default function AdminManageMatchPage() {
+  const { showSuccess, showError } = useToast();
   const params = useParams();
   const matchId = params?.id as string;
 
@@ -103,23 +105,61 @@ export default function AdminManageMatchPage() {
       setLoading(true);
       setError(null);
       try {
-        // Fetch match
-        const matchData = await tournamentStore.getMatchById(matchId);
-        if (!matchData) throw new Error("Match not found");
+        // Fetch match details
+        const { data: matchData, error: matchError } = await supabase
+          .from("matches")
+          .select("*")
+          .eq("id", matchId)
+          .single();
+        
+        if (matchError) {
+          setError(matchError.message);
+          setLoading(false);
+          return;
+        }
+        
+        if (!matchData) {
+          setError("Match not found");
+          setLoading(false);
+          return;
+        }
+        
         setMatch(matchData);
-        // Fetch teams with players
-        const [team1Data, team2Data] = await Promise.all([
-          tournamentStore.getTeamById(matchData.team1_id),
-          tournamentStore.getTeamById(matchData.team2_id),
+        
+        // Fetch teams
+        const [team1Result, team2Result] = await Promise.all([
+          supabase.from("teams").select("*").eq("id", matchData.team1_id).single(),
+          supabase.from("teams").select("*").eq("id", matchData.team2_id).single()
         ]);
-        setTeam1(team1Data);
-        setTeam2(team2Data);
-        // Fetch games from DB
-        const { data: gamesData } = await supabase.from("games").select("*").eq("match_id", matchId);
-        const dbGames: Game[] = gamesData && gamesData.length > 0 ? gamesData : [];
-        const mergedGames = mergeGamesWithStructure(dbGames);
+        
+        if (team1Result.error) {
+          console.error("Error fetching team1:", team1Result.error);
+          showError("Error fetching team1");
+        }
+        if (team2Result.error) {
+          console.error("Error fetching team2:", team2Result.error);
+          showError("Error fetching team2");
+        }
+        
+        setTeam1(team1Result.data);
+        setTeam2(team2Result.data);
+        
+        // Fetch games
+        const { data: gamesData, error: gamesError } = await supabase
+          .from("games")
+          .select("*")
+          .eq("match_id", matchId)
+          .order("created_at");
+        
+        if (gamesError) {
+          console.error("Error fetching games:", gamesError);
+          showError("Error fetching games");
+        }
+        
+        const mergedGames = mergeGamesWithStructure(gamesData || []);
         setGames(mergedGames);
-        // Set up local selection state
+        
+        // Initialize selections and results
         setGameSelections(
           mergedGames.map((game: Game) => ({
             player1Id: game.player1_id || "",
@@ -128,7 +168,6 @@ export default function AdminManageMatchPage() {
             player4Id: game.player4_id || "",
           }))
         );
-        // Set up local result state
         setResultInputs(
           mergedGames.map((game: Game) => ({
             team1_score: game.team1_score?.toString() ?? "",
@@ -136,14 +175,15 @@ export default function AdminManageMatchPage() {
             winner: game.winner ?? "",
           }))
         );
-      } catch (err: unknown) {
+      } catch (err) {
         const errorMessage = err instanceof Error ? err.message : String(err);
         setError(errorMessage);
+        showError("Error fetching match data", errorMessage);
       }
       setLoading(false);
     }
     if (matchId) fetchData();
-  }, [matchId]);
+  }, [matchId, showError]);
 
   // Helper to count wins and update match score in DB
   useEffect(() => {
@@ -268,10 +308,10 @@ export default function AdminManageMatchPage() {
           winner: game.winner ?? "",
         }))
       );
-      alert("Game saved!");
+      showSuccess("Game saved successfully!");
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
-      alert("Error saving game: " + errorMessage);
+      showError("Error saving game", errorMessage);
     }
     setSaving(false);
   };
@@ -302,10 +342,10 @@ export default function AdminManageMatchPage() {
           winner: game.winner ?? "",
         }))
       );
-      alert("Game marked as completed!");
+      showSuccess("Game marked as completed!");
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
-      alert("Error marking game as completed: " + errorMessage);
+      showError("Error marking game as completed", errorMessage);
     }
     setSaving(false);
   };

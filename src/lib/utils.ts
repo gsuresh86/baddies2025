@@ -60,4 +60,16 @@ export const categoryLabels: Record<PlayerCategory, { code: string; label: strin
   [PlayerCategory.GirlsU18]: { code: "GU18", label: "Girls U18" },
   [PlayerCategory.BoysU18]: { code: "BU18", label: "Boys U18" },
   [PlayerCategory.MixedDoubles]: { code: "XD", label: "Mixed Doubles" },
+};
+
+export const categoryTypes: Record<PlayerCategory, 'team' | 'player' | 'pair'> = {
+  [PlayerCategory.MensTeam]: 'team',
+  [PlayerCategory.WomensSingles]: 'player',
+  [PlayerCategory.WomensDoubles]: 'pair',
+  [PlayerCategory.BoysU13]: 'player',
+  [PlayerCategory.GirlsU13]: 'player',
+  [PlayerCategory.FamilyMixedDoubles]: 'pair',
+  [PlayerCategory.GirlsU18]: 'player',
+  [PlayerCategory.BoysU18]: 'player',
+  [PlayerCategory.MixedDoubles]: 'pair',
 }; 

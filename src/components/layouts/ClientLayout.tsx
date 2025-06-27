@@ -6,6 +6,7 @@ import { User } from "@supabase/supabase-js";
 import PublicLayout from './PublicLayout';
 import AdminLayout from './AdminLayout';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { ToastProvider } from '@/contexts/ToastContext';
 
 // Define route categories
 const PUBLIC_ROUTES = ['/', '/standings', '/teams', '/rules', '/tournaments', '/match'];
@@ -46,31 +47,41 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
 
   // If it's an auth route, render without any layout
   if (isAuthRoute) {
-    return <>{children}</>;
+    return (
+      <ToastProvider>
+        {children}
+      </ToastProvider>
+    );
   }
 
   // If it's an admin route, use admin layout
   if (isAdminRoute) {
     return (
-      <AdminLayout user={user}>
-        {children}
-      </AdminLayout>
+      <ToastProvider>
+        <AdminLayout user={user}>
+          {children}
+        </AdminLayout>
+      </ToastProvider>
     );
   }
 
   // If it's a public route, use public layout
   if (isPublicRoute) {
     return (
-      <PublicLayout>
-        {children}
-      </PublicLayout>
+      <ToastProvider>
+        <PublicLayout>
+          {children}
+        </PublicLayout>
+      </ToastProvider>
     );
   }
 
   // Default to public layout
   return (
-    <PublicLayout>
-      {children}
-    </PublicLayout>
+    <ToastProvider>
+      <PublicLayout>
+        {children}
+      </PublicLayout>
+    </ToastProvider>
   );
 } 

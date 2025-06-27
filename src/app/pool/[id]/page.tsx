@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/store';
-import { Pool, Team, Match, TournamentStandings } from '@/types';
+import { Pool, Team, Match, TournamentStandings, Player } from '@/types';
 import TeamsTab from './TeamsTab';
 import MatchesTab from './MatchesTab';
 import StandingsTab from './StandingsTab';
@@ -13,6 +13,7 @@ export default function PoolPage({ params }: { params: Promise<{ id: string }> }
   const [pool, setPool] = useState<Pool | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'teams' | 'matches' | 'standings'>('teams');
   const [showAddTeam, setShowAddTeam] = useState(false);
@@ -42,6 +43,11 @@ export default function PoolPage({ params }: { params: Promise<{ id: string }> }
       const { data: matchData } = await supabase.from('matches').select('*').eq('pool_id', id);
       
       setMatches(matchData || []);
+      // Fetch players for player/pair categories
+      if (poolData && poolData.category?.type && poolData.category.type !== 'team') {
+        const { data: poolPlayers } = await supabase.from('pool_players').select('*, player:t_players(*)').eq('pool_id', id);
+        setPlayers(poolPlayers?.map((pp: any) => pp.player) || []);
+      }
       setLoading(false);
     }
     fetchAll();
@@ -273,7 +279,7 @@ export default function PoolPage({ params }: { params: Promise<{ id: string }> }
           <TeamsTab teams={teams} />
         )}
         {activeTab === 'matches' && (
-          <MatchesTab matches={matches} teams={teams} />
+          <MatchesTab matches={matches} teams={teams} players={players} pool={pool} />
         )}
         {activeTab === 'standings' && (
           <StandingsTab standings={standings} />

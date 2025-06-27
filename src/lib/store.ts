@@ -439,7 +439,7 @@ class TournamentStore {
             }));
           }
           // For non-Men's Team, fetch players directly assigned to pool
-          if (pool.category?.code !== 'MT') {
+          if (pool.category?.type === 'player' || pool.category?.type === 'pair') {
             const { data: poolPlayers, error: poolPlayersError } = await supabase
               .from('pool_players')
               .select('*, player:t_players(*)')
@@ -614,6 +614,33 @@ class TournamentStore {
     }
   }
 
+  async assignPairToPool(player1Id: string, poolId: string): Promise<void> {
+    
+    const { data: existingAssignments, error: checkError } = await supabase
+      .from('pool_players')
+      .select('player_id')
+      .eq('pool_id', poolId)
+      .in('player_id', [player1Id]);
+    
+    if (checkError) throw checkError;
+    
+    if (existingAssignments && existingAssignments.length > 0) {
+      throw new Error('One or both players are already assigned to this pool');
+    }
+    
+    // Assign both players to the pool
+    const { error } = await supabase
+      .from('pool_players')
+      .insert([
+        { player_id: player1Id, pool_id: poolId }
+      ]);
+    
+    if (error) {
+      console.error('Error assigning pair to pool:', error);
+      throw error;
+    }
+  }
+
   async removePlayerFromPool(playerId: string, poolId: string): Promise<void> {
     const { error } = await supabase
       .from('pool_players')
@@ -626,49 +653,129 @@ class TournamentStore {
     }
   }
 
+  async removePairFromPool(playerId: string, poolId: string): Promise<void> {
+    // Get the partner of the player being removed
+    const { data: player, error: playerError } = await supabase
+      .from('t_players')
+      .select('partner_name')
+      .eq('id', playerId)
+      .single();
+    
+    if (playerError) throw playerError;
+    
+    if (player.partner_name) {
+      // Find the partner's ID
+      const { data: partner, error: partnerError } = await supabase
+        .from('t_players')
+        .select('id')
+        .eq('name', player.partner_name)
+        .single();
+      
+      if (partnerError) throw partnerError;
+      
+      // Remove both players from the pool
+      const { error } = await supabase
+        .from('pool_players')
+        .delete()
+        .eq('pool_id', poolId)
+        .in('player_id', [playerId, partner.id]);
+      
+      if (error) {
+        console.error('Error removing pair from pool:', error);
+        throw error;
+      }
+    } else {
+      // Fallback to single player removal
+      await this.removePlayerFromPool(playerId, poolId);
+    }
+  }
+
   // Match scheduling
   async generateMatchesForPool(poolId: string): Promise<void> {
     console.log('Generating matches for pool:', poolId);
-    
-    // Get teams in the pool
-    const { data: teams, error: teamsError } = await supabase
-      .from('teams')
-      .select('id')
-      .eq('pool_id', poolId);
-    
-    if (teamsError) {
-      console.error('Error fetching teams for pool:', teamsError);
-      throw teamsError;
-    }
-    
-    if (!teams || teams.length < 2) {
-      throw new Error('Need at least 2 teams in pool to generate matches');
-    }
-    
-    // Generate round-robin matches
-    const matches = [];
-    for (let i = 0; i < teams.length; i++) {
-      for (let j = i + 1; j < teams.length; j++) {
-        matches.push({
-          team1_id: teams[i].id,
-          team2_id: teams[j].id,
-          pool_id: poolId,
-          status: 'scheduled'
-        });
+    // Fetch pool with category
+    const { data: pool, error: poolError } = await supabase
+      .from('pools')
+      .select('*, category:categories(*)')
+      .eq('id', poolId)
+      .single();
+    if (poolError || !pool) throw poolError || new Error('Pool not found');
+    if (pool.category?.type === 'team') {
+      // Existing team logic
+      const { data: teams, error: teamsError } = await supabase
+        .from('teams')
+        .select('id')
+        .eq('pool_id', poolId);
+      if (teamsError) throw teamsError;
+      if (!teams || teams.length < 2) throw new Error('Need at least 2 teams in pool to generate matches');
+      const matches = [];
+      for (let i = 0; i < teams.length; i++) {
+        for (let j = i + 1; j < teams.length; j++) {
+          matches.push({ team1_id: teams[i].id, team2_id: teams[j].id, pool_id: poolId, status: 'scheduled' });
+        }
       }
+      const { error: matchesError } = await supabase.from('matches').insert(matches);
+      if (matchesError) throw matchesError;
+      console.log(`Generated ${matches.length} matches for pool ${poolId}`);
+    } else if (pool.category?.type === 'player') {
+      // Player-based logic
+      const { data: poolPlayers, error: poolPlayersError } = await supabase
+        .from('pool_players')
+        .select('player_id')
+        .eq('pool_id', poolId);
+      if (poolPlayersError) throw poolPlayersError;
+      if (!poolPlayers || poolPlayers.length < 2) throw new Error('Need at least 2 players in pool to generate matches');
+      const matches = [];
+      for (let i = 0; i < poolPlayers.length; i++) {
+        for (let j = i + 1; j < poolPlayers.length; j++) {
+          matches.push({ player1_id: poolPlayers[i].player_id, player2_id: poolPlayers[j].player_id, pool_id: poolId, status: 'scheduled' });
+        }
+      }
+      const { error: matchesError } = await supabase.from('matches').insert(matches);
+      if (matchesError) throw matchesError;
+      console.log(`Generated ${matches.length} player matches for pool ${poolId}`);
+    } else if (pool.category?.type === 'pair') {
+      // Pair-based logic for Family Mixed, Women's Doubles, Mixed Doubles
+      const { data: poolPlayers, error: poolPlayersError } = await supabase
+        .from('pool_players')
+        .select('player_id')
+        .eq('pool_id', poolId);
+      if (poolPlayersError) throw poolPlayersError;
+      if (!poolPlayers || poolPlayers.length < 2) throw new Error('Need at least 2 players in pool to generate matches');
+      
+      // Get player details
+      const { data: playersData, error: playersError } = await supabase
+        .from('t_players')
+        .select('id, name, partner_name')
+        .in('id', poolPlayers.map(pp => pp.player_id));
+      if (playersError) throw playersError;
+      
+      console.log('Pool players:', poolPlayers);
+      console.log('Players data:', playersData);
+      
+      if (!playersData || playersData.length < 2) {
+        throw new Error('Need at least 2 players in pool to generate matches');
+      }
+      
+      // Generate matches between all players (pairs will be handled by partner_name lookup)
+      const matches = [];
+      for (let i = 0; i < playersData.length; i++) {
+        for (let j = i + 1; j < playersData.length; j++) {
+          matches.push({
+            player1_id: playersData[i].id,
+            player2_id: playersData[j].id,
+            pool_id: poolId,
+            status: 'scheduled'
+          });
+        }
+      }
+      
+      const { error: matchesError } = await supabase.from('matches').insert(matches);
+      if (matchesError) throw matchesError;
+      console.log(`Generated ${matches.length} matches for pool ${poolId}`);
+    } else {
+      throw new Error('Unknown category type for match generation.');
     }
-    
-    // Insert matches
-    const { error: matchesError } = await supabase
-      .from('matches')
-      .insert(matches);
-    
-    if (matchesError) {
-      console.error('Error creating matches:', matchesError);
-      throw matchesError;
-    }
-    
-    console.log(`Generated ${matches.length} matches for pool ${poolId}`);
   }
 
   // Match management
