@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/store';
 import { Pool, Team, Match, TournamentStandings, Player } from '@/types';
-import StandingsTab from '../pool/[id]/StandingsTab';
+import StandingsTab from './pool/StandingsTab';
 import { categoryLabels } from '@/lib/utils';
 
 function calculateStandings(teams: Team[], players: Player[], matches: Match[]): TournamentStandings[] {
