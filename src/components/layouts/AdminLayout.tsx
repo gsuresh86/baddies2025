@@ -175,14 +175,8 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
                 />
               </div>
             </div>
-            
-            {/* Quick Stats */}
-            {/* Removed admin email container from topbar */}
-          </header>
-
-          {/* Quick Navigation */}
-          <nav className="w-full bg-gray-50 border-b border-gray-200 px-4 sm:px-6 py-3">
-            <div className="flex flex-wrap gap-3">
+            {/* Quick Navigation Buttons moved here */}
+            <div className="flex flex-wrap gap-3 mt-3 md:mt-0 justify-end w-full md:w-auto">
               <Link
                 href="/"
                 className="px-4 py-2 bg-white text-gray-700 rounded-lg text-sm font-medium shadow-sm hover:bg-gray-50 transition-all duration-200 border border-gray-200"
@@ -208,7 +202,7 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
                 📋 View Rules
               </Link>
             </div>
-          </nav>
+          </header>
 
           <main className="flex-1 px-4 sm:px-6 py-6 bg-gradient-to-br from-gray-50 to-gray-100 overflow-y-auto">
             {children}

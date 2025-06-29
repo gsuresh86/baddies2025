@@ -29,9 +29,29 @@ export default function AdminTeamsPage() {
   const [mensTeamPlayers, setMensTeamPlayers] = useState<Player[]>([]);
   const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
 
+  // Pools with players section
+  const [categories, setCategories] = useState<any[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [poolsWithPlayers, setPoolsWithPlayers] = useState<any[]>([]);
+  const [poolsLoading, setPoolsLoading] = useState(false);
+
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Fetch categories on mount
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  // Fetch pools with players when category changes
+  useEffect(() => {
+    if (selectedCategory) {
+      fetchPoolsWithPlayers(selectedCategory);
+    } else {
+      setPoolsWithPlayers([]);
+    }
+  }, [selectedCategory]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -90,6 +110,56 @@ export default function AdminTeamsPage() {
       console.error('Error fetching data:', err);
     }
     setLoading(false);
+  };
+
+  // Fetch categories for pools with players section
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase.from('categories').select('*').order('label');
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (err) {
+      console.error('Error fetching categories:', err);
+    }
+  };
+
+  // Fetch pools with players for selected category
+  const fetchPoolsWithPlayers = async (categoryId: string) => {
+    if (!categoryId) return;
+    
+    setPoolsLoading(true);
+    try {
+      // Get pools for the selected category
+      const { data: poolsData, error: poolsError } = await supabase
+        .from('pools')
+        .select('*, category:categories(*)')
+        .eq('category_id', categoryId);
+      
+      if (poolsError) throw poolsError;
+      
+      // Get pool players for each pool
+      const poolsWithPlayersData = await Promise.all(
+        (poolsData || []).map(async (pool) => {
+          const { data: poolPlayersData, error: poolPlayersError } = await supabase
+            .from('pool_players')
+            .select('*, player:t_players(*)')
+            .eq('pool_id', pool.id);
+          
+          if (poolPlayersError) throw poolPlayersError;
+          
+          return {
+            ...pool,
+            players: poolPlayersData?.map(pp => pp.player).filter(Boolean) || []
+          };
+        })
+      );
+      
+      setPoolsWithPlayers(poolsWithPlayersData);
+    } catch (err) {
+      console.error('Error fetching pools with players:', err);
+    } finally {
+      setPoolsLoading(false);
+    }
   };
 
   const handleCreateTeam = async () => {
@@ -388,6 +458,93 @@ export default function AdminTeamsPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Pools with Players Section */}
+      <div className="bg-white rounded-xl shadow-lg border border-gray-200 mt-8">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-800">Pools with Players</h2>
+          <p className="text-gray-600 mt-1">View players assigned to pools by category</p>
+        </div>
+        <div className="p-6">
+          {/* Category Filter */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Select Category:</label>
+            <select
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+              value={selectedCategory}
+              onChange={e => setSelectedCategory(e.target.value)}
+            >
+              <option value="">-- Choose a category --</option>
+              {categories.map(cat => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.label || cat.code}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Pools Display */}
+          {!selectedCategory ? (
+            <div className="text-center py-8">
+              <div className="text-6xl mb-4">🏸</div>
+              <h3 className="text-lg font-medium text-gray-800 mb-2">Select a category</h3>
+              <p className="text-gray-600">Choose a category to view pools and assigned players</p>
+            </div>
+          ) : poolsLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+              <p className="text-gray-500">Loading pools...</p>
+            </div>
+          ) : poolsWithPlayers.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="text-6xl mb-4">🏊</div>
+              <h3 className="text-lg font-medium text-gray-800 mb-2">No pools found</h3>
+              <p className="text-gray-600">No pools have been created for this category yet</p>
+            </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {poolsWithPlayers.map((pool) => {
+                const isPairCategory = pool.category?.type === 'pair';
+                const participantLabel = isPairCategory ? 'pairs' : 'players';
+                
+                return (
+                  <div key={pool.id} className="border border-gray-200 rounded-lg p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-800">{pool.name}</h3>
+                      <span className="text-sm text-gray-500">
+                        {pool.players.length}/{pool.max_teams} {participantLabel}
+                      </span>
+                    </div>
+                    
+                    {pool.players.length === 0 ? (
+                      <p className="text-gray-500 text-sm">No {participantLabel} assigned</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {pool.players.map((player: any) => {
+                          const displayName = isPairCategory && player.partner_name 
+                            ? `${player.name} / ${player.partner_name}`
+                            : player.name;
+                          
+                          return (
+                            <div key={player.id} className="p-2 bg-gray-50 rounded">
+                              <div className="text-sm font-medium text-gray-800">{displayName}</div>
+                              {player.level && (
+                                <div className="text-xs text-gray-500 mt-1">
+                                  Level: {player.level}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
