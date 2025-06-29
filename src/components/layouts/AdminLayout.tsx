@@ -51,6 +51,7 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
     { href: '/admin/teams', icon: '👥', label: 'Teams' },
     { href: '/admin/matches', icon: '🏸', label: 'Matches' },
     { href: '/admin/spin-wheel', icon: '🎰', label: 'Spin Wheel' },
+    { href: '/admin/tshirts', icon: '👕', label: 'T-Shirts' },
   ];
 
   return (

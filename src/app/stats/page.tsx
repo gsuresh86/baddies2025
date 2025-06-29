@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/store';
-import { Player } from '@/types';
 
 export default function StatsPage() {
   const [loading, setLoading] = useState(true);
@@ -15,21 +14,28 @@ export default function StatsPage() {
   useEffect(() => {
     async function fetchStats() {
       setLoading(true);
-      const playersRes = await supabase.from('t_players').select('id,name,email,category');
+      const playersRes = await supabase.from('t_players').select('id,name,email,phone,partner_name,partner_phone,category');
       // Calculate player stats
       const allPlayers = Array.isArray(playersRes.data) ? playersRes.data : [];
-      // Unique by name or email
-      const uniqueSet = new Set();
-      allPlayers.forEach((p: Player) => {
-        if (p.email) {
-          uniqueSet.add(p.email.toLowerCase());
-        } else if (p.name) {
-          uniqueSet.add(p.name.trim().toLowerCase());
+      // Unique by name (spaces removed, lowercased)
+      const uniqueMap = new Map();
+      allPlayers.forEach((p) => {
+        // Main player
+        const nameKey = (p.name || '').replace(/\s+/g, '').toLowerCase();
+        if (p.name && !uniqueMap.has(nameKey)) {
+          uniqueMap.set(nameKey, true);
+        }
+        // Partner
+        if (p.partner_name) {
+          const partnerNameKey = p.partner_name.replace(/\s+/g, '').toLowerCase();
+          if (!uniqueMap.has(partnerNameKey)) {
+            uniqueMap.set(partnerNameKey, true);
+          }
         }
       });
-      // Players by category
+      // Players by category (main player only, as before)
       const byCategory: Record<string, number> = {};
-      allPlayers.forEach((p: Player) => {
+      allPlayers.forEach((p) => {
         if (p.category) {
           byCategory[p.category] = (byCategory[p.category] || 0) + 1;
         } else {
@@ -38,7 +44,7 @@ export default function StatsPage() {
       });
       setPlayerStats({
         totalRegistrations: allPlayers.length,
-        uniqueParticipants: uniqueSet.size,
+        uniqueParticipants: uniqueMap.size,
         playersByCategory: byCategory,
       });
       setLoading(false);
