@@ -257,15 +257,31 @@ export default function AdminRegistrationsPage() {
                           }</td>
                           <td className="py-2 px-2 text-sm text-gray-600">{reg.paid_amt || "-"}</td>
                           <td className="py-2 px-2">
-                            <select
-                              value={reg.payment_status ? "paid" : "unpaid"}
-                              onChange={(e) => handleTogglePayment(reg.id, e.target.value === "paid")}
-                              className={`text-xs sm:text-sm px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${updatingId === reg.id ? "opacity-50" : ""}`}
+                            <button
+                              type="button"
+                              onClick={() => handleTogglePayment(reg.id, reg.payment_status ?? false)}
                               disabled={updatingId === reg.id}
+                              className={`flex items-center gap-2 px-3 py-1 rounded-full font-semibold text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2
+                                ${reg.payment_status ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-red-100 text-red-700 border border-red-300'}
+                                ${updatingId === reg.id ? 'opacity-60 cursor-not-allowed' : 'hover:shadow-md'}`}
                             >
-                              <option value="unpaid">Unpaid</option>
-                              <option value="paid">Paid</option>
-                            </select>
+                              {updatingId === reg.id ? (
+                                <svg className="animate-spin h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                                </svg>
+                              ) : reg.payment_status ? (
+                                <>
+                                  <span className="inline-block w-2 h-2 rounded-full bg-green-500"></span>
+                                  Paid
+                                </>
+                              ) : (
+                                <>
+                                  <span className="inline-block w-2 h-2 rounded-full bg-red-500"></span>
+                                  Unpaid
+                                </>
+                              )}
+                            </button>
                           </td>
                         </tr>
                       );
