@@ -16,7 +16,6 @@ interface PlayerRow {
 export default function AdminTShirtsPage() {
   const [players, setPlayers] = useState<PlayerRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tshirtStats, setTshirtStats] = useState<Record<string, number>>({});
 
   useEffect(() => {
     async function fetchPlayers() {
@@ -27,17 +26,6 @@ export default function AdminTShirtsPage() {
         .order("name");
       if (!error && data) {
         setPlayers(data);
-        // Calculate T-shirt size stats for both player and partner
-        const stats: Record<string, number> = {};
-        data.forEach((p: PlayerRow) => {
-          if (p.tshirt_size) {
-            stats[p.tshirt_size] = (stats[p.tshirt_size] || 0) + 1;
-          }
-          if (p.partner_name && p.partner_tshirt_size) {
-            stats[p.partner_tshirt_size] = (stats[p.partner_tshirt_size] || 0) + 1;
-          }
-        });
-        setTshirtStats(stats);
       }
       setLoading(false);
     }
@@ -64,6 +52,14 @@ export default function AdminTShirtsPage() {
   // Sort by name (case-insensitive)
   allRows.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 
+  // Calculate T-shirt size stats from unique players data
+  const tshirtStats: Record<string, number> = {};
+  allRows.forEach((row) => {
+    if (row.tshirt_size) {
+      tshirtStats[row.tshirt_size] = (tshirtStats[row.tshirt_size] || 0) + 1;
+    }
+  });
+
   return (
     <AuthGuard>
       <div className="mx-auto max-w-4xl">
@@ -74,7 +70,7 @@ export default function AdminTShirtsPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-8">
-          {Object.entries(tshirtStats).map(([size, count]) => (
+          {Object.entries(tshirtStats || {}).map(([size, count]) => (
             <div key={size} className="bg-white rounded-xl p-4 shadow border border-gray-200 flex flex-col items-center">
               <span className="text-lg font-bold text-blue-700">{size}</span>
               <span className="text-2xl font-bold text-gray-800">{count}</span>
