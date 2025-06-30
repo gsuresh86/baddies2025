@@ -60,6 +60,30 @@ export default function AdminTShirtsPage() {
     }
   });
 
+  // CSV Export function
+  const exportToCSV = () => {
+    const headers = ['#', 'Name', 'Phone', 'T-Shirt Size'];
+    const csvContent = [
+      headers.join(','),
+      ...allRows.map((row, idx) => [
+        idx + 1,
+        `"${row.name}"`,
+        `"${row.phone || ''}"`,
+        `"${row.tshirt_size || ''}"`
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `tshirt-sizes-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <AuthGuard>
       <div className="mx-auto max-w-4xl">
@@ -79,9 +103,17 @@ export default function AdminTShirtsPage() {
           ))}
         </div>
 
-        {/* Total Count */}
-        <div className="mb-4 text-right text-gray-700 font-semibold text-lg">
-          Total Unique Players: {allRows.length}
+        {/* Total Count and Export Button */}
+        <div className="mb-4 flex justify-between items-center">
+          <div className="text-gray-700 font-semibold text-lg">
+            Total Unique Players: {allRows.length}
+          </div>
+          <button
+            onClick={exportToCSV}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors text-sm"
+          >
+            📊 Export CSV
+          </button>
         </div>
 
         {/* Players Table */}
