@@ -22,6 +22,7 @@ export default function AdminRegistrationsPage() {
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [paidToFilter, setPaidToFilter] = useState<null | 'Surya' | 'Vasu'>(null);
 
   const fetchRegistrations = useCallback(async () => {
     setLoading(true);
@@ -69,7 +70,13 @@ export default function AdminRegistrationsPage() {
 
   const filteredRegistrations = registrations.filter(reg => {
     const matchesSearch = reg.name && reg.name.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
+    let matchesPaidTo = true;
+    if (paidToFilter === 'Surya') {
+      matchesPaidTo = !!(reg.paid_to && reg.paid_to.toLowerCase().includes('surya'));
+    } else if (paidToFilter === 'Vasu') {
+      matchesPaidTo = !!(reg.paid_to && reg.paid_to.toLowerCase().includes('vasu'));
+    }
+    return matchesSearch && matchesPaidTo;
   });
 
   // Calculate payment statistics
@@ -110,9 +117,20 @@ export default function AdminRegistrationsPage() {
           <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4">
             Payment Summary
           </h2>
-          
+          {/* Filter indicator and clear button */}
+          {paidToFilter && (
+            <div className="mb-3 flex items-center gap-2">
+              <span className="text-sm text-gray-700">Filtered by <b>Paid to {paidToFilter}</b></span>
+              <button
+                className="ml-2 px-2 py-1 text-xs rounded bg-gray-200 hover:bg-gray-300 text-gray-700"
+                onClick={() => setPaidToFilter(null)}
+              >
+                Clear Filter
+              </button>
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 cursor-default">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-blue-600">Total Amount</p>
@@ -127,8 +145,14 @@ export default function AdminRegistrationsPage() {
                 </div>
               </div>
             </div>
-            
-            <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+            <div
+              className={`rounded-lg p-4 border cursor-pointer transition-all ${
+                paidToFilter === 'Surya'
+                  ? 'bg-green-200 border-green-400 ring-2 ring-green-400'
+                  : 'bg-green-50 border-green-200 hover:bg-green-100'
+              }`}
+              onClick={() => setPaidToFilter(paidToFilter === 'Surya' ? null : 'Surya')}
+            >
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-green-600">Paid to Surya</p>
@@ -143,8 +167,14 @@ export default function AdminRegistrationsPage() {
                 </div>
               </div>
             </div>
-            
-            <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+            <div
+              className={`rounded-lg p-4 border cursor-pointer transition-all ${
+                paidToFilter === 'Vasu'
+                  ? 'bg-purple-200 border-purple-400 ring-2 ring-purple-400'
+                  : 'bg-purple-50 border-purple-200 hover:bg-purple-100'
+              }`}
+              onClick={() => setPaidToFilter(paidToFilter === 'Vasu' ? null : 'Vasu')}
+            >
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-purple-600">Paid to Vasu</p>
@@ -159,8 +189,7 @@ export default function AdminRegistrationsPage() {
                 </div>
               </div>
             </div>
-            
-            <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+            <div className="bg-red-50 rounded-lg p-4 border border-red-200 cursor-default">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-red-600">Empty Payment</p>
