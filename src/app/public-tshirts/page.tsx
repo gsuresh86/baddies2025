@@ -12,6 +12,8 @@ interface PlayerRow {
   tshirt_size?: string;
   partner_tshirt_size?: string;
   category?: string;
+  old_tshirt_size?: string;
+  old_partner_tshirt_size?: string;
 }
 
 export default function PublicTShirtsPage() {
@@ -24,7 +26,7 @@ export default function PublicTShirtsPage() {
       setLoading(true);
       const { data, error } = await supabase
         .from("t_players")
-        .select("id, name, phone, partner_name, partner_phone, tshirt_size, partner_tshirt_size, category")
+        .select("id, name, phone, partner_name, partner_phone, tshirt_size, partner_tshirt_size, category, old_tshirt_size, old_partner_tshirt_size")
         .order("name");
       if (!error && data) {
         setPlayers(data);
@@ -36,12 +38,12 @@ export default function PublicTShirtsPage() {
   }, []);
 
   // Use a Map to ensure uniqueness by name only (spaces removed, lowercased), and collect categories
-  const uniqueMap = new Map<string, { name: string; tshirt_size?: string; categories: Set<string> }>();
+  const uniqueMap = new Map<string, { name: string; tshirt_size?: string; old_tshirt_size?: string; categories: Set<string> }>();
   players.forEach((player) => {
     // Main player: always add their own category
     const nameKey = player.name.replace(/\s+/g, '').toLowerCase();
     if (!uniqueMap.has(nameKey)) {
-      uniqueMap.set(nameKey, { name: player.name, tshirt_size: player.tshirt_size, categories: new Set() });
+      uniqueMap.set(nameKey, { name: player.name, tshirt_size: player.tshirt_size, old_tshirt_size: player.old_tshirt_size, categories: new Set() });
     }
     if (player.category) {
       uniqueMap.get(nameKey)?.categories.add(player.category);
@@ -50,7 +52,7 @@ export default function PublicTShirtsPage() {
     if (player.partner_name) {
       const partnerNameKey = player.partner_name.replace(/\s+/g, '').toLowerCase();
       if (!uniqueMap.has(partnerNameKey)) {
-        uniqueMap.set(partnerNameKey, { name: player.partner_name, tshirt_size: player.partner_tshirt_size, categories: new Set() });
+        uniqueMap.set(partnerNameKey, { name: player.partner_name, tshirt_size: player.partner_tshirt_size, old_tshirt_size: player.old_partner_tshirt_size, categories: new Set() });
       }
       if (player.category) {
         uniqueMap.get(partnerNameKey)?.categories.add(player.category);
@@ -91,6 +93,7 @@ export default function PublicTShirtsPage() {
           <thead className="bg-white/5">
             <tr className="border-b border-white/10">
               <th className="text-left py-3 px-4 font-semibold text-white/80 text-sm">Name</th>
+              <th className="text-left py-3 px-4 font-semibold text-white/80 text-sm">Old T-Shirt Size</th>
               <th className="text-left py-3 px-4 font-semibold text-white/80 text-sm">T-Shirt Size</th>
               <th className="text-left py-3 px-4 font-semibold text-white/80 text-sm">Categories</th>
             </tr>
@@ -104,6 +107,7 @@ export default function PublicTShirtsPage() {
               filteredRows.map((row, idx) => (
                 <tr key={row.name + idx} className="border-b border-white/10 hover:bg-white/10 transition-colors">
                   <td className="py-2 px-4 text-white font-medium">{row.name}</td>
+                  <td className="py-2 px-4 text-white/80">{row.old_tshirt_size || "-"}</td>
                   <td className="py-2 px-4 text-white/80">{row.tshirt_size || "-"}</td>
                   <td className="py-2 px-4 text-white/80">{
                     Array.from(row.categories)
