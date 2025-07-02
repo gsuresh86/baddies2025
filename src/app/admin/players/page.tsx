@@ -6,6 +6,15 @@ import AuthGuard from '@/components/AuthGuard';
 import { useToast } from '@/contexts/ToastContext';
 import { playerCategories, categoryLabels, PlayerCategory } from '@/lib/utils';
 
+const STAGE_OPTIONS = [
+  'Round 1',
+  'Round 2',
+  'Round 3',
+  'Round 4',
+  'Round 5',
+  'Round 6',
+];
+
 export default function AdminPlayersPage() {
   const { showSuccess, showError } = useToast();
   const [players, setPlayers] = useState<Player[]>([]);
@@ -29,6 +38,12 @@ export default function AdminPlayersPage() {
   const [showAssignTeam, setShowAssignTeam] = useState(false);
   const [assignPlayer, setAssignPlayer] = useState<Player | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
+
+  // Inside AdminPlayersPage, add state for saving stage
+  const [savingStage, setSavingStage] = useState<Record<string, boolean>>({});
+
+  // Inside AdminPlayersPage, add state for stage filter
+  const [stageFilter, setStageFilter] = useState<string>('');
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -69,6 +84,11 @@ export default function AdminPlayersPage() {
       filtered = players.filter(player => player.category === activeTab);
     }
     
+    // Apply stage filter
+    if (activeTab === PlayerCategory.MensTeam && stageFilter && stageFilter !== 'all') {
+      filtered = filtered.filter(player => (player as any).stage === stageFilter);
+    }
+    
     // Apply search filter
     if (searchQuery.trim()) {
       filtered = filtered.filter(player =>
@@ -79,7 +99,7 @@ export default function AdminPlayersPage() {
     }
     
     setFilteredPlayers(filtered);
-  }, [searchQuery, players, activeTab]);
+  }, [searchQuery, players, activeTab, stageFilter]);
 
   const handleUpdatePlayer = async () => {
     if (!selectedPlayer || !editPlayerName.trim()) return;
@@ -105,12 +125,6 @@ export default function AdminPlayersPage() {
       console.error('Error updating player:', error);
       showError('Error updating player');
     }
-  };
-
-  const getPlayerTeams = (playerId: string): Team[] => {
-    return teams.filter(team => 
-      team.players?.some(player => player.id === playerId)
-    );
   };
 
   const handleSearch = async () => {
@@ -142,10 +156,6 @@ export default function AdminPlayersPage() {
     return category === "Men's Singles & Doubles (Team Event)";
   };
 
-  function isPlayerCategory(category: string): category is PlayerCategory {
-    return Object.values(PlayerCategory).includes(category as PlayerCategory);
-  }
-
   // Utility to safely get category label from categoryLabels
   function getCategoryLabel(key: string): string | undefined {
     // Try to match by PlayerCategory enum value
@@ -160,6 +170,25 @@ export default function AdminPlayersPage() {
     if (byLabel) return byLabel.label;
     return undefined;
   }
+
+  // Handler to update stage
+  const handleStageChange = async (playerId: string, newStage: string) => {
+    setSavingStage(prev => ({ ...prev, [playerId]: true }));
+    try {
+      const { error } = await supabase
+        .from('t_players')
+        .update({ stage: newStage })
+        .eq('id', playerId);
+      if (error) throw error;
+      // Update local state
+      setPlayers(prev => prev.map(p => p.id === playerId ? { ...p, stage: newStage } : p));
+      setFilteredPlayers(prev => prev.map(p => p.id === playerId ? { ...p, stage: newStage } : p));
+    } catch (error) {
+      showError('Error updating stage', error instanceof Error ? error.message : String(error));
+    } finally {
+      setSavingStage(prev => ({ ...prev, [playerId]: false }));
+    }
+  };
 
   return (
     <AuthGuard>
@@ -247,92 +276,79 @@ export default function AdminPlayersPage() {
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto border border-gray-200 rounded-lg">
-                <table className="w-full min-w-full">
-                  <thead className="bg-gray-50">
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-gray-800 text-xs sm:text-sm">Name & Partner Name</th>
-                      <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-gray-800 text-xs sm:text-sm hidden sm:table-cell">Skill Level</th>
-                      <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-gray-800 text-xs sm:text-sm hidden md:table-cell">Phone</th>
-                      <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-gray-800 text-xs sm:text-sm">Category</th>
-                      {activeTab === PlayerCategory.MensTeam && (
-                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-gray-800 text-xs sm:text-sm">Actions</th>
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredPlayers.map((player) => {
-                      const playerTeams = getPlayerTeams(player.id);
-                      const isDoubles = player.category === PlayerCategory.WomensDoubles || player.category === PlayerCategory.MixedDoubles || player.category === PlayerCategory.FamilyMixedDoubles;
-                      return (
-                        <tr key={player.id} className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="py-2 sm:py-3 px-2 sm:px-4">
-                            <div className="font-medium text-gray-800 text-sm">
-                              {player.name}{isDoubles && player.partner_name ? ` / ${player.partner_name}` : ''}
-                              <div className="text-xs text-gray-500 sm:hidden">
-                                {player.phone && `${player.phone}`}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="py-2 sm:py-3 px-2 sm:px-4 hidden sm:table-cell">
-                            <div className="text-gray-600 text-sm">{player.level || '-'}</div>
-                          </td>
-                          <td className="py-2 sm:py-3 px-2 sm:px-4 hidden md:table-cell">
-                            <div className="text-gray-600 text-sm">{player.phone || '-'}</div>
-                          </td>
-                          <td className="py-2 sm:py-3 px-2 sm:px-4">
-                            <div className="text-gray-600 text-xs sm:text-sm">
-                              {isPlayerCategory(player.category || '') ? (
-                                <span title={categoryLabels[player.category as PlayerCategory].label}>
-                                  {categoryLabels[player.category as PlayerCategory].label}
-                                </span>
-                              ) : (
-                                <span title={player.category || 'Unspecified'}>{player.category || 'Unspecified'}</span>
-                              )}
-                            </div>
-                          </td>
-                          {activeTab === PlayerCategory.MensTeam && (
+              <>
+                {/* Above the table, add the stage filter dropdown for Men's Team */}
+                {activeTab === PlayerCategory.MensTeam && (
+                  <div className="mb-4 flex items-center gap-2">
+                    <label className="font-bold text-gray-700 whitespace-nowrap mb-0">Filter by Stage:</label>
+                    <select
+                      className="w-32 p-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 text-gray-900 bg-white"
+                      value={stageFilter}
+                      onChange={e => setStageFilter(e.target.value)}
+                    >
+                      <option value="">All</option>
+                      {STAGE_OPTIONS.map(opt => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                  <table className="w-full min-w-full">
+                    <thead className="bg-gray-50">
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-gray-800 text-xs sm:text-sm">Name & Partner Name</th>
+                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-gray-800 text-xs sm:text-sm hidden sm:table-cell">Skill Level</th>
+                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-gray-800 text-xs sm:text-sm hidden md:table-cell">Phone</th>
+                        {activeTab === PlayerCategory.MensTeam && (
+                          <th className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold text-gray-800 text-xs sm:text-sm">Stage</th>
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredPlayers.map((player) => {
+                        const isDoubles = player.category === PlayerCategory.WomensDoubles || player.category === PlayerCategory.MixedDoubles || player.category === PlayerCategory.FamilyMixedDoubles;
+                        return (
+                          <tr key={player.id} className="border-b border-gray-100 hover:bg-gray-50">
                             <td className="py-2 sm:py-3 px-2 sm:px-4">
-                              <div className="flex gap-1 sm:gap-2">
-                                {playerTeams.length === 0 ? (
-                                  <button
-                                    onClick={() => {
-                                      setAssignPlayer(player);
-                                      setShowAssignTeam(true);
-                                      setSelectedTeamId('');
-                                    }}
-                                    className="px-2 sm:px-3 py-1 bg-purple-600 text-white rounded text-xs sm:text-sm font-medium hover:bg-purple-700"
-                                  >
-                                    Assign
-                                  </button>
-                                ) : (
-                                  <button
-                                    onClick={async () => {
-                                      const team = playerTeams[0];
-                                      if (!team) return;
-                                      if (!confirm(`Unassign ${player.name} from team ${team.name}?`)) return;
-                                      try {
-                                        await tournamentStore.removePlayerFromTeam(team.id, player.id);
-                                        showSuccess('Player unassigned successfully');
-                                        fetchData();
-                                      } catch (error) {
-                                        showError('Error unassigning player from team', error instanceof Error ? error.message : String(error));
-                                      }
-                                    }}
-                                    className="px-2 sm:px-3 py-1 bg-orange-600 text-white rounded text-xs sm:text-sm font-medium hover:bg-orange-700"
-                                  >
-                                    Unassign
-                                  </button>
-                                )}
+                              <div className="font-medium text-gray-800 text-sm">
+                                {player.name}{isDoubles && player.partner_name ? ` / ${player.partner_name}` : ''}
+                                <div className="text-xs text-gray-500 sm:hidden">
+                                  {player.phone && `${player.phone}`}
+                                </div>
                               </div>
                             </td>
-                          )}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                            <td className="py-2 sm:py-3 px-2 sm:px-4 hidden sm:table-cell">
+                              <div className="text-gray-600 text-sm">{player.level || '-'}</div>
+                            </td>
+                            <td className="py-2 sm:py-3 px-2 sm:px-4 hidden md:table-cell">
+                              <div className="text-gray-600 text-sm">{player.phone || '-'}</div>
+                            </td>
+                            {activeTab === PlayerCategory.MensTeam && (
+                              <td className="py-2 sm:py-3 px-2 sm:px-4">
+                                <select
+                                  className="w-32 p-1 rounded border border-gray-300 text-gray-900 bg-white text-xs sm:text-sm"
+                                  value={(player as any).stage || ''}
+                                  disabled={!!savingStage[player.id]}
+                                  onChange={e => handleStageChange(player.id, e.target.value)}
+                                >
+                                  <option value="">All</option>
+                                  {STAGE_OPTIONS.map(opt => (
+                                    <option key={opt} value={opt}>{opt}</option>
+                                  ))}
+                                </select>
+                                {savingStage[player.id] && (
+                                  <span className="ml-2 text-blue-600 text-xs">Saving...</span>
+                                )}
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -417,7 +433,7 @@ export default function AdminPlayersPage() {
         {showAssignTeam && assignPlayer && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl p-4 sm:p-6 w-full max-w-md">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Assign {assignPlayer.name} to a Team</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Assign {assignPlayer?.name} to a Team</h3>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Select Team</label>
@@ -436,7 +452,7 @@ export default function AdminPlayersPage() {
               <div className="flex gap-3 mt-6">
                 <button
                   onClick={async () => {
-                    if (!selectedTeamId) return;
+                    if (!selectedTeamId || !assignPlayer) return;
                     try {
                       await tournamentStore.addPlayerToTeam(selectedTeamId, assignPlayer.id);
                       setShowAssignTeam(false);

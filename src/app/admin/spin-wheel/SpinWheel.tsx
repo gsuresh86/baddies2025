@@ -1,4 +1,5 @@
-import { useState } from 'react';
+'use client';
+import { useState, useRef } from 'react';
 
 function SpinWheel({ items, onSpin, disabled, playersPerPool, categoryType }: { 
   items: any[], 
@@ -9,6 +10,7 @@ function SpinWheel({ items, onSpin, disabled, playersPerPool, categoryType }: {
 }) {
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Debug: Log the first few items to see their structure
   // console.log('SpinWheel items:', items.slice(0, 3));
@@ -21,6 +23,11 @@ function SpinWheel({ items, onSpin, disabled, playersPerPool, categoryType }: {
   const handleSpin = () => {
     if (items.length === 0 || disabled || isSpinning) return;
     
+    // Play sound
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play();
+    }
     setIsSpinning(true);
     const spins = 5 + Math.random() * 5; // 5-10 full rotations
     const finalRotation = rotation + (spins * 360);
@@ -102,6 +109,7 @@ function SpinWheel({ items, onSpin, disabled, playersPerPool, categoryType }: {
       >
         {isSpinning ? 'Spinning...' : 'Spin'}
       </button>
+      <audio ref={audioRef} src="/spin.mp3" preload="auto" />
       <div className="mt-3 text-gray-700 text-sm text-center">
         {items.length} players remaining • {playersPerPool} per pool
       </div>
