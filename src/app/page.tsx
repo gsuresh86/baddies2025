@@ -30,24 +30,6 @@ export default function LandingPage() {
     fetchStats();
   }, []);
 
-  useEffect(() => {
-    const deadline = new Date('2025-06-30T23:59:59');
-    const interval = setInterval(() => {
-      const now = new Date();
-      const diff = deadline.getTime() - now.getTime();
-      if (diff > 0) {
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-        const minutes = Math.floor((diff / (1000 * 60)) % 60);
-        const seconds = Math.floor((diff / 1000) % 60);
-        setTimeLeft({ days, hours, minutes, seconds });
-      } else {
-        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-      }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
   return (
     <>
       <div className="w-full max-w-6xl mt-8 px-2 sm:px-4 mx-auto font-body">
