@@ -8,8 +8,7 @@ import { Category, Player, Pool, Team } from '@/types';
 import {
   shuffleArray,
   getSelectedCategoryType,
-  assignPlayerToPool,
-  assignPlayerToTeam
+  assignPlayerToPool
 } from './spinWheelUtils';
 import {
   fetchCategories,
@@ -36,8 +35,9 @@ export default function SpinWheelPage() {
   const [assignedPool, setAssignedPool] = useState<Pool | null>(null);
   const [playersPerPool, setPlayersPerPool] = useState<number>(4);
   const [teams, setTeams] = useState<Team[]>([]);
-  const [teamAssignIndex, setTeamAssignIndex] = useState(0);
+  const [, setTeamAssignIndex] = useState(0);
   const [currentStageIndex, setCurrentStageIndex] = useState(0);
+  const [lastSpinTeamIndex, setLastSpinTeamIndex] = useState(0);
   
 
   // Fetch categories on mount
@@ -65,23 +65,14 @@ export default function SpinWheelPage() {
           setLoading(false);
           return;
         }
-        const stageOptions = [
-          'Round 1',
-          'Round 2',
-          'Round 3',
-          'Round 4',
-          'Round 5',
-          'Round 6'
-        ];
         const isMensTeam = selectedCategoryData.type === 'team';
         if (isMensTeam) {
-          // Use internal stage cycling logic
-          const stage = stageOptions[currentStageIndex];
-          const playersRes = await fetchPlayersByCategoryAndStage(PlayerCategory.MensTeam, stage);
+          // Fetch ALL players for Men's Team (not filtered by stage)
+          const allPlayersRes = await fetchPlayersByCategory(PlayerCategory.MensTeam);
           const teamsRes = await fetchTeams();
-          if (playersRes.error) throw playersRes.error;
+          if (allPlayersRes.error) throw allPlayersRes.error;
           if (teamsRes.error) throw teamsRes.error;
-          setPlayers(playersRes.data || []);
+          setPlayers(allPlayersRes.data || []);
           setTeams(teamsRes.data || []);
 
           // Fetch existing team-player assignments
@@ -91,15 +82,16 @@ export default function SpinWheelPage() {
 
           // Build assignments and spunPlayers from existing data
           const assignmentsInit = teamPlayers.map(tp => {
-            const player = (playersRes.data || []).find(p => p.id === tp.player_id);
+            const player = (allPlayersRes.data || []).find(p => p.id === tp.player_id);
             const team = (teamsRes.data || []).find(t => t.id === tp.team_id);
             return player && team ? {
               player,
               team,
               pool: null,
               timestamp: tp.created_at ? new Date(tp.created_at).toLocaleTimeString() : '',
+              stage: tp.stage || null,
             } : null;
-          }).filter((a): a is { player: Player; team: Team; pool: null; timestamp: string } => !!a);
+          }).filter((a): a is any => !!a);
           setAssignments(assignmentsInit);
           setSpunPlayers(assignmentsInit.map(a => a.player));
           setPlayersPerPool(6);
@@ -228,9 +220,7 @@ export default function SpinWheelPage() {
         'Round 3',
         'Round 4',
         'Round 5',
-        'Quarterfinal',
-        'Semifinal',
-        'Final'
+        'Round 6'
       ];
       let nextStageIndex = (currentStageIndex + 1) % stageOptions.length;
       // Try to find a stage with available players (avoid infinite loop)
@@ -248,27 +238,85 @@ export default function SpinWheelPage() {
     }
   };
 
-  // For men's team, spin wheel shows players, and assigns to teams in round-robin
+  // For men's team, spin wheel shows all players, and assigns to teams in round-robin, cycling through stages
   const handleMensTeamSpin = async (winner: Player) => {
     if (!teams.length) return;
-    const { assignedTeam } = assignPlayerToTeam({
-      teams,
-      teamAssignIndex
-    }) || { assignedTeam: null };
+    const winnerStage = (winner as any).stage;
+    if (!winnerStage) return;
+    // Ensure the player is not already assigned anywhere
+    const playerAlreadyAssigned = assignments.some(a => a.player?.id === winner.id);
+    if (playerAlreadyAssigned) {
+      setLastSpinTeamIndex((lastSpinTeamIndex + 1) % teams.length);
+      return;
+    }
+    // Try to assign to the next team in order, skipping teams that already have a player for this stage
+    let assignedTeam = null;
+    for (let offset = 0; offset < teams.length; offset++) {
+      const idx = (lastSpinTeamIndex + offset) % teams.length;
+      const team = teams[idx];
+      const teamHasStage = assignments.some(a => a.team?.id === team.id && a.stage === winnerStage);
+      if (!teamHasStage) {
+        assignedTeam = team;
+        break;
+      }
+    }
+    setLastSpinTeamIndex((lastSpinTeamIndex + 1) % teams.length); // Always advance
     if (!assignedTeam) return;
     setAssignments((prev) => [...prev, {
       player: winner,
       team: assignedTeam,
       pool: null,
-      timestamp: new Date().toLocaleTimeString()
+      timestamp: new Date().toLocaleTimeString(),
+      stage: winnerStage
     }]);
     setSpunPlayers((prev) => [...prev, winner]);
     await tournamentStore.addPlayerToTeam(assignedTeam.id, winner.id);
     setResultDialogOpen(true);
     setLastWinner(winner);
     setAssignedPool(null);
-    setTeamAssignIndex((prev) => prev + 1);
   };
+
+  // TEST: Assign all unassigned players to unique team+stage slots in a single run
+  /*const assignAllMensTeamPlayers = async () => {
+    if (!teams.length) return;
+    const stageOptions = [
+      'Round 1',
+      'Round 2',
+      'Round 3',
+      'Round 4',
+      'Round 5',
+      'Round 6'
+    ];
+    let newAssignments = [...assignments];
+    const newSpunPlayers = [...spunPlayers];
+    // For each stage, assign players to teams in order (Team 1 to Team 16, repeat if needed)
+    for (let rankIdx = 0; rankIdx < stageOptions.length; rankIdx++) {
+      const rank = stageOptions[rankIdx];
+      const playersForStage = players.filter(p => ((p as any).stage === rank) && !newSpunPlayers.includes(p));
+      for (let i = 0; i < playersForStage.length; i++) {
+        const player = playersForStage[i];
+        const team = teams[i % teams.length]; // Cycle through teams in order
+        const alreadyAssigned = newAssignments.some(a => a.team?.id === team.id && a.stage === rank);
+        const playerAlreadyAssigned = newAssignments.some(a => a.player?.id === player.id);
+        if (!alreadyAssigned && !playerAlreadyAssigned) {
+          newAssignments.push({
+            player,
+            team,
+            pool: null,
+            timestamp: new Date().toLocaleTimeString(),
+            stage: rank
+          });
+          newSpunPlayers.push(player);
+          await tournamentStore.addPlayerToTeam(team.id, player.id);
+        }
+      }
+    }
+    setAssignments(newAssignments);
+    setSpunPlayers(newSpunPlayers);
+    setResultDialogOpen(false);
+    setLastWinner(null);
+    setAssignedPool(null);
+  };*/
 
   return (
     <AuthGuard>
@@ -305,9 +353,6 @@ export default function SpinWheelPage() {
                 <option value={4}>4 players</option>
                 <option value={5}>5 players</option>
                 <option value={6}>6 players</option>
-                <option value={8}>8 players</option>
-                <option value={10}>10 players</option>
-                <option value={12}>12 players</option>
               </select>
             </div>
           )}
@@ -320,7 +365,7 @@ export default function SpinWheelPage() {
         )}
         {!loading && selectedCategory && (
           <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-[30%_70%] gap-8 items-start">
-            <div className="flex justify-start">
+            <div className="flex flex-col items-start">
               <SpinWheel
                 items={isMensTeamCategory ? shuffleArray(players.filter(p => !spunPlayers.includes(p))) : players.filter(p => !spunPlayers.includes(p))}
                 onSpin={isMensTeamCategory ? handleMensTeamSpin : handleSpin}
@@ -333,37 +378,45 @@ export default function SpinWheelPage() {
               {isMensTeamCategory ? (
                 <div className="mb-4">
                   <h2 className="text-lg font-bold text-gray-900 mb-2">Teams</h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-2">
-                    {[...teams].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })).map(team => {
-                      const teamAssignments = assignments.filter(a => a.team?.id === team.id);
-                      return (
-                        <div
-                          key={team.id}
-                          className="bg-gradient-to-br from-blue-100/60 to-green-100/60 rounded-2xl p-4 border border-blue-200/40 shadow-lg hover-lift transition-all duration-200 flex flex-col items-start min-h-[90px] relative"
-                        >
-                          <div className="flex items-center mb-2">
-                            <span className="text-2xl mr-2">👥</span>
-                            <span className="font-bold text-gray-900 text-base text-glow">{team.name}</span>
+                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-2">
+                    {[...teams]
+                      .sort((a, b) => {
+                        // Extract numbers from team names for natural sort
+                        const numA = parseInt(a.name.replace(/\D/g, ''));
+                        const numB = parseInt(b.name.replace(/\D/g, ''));
+                        if (!isNaN(numA) && !isNaN(numB)) {
+                          return numA - numB;
+                        }
+                        // Fallback to string comparison
+                        return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+                      })
+                      .map(team => {
+                        const teamAssignments = assignments.filter(a => a.team?.id === team.id);
+                        return (
+                          <div
+                            key={team.id}
+                            className="bg-gradient-to-br from-blue-100/60 to-green-100/60 rounded-2xl p-4 border border-blue-200/40 shadow-lg hover-lift transition-all duration-200 flex flex-col items-start min-h-[90px] relative"
+                          >
+                            <div className="flex items-center mb-2">
+                              <span className="text-2xl mr-2">👥</span>
+                              <span className="font-bold text-gray-900 text-base text-glow">{team.name}</span>
+                            </div>
+                            <div className="w-full">
+                              {teamAssignments.length === 0 ? (
+                                <span className="text-xs text-gray-400">No players assigned yet</span>
+                              ) : (
+                                <ul className="list-disc pl-4">
+                                  {teamAssignments.map((assignment, idx) => (
+                                    <li key={idx} className="text-sm text-gray-800 font-medium truncate">
+                                      {assignment.player?.name}
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
                           </div>
-                          <span className="text-xs text-gray-600 font-medium bg-white/60 rounded px-2 py-1 mt-1 shadow-sm mb-2">
-                            {teamAssignments.length} player{teamAssignments.length === 1 ? '' : 's'}
-                          </span>
-                          <div className="w-full">
-                            {teamAssignments.length === 0 ? (
-                              <span className="text-xs text-gray-400">No players assigned yet</span>
-                            ) : (
-                              <ul className="list-disc pl-4">
-                                {teamAssignments.map((assignment, idx) => (
-                                  <li key={idx} className="text-sm text-gray-800 font-medium truncate">
-                                    {assignment.player?.name}
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
                   </div>
                 </div>
               ) : (
@@ -382,9 +435,6 @@ export default function SpinWheelPage() {
                             <span className="text-2xl mr-2">🏊‍♂️</span>
                             <span className="font-bold text-gray-900 text-base text-glow">{pool.name}</span>
                           </div>
-                          <span className="text-xs text-gray-600 font-medium bg-white/60 rounded px-2 py-1 mt-1 shadow-sm mb-2">
-                            {poolAssignments.length} {isPairCategory ? 'pair' : 'player'}{poolAssignments.length === 1 ? '' : 's'}
-                          </span>
                           <div className="w-full">
                             {poolAssignments.length === 0 ? (
                               <span className="text-xs text-gray-400">No {isPairCategory ? 'pairs' : 'players'} assigned yet</span>

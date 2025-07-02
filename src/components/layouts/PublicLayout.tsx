@@ -48,6 +48,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
         
         {/* Navigation - Second Row on Mobile */}
         <nav className="flex flex-wrap justify-center sm:justify-end gap-2 md:gap-4">
+          {/*
           <Link
             href="/standings"
             className="px-3 sm:px-5 py-2 bg-black text-white rounded-xl text-sm sm:text-lg font-bold shadow hover:bg-gray-900 transition border-2 border-gray-700 hover-lift relative overflow-hidden"
@@ -66,6 +67,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
           >
             <span className="relative">👥 Teams</span>
           </Link>
+          */}
           <Link
             href="/rules"
             className="px-3 sm:px-5 py-2 bg-black text-white rounded-xl text-sm sm:text-lg font-bold shadow hover:bg-gray-900 transition border-2 border-gray-700 hover-lift relative overflow-hidden"

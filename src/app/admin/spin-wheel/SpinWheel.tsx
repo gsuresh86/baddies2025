@@ -23,7 +23,7 @@ function SpinWheel({ items, onSpin, disabled, playersPerPool, categoryType }: {
   const handleSpin = () => {
     if (items.length === 0 || disabled || isSpinning) return;
     
-    // Play sound
+    // Play sound (disabled for testing)
     if (audioRef.current) {
       audioRef.current.currentTime = 0;
       audioRef.current.play();
@@ -33,12 +33,12 @@ function SpinWheel({ items, onSpin, disabled, playersPerPool, categoryType }: {
     const finalRotation = rotation + (spins * 360);
     setRotation(finalRotation);
     
-    // Simulate spinning animation
+    // Simulate spinning animation (reduced to 0.5s for testing)
     setTimeout(() => {
       const winner = items[Math.floor(Math.random() * items.length)];
       setIsSpinning(false);
       onSpin(winner);
-    }, 3000);
+    }, 500);
   };
 
   if (items.length === 0) {
@@ -58,7 +58,7 @@ function SpinWheel({ items, onSpin, disabled, playersPerPool, categoryType }: {
         className="w-80 h-80 rounded-full border-8 border-white shadow-lg mb-4 flex items-center justify-center relative overflow-hidden"
         style={{
           transform: `rotate(${rotation}deg)`,
-          transition: isSpinning ? 'transform 3s cubic-bezier(0.25, 0.46, 0.45, 0.94)' : 'none'
+          transition: isSpinning ? 'transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)' : 'none'
         }}
       >
         {items.length === 0 ? (

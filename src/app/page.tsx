@@ -7,9 +7,7 @@ import Image from 'next/image';
 
 export default function LandingPage() {
   const [, setStats] = useState({ pools: 0, teams: 0, players: 0, categories: 0 });
-  // Timer state for registration deadline
-  const [timeLeft, setTimeLeft] = useState<{days:number, hours:number, minutes:number, seconds:number}>({days:0, hours:0, minutes:0, seconds:0});
-
+  
   useEffect(() => {
     async function fetchStats() {
       const [poolsRes, teamsRes, playersRes, categoriesRes] = await Promise.all([
@@ -98,41 +96,25 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Registration Deadline Section with Timer */}
+        {/* Spin the Wheel Event Promo Section */}
         <div className="mb-8 grid grid-cols-1 md:grid-cols-1 gap-4">
-          <div className="bg-gradient-to-r from-red-500/20 to-red-600/20 rounded-2xl p-6 border border-red-200/30 text-center">
-            <div className="text-3xl mb-3">⏰</div>
-            <h3 className="text-lg font-bold text-white mb-2 font-heading">Registration Deadline</h3>
-            <p className="text-white/80 font-semibold mb-2">30 June 2025, 11:59 PM</p>
-            <div className="flex justify-center gap-6 mb-4">
-              <div className="px-6 py-4 flex gap-6 items-center">
-                <div className="flex flex-col items-center">
-                  <span className="font-extrabold text-4xl sm:text-5xl md:text-6xl text-white drop-shadow-lg animate-pulse">{timeLeft.days}</span>
-                  <span className="text-xs sm:text-sm text-white/80 mt-1 tracking-wide">days</span>
-                </div>
-                <div className="flex flex-col items-center">
-                  <span className="font-extrabold text-4xl sm:text-5xl md:text-6xl text-white drop-shadow-lg animate-pulse">{timeLeft.hours}</span>
-                  <span className="text-xs sm:text-sm text-white/80 mt-1 tracking-wide">hrs</span>
-                </div>
-                <div className="flex flex-col items-center">
-                  <span className="font-extrabold text-4xl sm:text-5xl md:text-6xl text-white drop-shadow-lg animate-pulse">{timeLeft.minutes}</span>
-                  <span className="text-xs sm:text-sm text-white/80 mt-1 tracking-wide">min</span>
-                </div>
-                <div className="flex flex-col items-center">
-                  <span className="font-extrabold text-4xl sm:text-5xl md:text-6xl text-white drop-shadow-lg animate-pulse">{timeLeft.seconds}</span>
-                  <span className="text-xs sm:text-sm text-white/80 mt-1 tracking-wide">sec</span>
-                </div>
-              </div>
+          <div className="bg-gradient-to-r from-yellow-600/90 to-pink-700/90 rounded-2xl p-8 border-4 border-yellow-400/60 text-center shadow-2xl animate-fade-in-scale">
+            <div className="flex flex-col items-center justify-center">
+              <div className="text-5xl mb-4 animate-spin-slow">🎡</div>
+              <h2 className="text-3xl font-extrabold text-white drop-shadow mb-2 font-heading">Spin the Wheel Night!</h2>
+              <p className="text-lg text-white font-semibold mb-4">Don&apos;t miss the most exciting draw of the year!</p>
+              <div className="text-xl text-white font-bold mb-2">3rd July, 6:00 PM onwards</div>
+              <div className="text-lg text-white mb-4">Join us virtually and watch the teams get picked live!</div>
+              <a
+                href="https://meet.google.com/pky-fuaf-haa"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block bg-gradient-to-r from-pink-600 to-yellow-500 hover:from-yellow-500 hover:to-pink-600 text-black font-bold py-3 px-8 rounded-xl text-lg shadow-lg mb-3 transition-all duration-200 animate-bounce border-2 border-white"
+              >
+                🎥 Join Spin the Wheel Live
+              </a>
+              <div className="text-sm text-white/90 mt-2">Open to all participants, families, and friends!</div>
             </div>
-            <a
-              href="https://docs.google.com/forms/d/e/1FAIpQLSc8U4-KqWzDRl-n_afvn14LpMhdM5_qr3d-xVF9IxOhCBRh8Q/viewform"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white font-bold py-3 px-8 rounded-xl text-lg shadow-lg mb-3 transition-all duration-200"
-            >
-              Register Now
-            </a>
-            <p className="text-white/60 text-sm mt-1">Don&apos;t miss out!</p>
           </div>
         </div>
 

@@ -6,6 +6,7 @@ import { supabase } from "@/lib/store";
 import { Match, Game as GameBase, Team } from "@/types";
 import Link from "next/link";
 import { useToast } from '@/contexts/ToastContext';
+import { tournamentStore } from '@/lib/store';
 
 type Game = GameBase & {
   player1_id?: string;
@@ -127,22 +128,18 @@ export default function AdminManageMatchPage() {
         setMatch(matchData);
         
         // Fetch teams
-        const [team1Result, team2Result] = await Promise.all([
-          supabase.from("teams").select("*").eq("id", matchData.team1_id).single(),
-          supabase.from("teams").select("*").eq("id", matchData.team2_id).single()
-        ]);
-        
-        if (team1Result.error) {
-          console.error("Error fetching team1:", team1Result.error);
+        const team1 = await tournamentStore.getTeamById(matchData.team1_id);
+        const team2 = await tournamentStore.getTeamById(matchData.team2_id);
+        if (!team1) {
+          console.error("Error fetching team1");
           showError("Error fetching team1");
         }
-        if (team2Result.error) {
-          console.error("Error fetching team2:", team2Result.error);
+        if (!team2) {
+          console.error("Error fetching team2");
           showError("Error fetching team2");
         }
-        
-        setTeam1(team1Result.data);
-        setTeam2(team2Result.data);
+        setTeam1(team1);
+        setTeam2(team2);
         
         // Fetch games
         const { data: gamesData, error: gamesError } = await supabase
