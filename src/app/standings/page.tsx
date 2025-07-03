@@ -6,9 +6,10 @@ import { Pool, Team, Match, TournamentStandings, Player } from '@/types';
 import StandingsTab from './pool/StandingsTab';
 import { categoryLabels } from '@/lib/utils';
 
-function calculateStandings(teams: Team[], players: Player[], matches: Match[]): TournamentStandings[] {
+function calculateStandings(teams: Team[], players: Player[], matches: Match[], categoryCode?: string): TournamentStandings[] {
   const standings: { [id: string]: TournamentStandings } = {};
-  
+  const pairFirstNameOnly = ["XD", "FM", "WD"];
+
   // Initialize standings for teams
   teams.forEach(team => {
     standings[team.id] = {
@@ -25,9 +26,18 @@ function calculateStandings(teams: Team[], players: Player[], matches: Match[]):
 
   // Initialize standings for players (for player-based categories)
   players.forEach(player => {
-    // For pair-based categories, include partner name in the display
-    const displayName = player.partner_name ? `${player.name} / ${player.partner_name}` : player.name;
-    
+    let displayName;
+    if (player.partner_name) {
+      if (pairFirstNameOnly.includes(categoryCode || "")) {
+        const first = player.name.split(" ")[0];
+        const partnerFirst = player.partner_name.split(" ")[0];
+        displayName = `${first} / ${partnerFirst}`;
+      } else {
+        displayName = `${player.name} / ${player.partner_name}`;
+      }
+    } else {
+      displayName = player.name;
+    }
     standings[player.id] = {
       teamId: player.id,
       teamName: displayName,
@@ -193,143 +203,75 @@ export default function StandingsPage() {
     );
   }
 
-  return (
-    <div className="max-w-6xl mx-auto py-12 px-4">
-      {/* Enhanced Header */}
-      <div className="text-center mb-12 animate-slide-in-up">
-        <div className="text-5xl mb-4 animate-float">🏆</div>
-        <h1 className="text-4xl md:text-5xl font-bold text-white text-glow-white mb-4">
-          Tournament Standings
-        </h1>
-        <p className="text-white/80 text-xl max-w-2xl mx-auto">
-          Track the performance and rankings of all teams across different categories
+  // Flatten all pools to show one table per category (or all in one if 'all')
+  const tables: React.ReactNode[] = [];
+  if (filteredPools.length === 0) {
+    tables.push(
+      <div className="text-center py-12" key="no-pools">
+        <div className="text-3xl mb-2">📊</div>
+        <p className="text-white text-lg">
+          {selectedCategory === 'all' 
+            ? 'No pools found. Tournament standings will appear here once pools are created.' 
+            : `No pools found for ${categoryLabels[selectedCategory as keyof typeof categoryLabels]?.label || selectedCategory}.`}
         </p>
       </div>
+    );
+  } else {
+    // If 'all', show all pools in one table; otherwise, show only the selected category
+    const poolsToShow = selectedCategory === 'all' ? filteredPools : filteredPools;
+    // For each pool, show its standings directly (no cards)
+    poolsToShow.forEach((pool) => {
+      const standings = calculateStandings(
+        teamsByPool[pool.id] || [],
+        playersByPool[pool.id] || [],
+        matchesByPool[pool.id] || [],
+        pool.category?.code
+      );
+      tables.push(
+        <div key={pool.id} className="mb-8">
+          <div className="bg-white/10 backdrop-blur-md rounded-lg p-2 shadow">
+            <div className="mb-2">
+              <h3 className="text-lg font-semibold text-white/90">{pool.name}</h3>
+            </div>
+            <StandingsTab standings={standings} />
+          </div>
+        </div>
+      );
+    });
+  }
 
-      {/* Category Filter */}
-      <div className="bg-gradient-to-r from-white/10 to-white/5 rounded-3xl p-6 backdrop-blur-md border border-white/20 shadow-2xl mb-8 animate-fade-in-scale">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-bold text-white text-glow-white mb-2">Category Filter</h2>
-            <p className="text-white/80 text-sm">
-              {selectedCategory === 'all' 
-                ? 'Showing standings for all categories' 
-                : `Showing standings for ${categoryLabels[selectedCategory as keyof typeof categoryLabels]?.label || selectedCategory}`
-              }
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <label className="text-white/90 text-sm font-medium whitespace-nowrap">Select Category:</label>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm"
-            >
-              <option value="all" className="text-gray-800">All Categories</option>
-              <option value="MT" className="text-gray-800">Men&apos;s Team</option>
-              <option value="WS" className="text-gray-800">Women&apos;s Singles</option>
-              <option value="WD" className="text-gray-800">Women&apos;s Doubles</option>
-              <option value="XD" className="text-gray-800">Mixed Doubles</option>
-              <option value="BU18" className="text-gray-800">Boys U18</option>
-              <option value="BU13" className="text-gray-800">Boys U13</option>
-              <option value="GU18" className="text-gray-800">Girls U18</option>
-              <option value="GU13" className="text-gray-800">Girls U13</option>
-              <option value="FM" className="text-gray-800">Family Mixed</option>
-            </select>
-          </div>
+  return (
+    <div className="max-w-6xl mx-auto py-12 px-4">
+      {/* Enhanced Standings Header */}
+      <div className="text-center mb-12 animate-slide-in-up">
+        <div className="text-5xl mb-4 animate-float">🏆</div>
+        <h1 className="text-4xl md:text-5xl font-bold text-white mb-4" style={{textShadow: '0 0 20px rgba(255,255,255,0.8)'}}>Standings</h1>
+      </div>
+      {/* Category Dropdown Top Right */}
+      <div className="flex justify-end mb-6">
+        <div className="flex items-center gap-2">
+          <label className="text-white/90 text-sm font-medium whitespace-nowrap" htmlFor="category-select">Category:</label>
+          <select
+            id="category-select"
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm"
+          >
+            <option value="all" className="text-gray-800">All Categories</option>
+            <option value="MT" className="text-gray-800">Men&apos;s Team</option>
+            <option value="WS" className="text-gray-800">Women&apos;s Singles</option>
+            <option value="WD" className="text-gray-800">Women&apos;s Doubles</option>
+            <option value="XD" className="text-gray-800">Mixed Doubles</option>
+            <option value="BU18" className="text-gray-800">Boys U18</option>
+            <option value="BU13" className="text-gray-800">Boys U13</option>
+            <option value="GU18" className="text-gray-800">Girls U18</option>
+            <option value="GU13" className="text-gray-800">Girls U13</option>
+            <option value="FM" className="text-gray-800">Family Mixed</option>
+          </select>
         </div>
       </div>
-
-      {filteredPools.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="bg-gradient-to-r from-white/10 to-white/5 rounded-3xl p-8 backdrop-blur-md border border-white/20">
-            <div className="text-4xl mb-4">📊</div>
-            <p className="text-white text-lg">
-              {selectedCategory === 'all' 
-                ? 'No pools found. Tournament standings will appear here once pools are created.' 
-                : `No pools found for ${categoryLabels[selectedCategory as keyof typeof categoryLabels]?.label || selectedCategory}.`
-              }
-            </p>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-8">
-          {Object.entries(poolsByCategory).map(([categoryCode, categoryPools], categoryIndex) => {
-            const categoryLabel = categoryLabels[categoryCode as keyof typeof categoryLabels]?.label || categoryCode;
-            const categoryIcon = categoryCode === 'MT' ? '👥' : 
-                               categoryCode === 'WS' ? '🏸' : 
-                               categoryCode === 'WD' ? '👯‍♀️' : 
-                               categoryCode === 'XD' ? '💑' : 
-                               categoryCode.startsWith('B') ? '👦' : 
-                               categoryCode.startsWith('G') ? '👧' : 
-                               categoryCode === 'FM' ? '👨‍👩‍👧‍👦' : '🏆';
-            
-            return (
-              <div key={categoryCode} className="animate-fade-in-scale" style={{animationDelay: `${categoryIndex * 0.1}s`}}>
-                <div className="bg-gradient-to-r from-white/10 to-white/5 rounded-3xl p-8 backdrop-blur-md border border-white/20 shadow-2xl hover-lift">
-                  <div className="flex items-center mb-6">
-                    <div className="text-3xl mr-4">{categoryIcon}</div>
-                    <h2 className="text-2xl font-bold text-white text-glow-white">{categoryLabel}</h2>
-                  </div>
-                  
-                  <div className="space-y-6">
-                    {categoryPools.map((pool) => {
-                      const isPlayerBased = pool.category?.type === 'player' || pool.category?.type === 'pair';
-                      const participantCount = isPlayerBased 
-                        ? playersByPool[pool.id]?.length || 0
-                        : teamsByPool[pool.id]?.length || 0;
-                      const participantLabel = isPlayerBased ? (pool.category?.type === 'pair' ? 'pairs' : 'players') : 'teams';
-                      
-                      return (
-                        <div key={pool.id}>
-                          {/* Mobile: Scrollable card */}
-                          <div className="sm:hidden mb-8">
-                            <div className="bg-white/5 rounded-2xl p-2 backdrop-blur-sm border border-white/10 shadow-2xl hover-lift">
-                              <div className="flex items-center mb-2">
-                                <h3 className="text-lg font-semibold text-white/90 mr-3">{pool.name}</h3>
-                                <span className="ml-2 px-2 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full">
-                                  {participantCount} {participantLabel}
-                                </span>
-                              </div>
-                              <div className="overflow-x-auto w-full">
-                                <StandingsTab 
-                                  standings={calculateStandings(
-                                    teamsByPool[pool.id] || [], 
-                                    playersByPool[pool.id] || [], 
-                                    matchesByPool[pool.id] || []
-                                  )} 
-                                />
-                              </div>
-                            </div>
-                          </div>
-                          {/* Desktop: Card as before */}
-                          <div className="hidden sm:block mb-8">
-                            <div className="bg-white/5 rounded-2xl p-6 backdrop-blur-sm border border-white/10">
-                              <div className="flex items-center mb-4">
-                                <h3 className="text-lg font-semibold text-white/90">{pool.name}</h3>
-                                <span className="ml-3 px-2 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full">
-                                  {participantCount} {participantLabel}
-                                </span>
-                              </div>
-                              <StandingsTab 
-                                standings={calculateStandings(
-                                  teamsByPool[pool.id] || [], 
-                                  playersByPool[pool.id] || [], 
-                                  matchesByPool[pool.id] || []
-                                )} 
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {/* Standings Tables */}
+      <div>{tables}</div>
 
       {/* Tournament Stats Summary */}
       <div className="mt-12 bg-gradient-to-r from-white/10 to-white/5 rounded-3xl p-8 backdrop-blur-md border border-white/20 animate-fade-in-scale" style={{animationDelay: '0.5s'}}>
