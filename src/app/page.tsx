@@ -143,59 +143,75 @@ export default function LandingPage() {
               <h2 className="text-3xl font-bold text-white text-glow-white mb-2 font-heading">Our Sponsors</h2>
               <p className="text-white/80 text-lg">Proudly supported by leading organizations</p>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Planet Green */}
-              <div className="bg-gradient-to-br from-green-500/20 to-emerald-600/20 rounded-2xl p-6 border border-green-200/30 hover-lift transition-all duration-300">
-                <div className="text-center flex flex-col items-center">
+
+            {/* Sponsors Layout: Planet Green on first row, others on second row */}
+            <div className="flex flex-col gap-8 mb-12">
+              {/* First row: Presenting Sponsor */}
+              <div className="flex flex-col md:flex-row justify-center items-center gap-8">
+                <div className="bg-gradient-to-br from-green-700/30 to-emerald-900/30 rounded-2xl p-8 border-2 border-green-300/30 shadow-xl hover:scale-105 hover:shadow-2xl transition-all duration-300 flex flex-col items-center min-w-[260px]">
+                  <span className="text-xs uppercase tracking-widest text-green-100 mb-3 font-bold drop-shadow">Presenting Sponsor</span>
                   <Image
                     src="/planet-green-logo.png"
                     alt="Planet Green Logo"
-                    width={180}
-                    height={64}
-                    className="h-16 mb-4 w-auto"
-                    style={{ maxWidth: '180px' }}
+                    width={220}
+                    height={90}
+                    className="h-24 mb-2 w-auto drop-shadow-lg"
+                    style={{ maxWidth: '220px' }}
                   />
-                  <a 
-                    href="https://www.planetgreen.co.in/" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="inline-block bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:from-green-700 hover:to-emerald-700 transition-all duration-300"
-                  >
-                    Visit Website
-                  </a>
                 </div>
               </div>
-
-              {/* Badminton Association */}
-              <div className="bg-gradient-to-br from-blue-500/20 to-indigo-600/20 rounded-2xl p-6 border border-blue-200/30 hover-lift transition-all duration-300">
-                <div className="text-center">
-                  <div className="text-4xl mb-4">🏸</div>
-                  <h3 className="text-xl font-bold text-white mb-2">Badminton Association</h3>
-                  <p className="text-white/80 text-sm mb-4">Promoting Sports Excellence</p>
-                  <div className="inline-block bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
-                    Official Partner
+              {/* Second row: Co-Powered By and Game Zone Partner */}
+              <div className="flex flex-col md:flex-row justify-center items-center gap-8">
+                {/* Co-Powered By */}
+                <div className="bg-gradient-to-br from-blue-700/30 to-blue-900/30 rounded-2xl p-8 border-2 border-blue-300/30 shadow-xl hover:scale-105 hover:shadow-2xl transition-all duration-300 flex flex-col items-center min-w-[260px]">
+                  <span className="text-xs uppercase tracking-widest text-blue-100 mb-3 font-bold drop-shadow">Co-Powered By</span>
+                  <div className="flex flex-row items-center justify-center gap-8 mb-2">
+                    <Image
+                      src="/creekside-logo.png"
+                      alt="Creekside Resort Logo"
+                      width={140}
+                      height={60}
+                      className="h-16 w-auto drop-shadow-lg bg-white rounded-xl p-1"
+                      style={{ maxWidth: '140px' }}
+                    />
+                    <Image
+                      src="/trice-logo.png"
+                      alt="Ask Trice Logo"
+                      width={120}
+                      height={60}
+                      className="h-16 w-auto drop-shadow-lg bg-white rounded-xl p-1"
+                      style={{ maxWidth: '120px' }}
+                    />
                   </div>
                 </div>
-              </div>
-
-              {/* Sports Equipment */}
-              <div className="bg-gradient-to-br from-purple-500/20 to-pink-600/20 rounded-2xl p-6 border border-purple-200/30 hover-lift transition-all duration-300">
-                <div className="text-center">
-                  <div className="text-4xl mb-4">🎾</div>
-                  <h3 className="text-xl font-bold text-white mb-2">Sports Equipment</h3>
-                  <p className="text-white/80 text-sm mb-4">Premium Gear Provider</p>
-                  <div className="inline-block bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
-                    Equipment Partner
-                  </div>
+                {/* Game Zone Partner */}
+                <div className="bg-gradient-to-br from-pink-700/30 to-purple-900/30 rounded-2xl p-8 border-2 border-pink-300/30 shadow-xl hover:scale-105 hover:shadow-2xl transition-all duration-300 flex flex-col items-center min-w-[260px]">
+                  <span className="text-xs uppercase tracking-widest text-pink-100 mb-3 font-bold drop-shadow">Game Zone Partner</span>
+                  <Image
+                    src="/gamepoint-logo.png"
+                    alt="Game Point Logo"
+                    width={160}
+                    height={60}
+                    className="h-20 mb-2 w-auto drop-shadow-lg bg-white rounded-xl p-1"
+                    style={{ maxWidth: '160px' }}
+                  />
                 </div>
               </div>
             </div>
 
-            <div className="text-center mt-8 pt-6 border-t border-white/10">
-              <p className="text-white/60 text-sm">
-                Interested in becoming a sponsor? Contact us for partnership opportunities.
-              </p>
+            {/* Conducted by Baddies Committee */}
+            <div className="flex flex-col items-center justify-center mt-10 pt-8 border-t border-white/10">
+              <span className="text-xs uppercase tracking-widest text-white/80 mb-2 font-bold drop-shadow">Organised by</span>
+              <div className="flex flex-col items-center">
+                <Image
+                  src="/baddies.png"
+                  alt="Baddies Committee Logo"
+                  width={220}
+                  height={100}
+                  className="h-24 w-auto mb-2 drop-shadow-lg"
+                  style={{ maxWidth: '220px' }}
+                />
+              </div>
             </div>
           </div>
         </div>
