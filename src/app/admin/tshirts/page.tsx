@@ -32,26 +32,17 @@ const TSHIRT_SIZE_OPTIONS = [
   { value: 'XXXL/46', label: 'XXXL/46' },
   { value: 'XXXXL/48', label: 'XXXXL/48' },
 ];
+// Map all possible variants to canonical size
 const TSHIRT_SIZE_MAP: Record<string, string> = {
-  'XS': 'XS/34',
-  'S': 'S/36',
-  'M': 'M/38',
-  'L': 'L/40',
-  'XL': 'XL/42',
-  'XXL': 'XXL/44',
-  'XXXL': 'XXXL/46',
-  'XXXXL': 'XXXXL/48',
-  '28': '28',
-  '30': '30',
-  '32': '32',
-  'XS/34': 'XS/34',
-  'S/36': 'S/36',
-  'M/38': 'M/38',
-  'L/40': 'L/40',
-  'XL/42': 'XL/42',
-  'XXL/44': 'XXL/44',
-  'XXXL/46': 'XXXL/46',
-  'XXXXL/48': 'XXXXL/48',
+  'XS': 'XS/34', 'XS/34': 'XS/34', '34': 'XS/34',
+  'S': 'S/36', 'S/36': 'S/36', '36': 'S/36',
+  'M': 'M/38', 'M/38': 'M/38', '38': 'M/38',
+  'L': 'L/40', 'L/40': 'L/40', '40': 'L/40',
+  'XL': 'XL/42', 'XL/42': 'XL/42', '42': 'XL/42',
+  'XXL': 'XXL/44', 'XXL/44': 'XXL/44', '44': 'XXL/44',
+  'XXXL': 'XXXL/46', 'XXXL/46': 'XXXL/46', '46': 'XXXL/46',
+  'XXXXL': 'XXXXL/48', 'XXXXL/48': 'XXXXL/48', '48': 'XXXXL/48',
+  '28': '28', '30': '30', '32': '32',
 };
 
 export default function AdminTShirtsPage() {
@@ -101,7 +92,8 @@ export default function AdminTShirtsPage() {
   const tshirtStats: Record<string, number> = {};
   allRows.forEach((row) => {
     if (row.tshirt_size) {
-      tshirtStats[row.tshirt_size] = (tshirtStats[row.tshirt_size] || 0) + 1;
+      const mapped = TSHIRT_SIZE_MAP[row.tshirt_size.trim().toUpperCase()] || row.tshirt_size.trim();
+      tshirtStats[mapped] = (tshirtStats[mapped] || 0) + 1;
     }
   });
 
@@ -199,10 +191,10 @@ export default function AdminTShirtsPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-8">
-          {Object.entries(tshirtStats || {}).map(([size, count]) => (
-            <div key={size} className="bg-white rounded-xl p-4 shadow border border-gray-200 flex flex-col items-center">
-              <span className="text-lg font-bold text-blue-700">{size}</span>
-              <span className="text-2xl font-bold text-gray-800">{count}</span>
+          {TSHIRT_SIZE_OPTIONS.map(option => (
+            <div key={option.value} className="bg-white rounded-xl p-4 shadow border border-gray-200 flex flex-col items-center">
+              <span className="text-lg font-bold text-blue-700">{option.label}</span>
+              <span className="text-2xl font-bold text-gray-800">{tshirtStats[option.value] || 0}</span>
               <span className="text-xs text-gray-500 mt-1">T-Shirts</span>
             </div>
           ))}
@@ -259,11 +251,11 @@ export default function AdminTShirtsPage() {
                       <td className="py-2 px-4 text-gray-700">{idx + 1}</td>
                       <td className="py-2 px-4 text-gray-900">{row.name}</td>
                       <td className="py-2 px-4 text-gray-700">{row.phone || "-"}</td>
-                      <td className="py-2 px-4 text-gray-700">{oldTshirtSize ? (TSHIRT_SIZE_MAP[oldTshirtSize] || oldTshirtSize) : "-"}</td>
+                      <td className="py-2 px-4 text-gray-700">{oldTshirtSize ? (TSHIRT_SIZE_MAP[oldTshirtSize.trim().toUpperCase()] || oldTshirtSize) : "-"}</td>
                       <td className="py-2 px-4 text-gray-700">
                         <select
                           className="border rounded px-2 py-1 w-24"
-                          value={editSizes[nameKey] !== undefined ? editSizes[nameKey] : (row.tshirt_size ? (TSHIRT_SIZE_MAP[row.tshirt_size] || row.tshirt_size) : '')}
+                          value={editSizes[nameKey] !== undefined ? editSizes[nameKey] : (row.tshirt_size ? (TSHIRT_SIZE_MAP[row.tshirt_size.trim().toUpperCase()] || row.tshirt_size) : '')}
                           onChange={e => handleSizeChange(row, nameKey, e.target.value)}
                           disabled={saving[nameKey]}
                         >
