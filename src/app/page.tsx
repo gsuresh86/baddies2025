@@ -203,14 +203,16 @@ export default function LandingPage() {
             <div className="flex flex-col items-center justify-center mt-10 pt-8 border-t border-white/10">
               <span className="text-xs uppercase tracking-widest text-white/80 mb-2 font-bold drop-shadow">Organised by</span>
               <div className="flex flex-col items-center">
-                <Image
-                  src="/baddies.png"
-                  alt="Baddies Committee Logo"
-                  width={220}
-                  height={100}
-                  className="h-24 w-auto mb-2 drop-shadow-lg"
-                  style={{ maxWidth: '220px' }}
-                />
+                <div className="bg-white rounded-2xl p-4 shadow-xl flex items-center justify-center mb-2">
+                  <Image
+                    src="/baddies.png"
+                    alt="Baddies Committee Logo"
+                    width={220}
+                    height={100}
+                    className="h-24 w-auto drop-shadow-lg"
+                    style={{ maxWidth: '220px' }}
+                  />
+                </div>
               </div>
             </div>
           </div>
