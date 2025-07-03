@@ -124,7 +124,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
       </div>
   
       
-      <main className="flex-1 relative z-10 w-full flex flex-col items-center justify-center animate-fade-in-scale" style={{animationDelay: '0.6s'}}>
+      <main className="flex-1 relative z-10 w-full flex flex-col items-center justify-center animate-fade-in-scale pb-28" style={{animationDelay: '0.6s'}}>
         {children}
       </main>
       
@@ -133,13 +133,13 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
         <div className="w-full h-full bg-gradient-to-br from-white/20 to-white/5 rounded-full border-2 border-white/30 backdrop-blur-sm"></div>
       </div>
       
-      {/* Footer with tournament info */}
-      <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 z-10 text-center">
-        <div className="bg-black/90 rounded-2xl px-6 py-2 border border-gray-800">
+      {/* Footer with tournament info - sticky at bottom, never overlaps content */}
+      <footer className="w-full z-20 text-center sticky bottom-0 left-0 flex flex-col items-center justify-center mt-auto pt-8 pb-3 bg-black/90 border-t border-gray-800">
+        <div className="rounded-2xl px-6 py-2">
           <p className="text-white font-semibold text-sm">🏸 PBEL City Badminton Tournament 2025</p>
           <p className="text-gray-300 text-xs mt-1">#PBELCityBT2025 • Badminton Baddies</p>
         </div>
-      </div>
+      </footer>
     </div>
   );
 } 

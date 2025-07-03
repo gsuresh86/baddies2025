@@ -3,65 +3,81 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/store';
 import { Team, Pool } from '@/types';
-import { PlayerCategory, categoryTypes, categoryLabels } from '@/lib/utils';
-
-function getPlayerCategoryFromCategory(cat: any): PlayerCategory | undefined {
-  if (!cat) return undefined;
-  // Try to match by code
-  const entry = Object.entries(categoryLabels).find(([, info]) => info.code === cat.code);
-  return entry ? (entry[0] as PlayerCategory) : undefined;
-}
 
 export default function TeamsPage() {
   const [teams, setTeams] = useState<Team[]>([]);
-  const [pools, setPools] = useState<Pool[]>([]);
+  const [, setPools] = useState<Pool[]>([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [mensTeams, setMensTeams] = useState<any[]>([]);
+  const [mensTeams] = useState<any[]>([]);
   const [otherPoolsWithPlayers, setOtherPoolsWithPlayers] = useState<any[]>([]);
   const [poolsLoading, setPoolsLoading] = useState(false);
 
   // Fetch all categories on mount
   useEffect(() => {
-    async function fetchAll() {
+    async function fetchCategoriesAndPools() {
       setLoading(true);
-      const [{ data: teamData }, { data: poolData }, { data: categoryData }] = await Promise.all([
-        supabase.from('teams').select('*, pool:pools(*), team_players:team_players(player:t_players(*))'),
+      const [{ data: poolData }, { data: categoryData }] = await Promise.all([
         supabase.from('pools').select('*, category:categories(*)'),
         supabase.from('categories').select('*').order('label'),
       ]);
-      setTeams(teamData || []);
       setPools(poolData || []);
       setCategories(categoryData || []);
       setLoading(false);
-
-      // Men's Team logic
-      // Show all teams that have at least one player (team_players), regardless of pool or category
-      const mensTeams = (teamData || [])
-        .map((team: any) => ({
-          ...team,
-          players: team.team_players?.map((tp: any) => tp.player) || [],
-          pool: team.pool,
-        }))
-        .filter((team: any) => team.players.length > 0)
-        .sort((a: any, b: any) => {
-          const numA = parseInt((a.name || '').replace(/\D/g, ''));
-          const numB = parseInt((b.name || '').replace(/\D/g, ''));
-          if (!isNaN(numA) && !isNaN(numB)) {
-            return numA - numB;
-          }
-          return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
-        });
-      setMensTeams(mensTeams);
+      // Set default selected category to first team category (Men's Team)
+      if (categoryData && categoryData.length > 0) {
+        const mensTeamCat = categoryData.find((cat: any) => cat.type === 'team' && (cat.label?.toLowerCase().includes('men') || cat.code?.toLowerCase().includes('men')));
+        if (mensTeamCat) {
+          setSelectedCategory(mensTeamCat.id);
+        } else {
+          // fallback: first team category
+          const firstTeamCat = categoryData.find((cat: any) => cat.type === 'team');
+          if (firstTeamCat) setSelectedCategory(firstTeamCat.id);
+        }
+      }
     }
-    fetchAll();
+    fetchCategoriesAndPools();
   }, []);
+
+  // Fetch teams (with players from team_players) for team categories
+  useEffect(() => {
+    async function fetchTeamsForCategory() {
+      // If no category selected, fetch all teams
+      if (!selectedCategory) {
+        setLoading(true);
+        const { data: teamData } = await supabase
+          .from('teams')
+          .select('*, pool:pools(*), team_players:team_players(player:t_players(*))');
+        setTeams(teamData || []);
+        setLoading(false);
+        return;
+      }
+      // Check if selected category is a team type
+      const selectedCat = categories.find((cat: any) => cat.id === selectedCategory);
+      if (selectedCat && selectedCat.type === 'team') {
+        setLoading(true);
+        // Fetch teams for this category
+        const { data: teamData } = await supabase
+          .from('teams')
+          .select('*, pool:pools(*), team_players:team_players(player:t_players(*))')
+          .in('pool.category_id', [selectedCategory]);
+        setTeams(teamData || []);
+        setLoading(false);
+      }
+    }
+    fetchTeamsForCategory();
+  }, [selectedCategory, categories]);
 
   // Fetch pools with players for non-team categories
   useEffect(() => {
     async function fetchPoolsWithPlayers() {
       if (!selectedCategory) {
+        setOtherPoolsWithPlayers([]);
+        return;
+      }
+      const selectedCat = categories.find((cat: any) => cat.id === selectedCategory);
+      if (!selectedCat || selectedCat.type === 'team') {
         setOtherPoolsWithPlayers([]);
         return;
       }
@@ -93,7 +109,7 @@ export default function TeamsPage() {
       setPoolsLoading(false);
     }
     fetchPoolsWithPlayers();
-  }, [selectedCategory]);
+  }, [selectedCategory, categories]);
 
   useEffect(() => {
     console.log('mensTeams:', mensTeams, 'count:', mensTeams.length);
@@ -115,171 +131,172 @@ export default function TeamsPage() {
     <div className="max-w-6xl mx-auto py-12 px-4">
       {/* Enhanced Header */}
       <div className="text-center mb-12 animate-slide-in-up">
-        <div className="text-5xl mb-4 animate-float">👥</div>
-        <h1 className="text-4xl md:text-5xl font-bold text-white text-glow-white mb-4">
-          Tournament Teams
-        </h1>
+        <div className="flex items-center justify-center gap-4 mb-8">
+          <span className="text-5xl animate-float">👥</span>
+          <h1 className="text-4xl md:text-5xl font-bold text-white" style={{textShadow: '0 0 20px rgba(255,255,255,0.8)'}}>Teams</h1>
+        </div>
         <p className="text-white/80 text-xl max-w-2xl mx-auto">
           Meet the competing teams and their players across all divisions
         </p>
       </div>
 
-      {/* Teams Overview */}
-      <div className="bg-gradient-to-r from-white/10 to-white/5 rounded-3xl p-8 backdrop-blur-md border border-white/20 animate-fade-in-scale mb-10">
-        <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold text-white text-glow-white mb-2">📊 Teams Overview</h2>
-          <p className="text-white/80">Complete list of registered teams</p>
-        </div>
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
-          <div className="text-center p-6 rounded-2xl bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-200/30">
-            <div className="text-3xl font-bold text-blue-300 mb-2">{teams.length}</div>
-            <div className="text-white/80 text-sm">Total Teams</div>
-          </div>
-          <div className="text-center p-6 rounded-2xl bg-gradient-to-br from-green-500/20 to-green-600/20 border border-green-200/30">
-            <div className="text-3xl font-bold text-green-300 mb-2">{pools.length}</div>
-            <div className="text-white/80 text-sm">Active Pools</div>
-          </div>
-          <div className="text-center p-6 rounded-2xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-200/30">
-            <div className="text-3xl font-bold text-purple-300 mb-2">
-              {Math.round(teams.length / Math.max(pools.length, 1))}
-            </div>
-            <div className="text-white/80 text-sm">Avg per Pool</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Men's Team Section */}
-      {mensTeams.length > 0 && (
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold text-white text-glow-white mb-6">Mens Team</h2>
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {mensTeams.map((team: any) => (
-              <div key={team.id} className="bg-gradient-to-br from-blue-100/60 to-green-100/60 rounded-2xl p-6 border border-blue-200/40 shadow-lg hover-lift transition-all duration-200">
-                <div className="flex items-center mb-2">
-                  <span className="text-2xl mr-2">👥</span>
-                  <span className="font-bold text-gray-900 text-base text-glow">{team.name}</span>
-                </div>
-                <div className="text-xs text-gray-600 font-medium bg-white/60 rounded px-2 py-1 mb-2 shadow-sm">
-                  Pool: {team.pool?.name || 'Unassigned'}
-                </div>
-                <div className="w-full">
-                  {team.players.length === 0 ? (
-                    <span className="text-xs text-gray-400">No players assigned yet</span>
-                  ) : (
-                    <ul className="list-disc pl-4">
-                      {team.players.map((player: any, pIdx: number) => (
-                        <li key={player.id || pIdx} className="text-sm text-gray-800 font-medium truncate">
-                          {player.name}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Pools with Players for Other Categories */}
-      <div className="bg-gradient-to-r from-white/10 to-white/5 rounded-3xl p-8 backdrop-blur-md border border-white/20 shadow-2xl animate-fade-in-scale mb-10">
-        <div className="text-center mb-8">
-          <div className="text-4xl mb-4">🏸</div>
-          <h2 className="text-3xl font-bold text-white text-glow-white mb-2">Pools with Players</h2>
-          <p className="text-white/80 text-lg">View players assigned to pools by category</p>
-        </div>
-        {/* Category Filter */}
-        <div className="max-w-md mx-auto mb-8">
-          <label className="block text-sm font-medium text-white/80 mb-2">Select Category:</label>
+      {/* Category Dropdown Top Right */}
+      <div className="flex justify-end mb-6">
+        <div className="flex items-center gap-2">
+          <label className="text-white/90 text-sm font-medium whitespace-nowrap" htmlFor="category-select">Category:</label>
           <select
-            className="w-full px-4 py-3 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white/90 backdrop-blur-sm"
+            id="category-select"
             value={selectedCategory}
-            onChange={e => setSelectedCategory(e.target.value)}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm"
           >
-            <option value="">-- Choose a category --</option>
-            {categories.filter((cat: any) => {
-              const playerCat = getPlayerCategoryFromCategory(cat);
-              return cat.type !== 'team' && (!playerCat || categoryTypes[playerCat] !== 'team');
-            }).map((cat: any) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.label || cat.code}
-              </option>
+            <option value="">All Categories</option>
+            {categories.map((cat: any) => (
+              <option key={cat.id} value={cat.id}>{cat.label || cat.code}</option>
             ))}
           </select>
         </div>
-        {/* Pools Display */}
-        {!selectedCategory ? (
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4 animate-float">🏸</div>
-            <h3 className="text-xl font-medium text-white mb-2">Select a category</h3>
-            <p className="text-white/80">Choose a category to view pools and assigned players</p>
-          </div>
-        ) : poolsLoading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-white/30 border-t-white mx-auto mb-4"></div>
-            <p className="text-white/80 text-lg">Loading pools...</p>
-          </div>
-        ) : otherPoolsWithPlayers.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4 animate-float">🏊</div>
-            <h3 className="text-xl font-medium text-white mb-2">No pools found</h3>
-            <p className="text-white/80">No pools have been created for this category yet</p>
-          </div>
-        ) : (
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {otherPoolsWithPlayers.map((pool: any, poolIndex: number) => {
-              const isPairCategory = pool.category?.type === 'pair';
-              const participantLabel = isPairCategory ? 'pairs' : 'players';
-              return (
-                <div
-                  key={pool.id}
-                  className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/20 hover-lift transition-all duration-300"
-                  style={{ animationDelay: `${poolIndex * 0.1}s` }}
-                >
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-xl font-bold text-white text-glow-white">{pool.name}</h3>
-                  </div>
-                  {pool.players.length === 0 ? (
-                    <div className="text-center py-8">
-                      <div className="text-2xl mb-2">📝</div>
-                      <p className="text-white/80">No {participantLabel} assigned</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {pool.players.map((player: any, playerIndex: number) => {
-                        const displayName = isPairCategory && player.partner_name
-                          ? `${player.name} / ${player.partner_name}`
-                          : player.name;
-                        return (
-                          <div
-                            key={player.id}
-                            className="bg-gradient-to-br from-white/10 to-white/5 rounded-xl p-4 border border-white/10 hover-lift transition-all duration-200"
-                            style={{ animationDelay: `${(poolIndex * 0.1) + (playerIndex * 0.05)}s` }}
-                          >
-                            <div className="flex items-center">
-                              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-3 text-white font-bold text-sm">
-                                {player.name.charAt(0).toUpperCase()}
-                              </div>
-                              <div className="flex-1">
-                                <div className="text-white font-medium">{displayName}</div>
-                                {player.level && (
-                                  <div className="text-white/60 text-xs mt-1">
-                                    Level: {player.level}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
       </div>
+
+      {/* Teams or Pools with Players */}
+      {selectedCategory ? (
+        // If selected category is team-based, show teams; else show pools with players
+        (() => {
+          const selectedCat = categories.find((cat: any) => cat.id === selectedCategory);
+          const isTeamCategory = selectedCat && selectedCat.type === 'team';
+          if (isTeamCategory) {
+            // Show teams for this category
+            const filteredTeams = teams
+              .filter((team: any) => team.pool?.category_id === selectedCategory)
+              .sort((a: any, b: any) => {
+                // Extract numbers from team names for natural sort
+                const numA = parseInt((a.name || '').replace(/\D/g, ''));
+                const numB = parseInt((b.name || '').replace(/\D/g, ''));
+                if (!isNaN(numA) && !isNaN(numB)) {
+                  return numA - numB;
+                }
+                return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
+              });
+            if (filteredTeams.length === 0) {
+              return <div className="text-center py-12 text-white/80">No teams found for this category.</div>;
+            }
+            return (
+              <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+                {filteredTeams.map((team: any) => (
+                  <div key={team.id} className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/20 hover-lift transition-all duration-300">
+                    <div className="flex items-center mb-4">
+                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-3 text-white font-bold text-lg">
+                        {team.name.charAt(0).toUpperCase()}
+                      </div>
+                      <h3 className="text-xl font-bold text-white text-glow-white">{team.name}</h3>
+                    </div>
+                    {!team.team_players || team.team_players.length === 0 ? (
+                      <div className="text-center py-8">
+                        <div className="text-2xl mb-2">📝</div>
+                        <p className="text-white/80">No players assigned</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {team.team_players.map((tp: any, idx: number) => (
+                          <div key={tp.player?.id || idx} className="flex items-center gap-3 p-2 bg-white/5 rounded-lg">
+                            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                              {tp.player?.name?.charAt(0).toUpperCase()}
+                            </div>
+                            <span className="text-white font-medium">{tp.player?.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            );
+          } else {
+            // Show pools with players for this category (already handled by otherPoolsWithPlayers)
+            if (poolsLoading) {
+              return <div className="text-center py-12 text-white/80">Loading pools...</div>;
+            }
+            if (otherPoolsWithPlayers.length === 0) {
+              return <div className="text-center py-12 text-white/80">No pools found for this category.</div>;
+            }
+            return (
+              <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+                {otherPoolsWithPlayers.map((pool: any, poolIndex: number) => {
+                  const isPairCategory = pool.category?.type === 'pair';
+                  const participantLabel = isPairCategory ? 'pairs' : 'players';
+                  return (
+                    <div
+                      key={pool.id}
+                      className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/20 hover-lift transition-all duration-300"
+                      style={{ animationDelay: `${poolIndex * 0.1}s` }}
+                    >
+                      <div className="flex items-center mb-4">
+                        <h3 className="text-xl font-bold text-white text-glow-white">{pool.name}</h3>
+                      </div>
+                      {!pool.players || pool.players.length === 0 ? (
+                        <div className="text-center py-8">
+                          <div className="text-2xl mb-2">📝</div>
+                          <p className="text-white/80">No {participantLabel} assigned</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {pool.players.map((player: any, playerIndex: number) => {
+                            const displayName = isPairCategory && player.partner_name
+                              ? `${player.name} / ${player.partner_name}`
+                              : player.name;
+                            return (
+                              <div
+                                key={player.id || playerIndex}
+                                className="flex items-center gap-3 p-2 bg-white/5 rounded-lg"
+                              >
+                                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                                  {player.name.charAt(0).toUpperCase()}
+                                </div>
+                                <span className="text-white font-medium">{displayName}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          }
+        })()
+      ) : (
+        // No category selected: show all teams (default)
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+          {teams.map((team: any) => (
+            <div key={team.id} className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/20 hover-lift transition-all duration-300">
+              <div className="flex items-center mb-4">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-3 text-white font-bold text-lg">
+                  {team.name.charAt(0).toUpperCase()}
+                </div>
+                <h3 className="text-xl font-bold text-white text-glow-white">{team.name}</h3>
+              </div>
+              {!team.players || team.players.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="text-2xl mb-2">📝</div>
+                  <p className="text-white/80">No players assigned</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {team.players.map((player: any, idx: number) => (
+                    <div key={player.id || idx} className="flex items-center gap-3 p-2 bg-white/5 rounded-lg">
+                      <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                        {player.name.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="text-white font-medium">{player.name}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 } 

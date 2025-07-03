@@ -244,8 +244,10 @@ export default function StandingsPage() {
     <div className="max-w-6xl mx-auto py-12 px-4">
       {/* Enhanced Standings Header */}
       <div className="text-center mb-12 animate-slide-in-up">
-        <div className="text-5xl mb-4 animate-float">🏆</div>
-        <h1 className="text-4xl md:text-5xl font-bold text-white mb-4" style={{textShadow: '0 0 20px rgba(255,255,255,0.8)'}}>Standings</h1>
+        <div className="flex items-center justify-center gap-4 mb-8">
+          <span className="text-5xl animate-float">🏆</span>
+          <h1 className="text-4xl md:text-5xl font-bold text-white" style={{textShadow: '0 0 20px rgba(255,255,255,0.8)'}}>Standings</h1>
+        </div>
       </div>
       {/* Category Dropdown Top Right */}
       <div className="flex justify-end mb-6">
