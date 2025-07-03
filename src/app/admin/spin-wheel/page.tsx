@@ -34,7 +34,7 @@ export default function SpinWheelPage() {
   const [resultDialogOpen, setResultDialogOpen] = useState(false);
   const [lastWinner, setLastWinner] = useState<Player | null>(null);
   const [assignedPool, setAssignedPool] = useState<Pool | null>(null);
-  const [playersPerPool, setPlayersPerPool] = useState<number>(4);
+  const [playersPerPool, setPlayersPerPool] = useState<number>(6);
   const [teams, setTeams] = useState<Team[]>([]);
   const [, setTeamAssignIndex] = useState(0);
   const [currentStageIndex, setCurrentStageIndex] = useState(0);
@@ -71,8 +71,18 @@ export default function SpinWheelPage() {
           // Fetch ALL players for Men's Team (not filtered by stage)
           const allPlayersRes = await fetchPlayersByCategory(PlayerCategory.MensTeam);
           const teamsRes = await fetchTeams();
-          if (allPlayersRes.error) throw allPlayersRes.error;
           if (teamsRes.error) throw teamsRes.error;
+          // Sort teams by the number in their name (e.g., Team 1, Team 2, ...)
+          if (teamsRes.data) {
+            teamsRes.data.sort((a, b) => {
+              const numA = parseInt((a.name || '').replace(/\D/g, ''));
+              const numB = parseInt((b.name || '').replace(/\D/g, ''));
+              if (!isNaN(numA) && !isNaN(numB)) {
+                return numA - numB;
+              }
+              return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
+            });
+          }
           setPlayers(allPlayersRes.data || []);
           setTeams(teamsRes.data || []);
 
@@ -118,7 +128,7 @@ export default function SpinWheelPage() {
             setPools(poolsRes.data || []);
             setAssignments([]);
             setSpunPlayers([]);
-            setPlayersPerPool(4);
+            setPlayersPerPool(5);
             setLoading(false);
             return;
           }
@@ -150,7 +160,7 @@ export default function SpinWheelPage() {
         }).filter((a): a is any => !!a);
         setAssignments(assignmentsInit);
         setSpunPlayers(assignmentsInit.map(a => a.player));
-        setPlayersPerPool(4);
+        setPlayersPerPool(5);
       } catch {
         // No need to setError here, as the error handling is done in the component
       } finally {
@@ -269,6 +279,7 @@ export default function SpinWheelPage() {
     let assignedTeam = null;
     for (let offset = 0; offset < teams.length; offset++) {
       const idx = (lastSpinTeamIndex + offset) % teams.length;
+      debugger
       const team = teams[idx];
       const teamHasStage = assignments.some(a => a.team?.id === team.id && a.stage === winnerStage);
       if (!teamHasStage) {
@@ -356,22 +367,6 @@ export default function SpinWheelPage() {
               ))}
             </select>
           </div>
-          {getSelectedCategoryType(categories, selectedCategory) !== 'team' && (
-            <div className="flex flex-col items-start">
-              <label className="block mb-1 font-bold text-gray-700 text-left">Players per Pool:</label>
-              <select
-                className="w-full p-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 text-gray-900 bg-white"
-                value={playersPerPool}
-                onChange={e => setPlayersPerPool(Number(e.target.value))}
-              >
-                <option value={2}>2 players</option>
-                <option value={3}>3 players</option>
-                <option value={4}>4 players</option>
-                <option value={5}>5 players</option>
-                <option value={6}>6 players</option>
-              </select>
-            </div>
-          )}
         </div>
         {loading && (
           <div className="text-left text-gray-700 py-4">
@@ -386,7 +381,6 @@ export default function SpinWheelPage() {
                 items={isMensTeamCategory ? shuffleArray(players.filter(p => !spunPlayers.includes(p))) : players.filter(p => !spunPlayers.includes(p))}
                 onSpin={isMensTeamCategory ? handleMensTeamSpin : handleSpin}
                 disabled={loading}
-                playersPerPool={isMensTeamCategory ? 6 : playersPerPool}
                 categoryType={getSelectedCategoryType(categories, selectedCategory)}
               />
             </div>
@@ -448,7 +442,7 @@ export default function SpinWheelPage() {
                           className="bg-gradient-to-br from-blue-100/60 to-green-100/60 rounded-2xl p-4 border border-blue-200/40 shadow-lg hover-lift transition-all duration-200 flex flex-col items-start min-h-[90px] relative"
                         >
                           <div className="flex items-center mb-2">
-                            <span className="text-2xl mr-2">🏊‍♂️</span>
+                            <span className="text-2xl mr-2">🏸</span>
                             <span className="font-bold text-gray-900 text-base text-glow">{pool.name}</span>
                           </div>
                           <div className="w-full">

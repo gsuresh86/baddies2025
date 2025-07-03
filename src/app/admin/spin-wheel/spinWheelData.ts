@@ -17,7 +17,7 @@ export async function fetchPoolsByCategoryId(selectedCategory: string) {
 }
 
 export async function fetchTeams() {
-  return await supabase.from('teams').select('*');
+  return await supabase.from('teams').select('*').order('name');
 }
 
 export async function fetchTeamPlayers() {

@@ -46,7 +46,6 @@ function ResultDialog({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fade-in">
       <div className="bg-white rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl animate-scale-in">
         <div className="text-center">
-          <audio ref={audioRef} src="/cheering.mp3" preload="auto" />
           <div className="text-6xl mb-4 animate-bounce">🎉</div>
           <h2 className="text-2xl font-bold text-purple-800 mb-2">Congratulations!</h2>
           <div className="text-xl font-semibold text-gray-800 mb-4">

@@ -1,17 +1,15 @@
 'use client';
 import { useState, useRef } from 'react';
 
-function SpinWheel({ items, onSpin, disabled, playersPerPool, categoryType }: { 
+function SpinWheel({ items, onSpin, disabled, categoryType }: { 
   items: any[], 
   onSpin: (winner: any) => void,
   disabled: boolean,
-  playersPerPool: number,
   categoryType: 'team' | 'player' | 'pair'
 }) {
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const resultAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // Debug: Log the first few items to see their structure
   // console.log('SpinWheel items:', items.slice(0, 3));
@@ -31,15 +29,11 @@ function SpinWheel({ items, onSpin, disabled, playersPerPool, categoryType }: {
     const spins = 8 + Math.random() * 4; // 8-12 full rotations for a dramatic effect
     const finalRotation = rotation + (spins * 360);
     setRotation(finalRotation);
-    // Spin for 2 seconds, then show result dialog and play cheering sound
+    // Spin for 2 seconds, then show result dialog
     setTimeout(() => {
       const winner = items[Math.floor(Math.random() * items.length)];
       setIsSpinning(false);
       onSpin(winner); // Show result dialog immediately
-      if (resultAudioRef.current) {
-        resultAudioRef.current.currentTime = 0;
-        resultAudioRef.current.play();
-      }
     }, 2000);
   };
 
@@ -127,9 +121,8 @@ function SpinWheel({ items, onSpin, disabled, playersPerPool, categoryType }: {
         {isSpinning ? 'Spinning...' : 'Spin'}
       </button>
       <audio ref={audioRef} src="/spin.mp3" preload="auto" />
-      <audio ref={resultAudioRef} src="/cheering.mp3" preload="auto" />
       <div className="mt-3 text-gray-700 text-sm text-center">
-        {items.length} players remaining • {playersPerPool} per pool
+        {items.length} players remaining
       </div>
     </div>
   );

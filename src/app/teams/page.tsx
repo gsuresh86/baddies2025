@@ -44,7 +44,15 @@ export default function TeamsPage() {
           players: team.team_players?.map((tp: any) => tp.player) || [],
           pool: team.pool,
         }))
-        .filter((team: any) => team.players.length > 0);
+        .filter((team: any) => team.players.length > 0)
+        .sort((a: any, b: any) => {
+          const numA = parseInt((a.name || '').replace(/\D/g, ''));
+          const numB = parseInt((b.name || '').replace(/\D/g, ''));
+          if (!isNaN(numA) && !isNaN(numB)) {
+            return numA - numB;
+          }
+          return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
+        });
       setMensTeams(mensTeams);
     }
     fetchAll();
