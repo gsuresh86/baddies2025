@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/lib/store";
 import AuthGuard from "@/components/AuthGuard";
+import * as XLSX from 'xlsx';
 
 interface PlayerRow {
   id: string;
@@ -105,27 +106,21 @@ export default function AdminTShirtsPage() {
   });
 
   // CSV Export function
-  const exportToCSV = () => {
+  const exportToExcel = () => {
     const headers = ['#', 'Name', 'Phone', 'T-Shirt Size'];
-    const csvContent = [
-      headers.join(','),
-      ...allRows.map((row, idx) => [
-        idx + 1,
-        `"${row.name}"`,
-        `"${row.phone || ''}"`,
-        `"${row.tshirt_size || ''}"`
-      ].join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `tshirt-sizes-${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const data = allRows.map((row, idx) => [
+      idx + 1,
+      row.name,
+      row.phone || '',
+      row.tshirt_size || ''
+    ]);
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      headers,
+      ...data
+    ]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'TShirts');
+    XLSX.writeFile(workbook, `tshirt-sizes-${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const handleSizeChange = (row: any, nameKey: string, value: string) => {
@@ -219,10 +214,10 @@ export default function AdminTShirtsPage() {
             Total Unique Players: {allRows.length}
           </div>
           <button
-            onClick={exportToCSV}
+            onClick={exportToExcel}
             className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors text-sm"
           >
-            📊 Export CSV
+            📊 Export Excel
           </button>
         </div>
 
