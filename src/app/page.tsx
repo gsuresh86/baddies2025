@@ -158,6 +158,118 @@ export default function LandingPage() {
           </div>
         </div>
 
+        {/* Media & Gallery Section */}
+        <div id="media-gallery" className="mb-12 scroll-mt-24">
+          <div className="text-center mb-8">
+            <div className="text-4xl mb-4">🎥</div>
+            <h2 className="text-3xl font-bold text-white text-glow-white mb-2 font-heading">Media & Gallery</h2>
+            <p className="text-white/80 text-lg">Watch highlights and relive the best moments!</p>
+          </div>
+          <div className="flex flex-row gap-x-8 py-2 flex-wrap justify-center items-stretch">
+            {/* YouTube Video Thumbnail 1 */}
+            <a
+              href="https://www.youtube.com/watch?si=PcwbnejYIJLkC-aP&v=OUvr1BIXMvE&feature=youtu.be&themeRefresh=1"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative rounded-2xl overflow-hidden shadow-lg border border-white/10 bg-black/60 hover:scale-105 transition-transform duration-300 flex flex-col items-center justify-center"
+              style={{ aspectRatio: '16/9', maxWidth: '320px', height: '180px', minWidth: '220px' }}
+            >
+              <Image
+                src="https://img.youtube.com/vi/OUvr1BIXMvE/hqdefault.jpg"
+                alt="PBEL City Badminton Tournament 2025 Video"
+                className="w-full h-full object-cover group-hover:brightness-75 transition duration-300"
+                width={320}
+                height={180}
+                unoptimized
+              />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="bg-black/70 rounded-full p-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24" width="48" height="48">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </div>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-4 py-2">
+                <span className="text-white font-semibold text-base">PBEL City Badminton Tournament 2025</span>
+              </div>
+            </a>
+            {/* YouTube Video Thumbnail 2 */}
+            <a
+              href="https://www.youtube.com/watch?v=m5vLAxRWocc"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative rounded-2xl overflow-hidden shadow-lg border border-white/10 bg-black/60 hover:scale-105 transition-transform duration-300 flex flex-col items-center justify-center"
+              style={{ aspectRatio: '16/9', maxWidth: '320px', height: '180px', minWidth: '220px' }}
+            >
+              <Image
+                src="https://img.youtube.com/vi/m5vLAxRWocc/hqdefault.jpg"
+                alt="PBEL City Badminton Tournament 2025 - Gallery Video 2"
+                className="w-full h-full object-cover group-hover:brightness-75 transition duration-300"
+                width={320}
+                height={180}
+                unoptimized
+              />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="bg-black/70 rounded-full p-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24" width="48" height="48">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </div>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-4 py-2">
+                <span className="text-white font-semibold text-base">PBEL City Badminton Tournament - Gallery Video</span>
+              </div>
+            </a>
+            {/* YouTube Video Thumbnail 3 */}
+            <a
+              href="https://www.youtube.com/watch?v=afOWQWRT0aM"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative rounded-2xl overflow-hidden shadow-lg border border-white/10 bg-black/60 hover:scale-105 transition-transform duration-300 flex flex-col items-center justify-center"
+              style={{ aspectRatio: '16/9', maxWidth: '320px', height: '180px', minWidth: '220px' }}
+            >
+              <Image
+                src="https://img.youtube.com/vi/afOWQWRT0aM/hqdefault.jpg"
+                alt="PBEL City Badminton Tournament 2025 - Gallery Video 3"
+                className="w-full h-full object-cover group-hover:brightness-75 transition duration-300"
+                width={320}
+                height={180}
+                unoptimized
+              />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="bg-black/70 rounded-full p-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24" width="48" height="48">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </div>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-4 py-2">
+                <span className="text-white font-semibold text-base">PBEL City Badminton Tournament - Gallery Video 2</span>
+              </div>
+            </a>
+            {/* Dummy Thumbnail */}
+            <div
+              className="group relative rounded-2xl overflow-hidden shadow-lg border border-white/10 bg-black/40 flex flex-col items-center justify-center cursor-not-allowed opacity-60"
+              style={{ aspectRatio: '16/9', maxWidth: '320px', height: '180px', minWidth: '220px' }}
+            >
+              <div className="w-full h-full flex items-center justify-center">
+                <span className="text-5xl text-white/30">📸</span>
+              </div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="bg-black/60 rounded-full p-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24" width="48" height="48">
+                    <circle cx="12" cy="12" r="10" fill="#fff" fillOpacity="0.1" />
+                    <rect x="8" y="8" width="8" height="8" rx="2" fill="#fff" fillOpacity="0.2" />
+                  </svg>
+                </div>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-4 py-2">
+                <span className="text-white font-semibold text-base">More coming soon...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Sponsors Section */}
         <div id="sponsors" className="mt-8 scroll-mt-24">
           <div className="bg-gradient-to-r from-white/10 to-white/5 rounded-3xl p-8 backdrop-blur-md border border-white/20 shadow-2xl animate-fade-in-scale">

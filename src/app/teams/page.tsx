@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/store';
 import { Team, Pool } from '@/types';
+import Image from 'next/image';
 
 export default function TeamsPage() {
   const [teams, setTeams] = useState<Team[]>([]);
@@ -185,10 +186,33 @@ export default function TeamsPage() {
                 {filteredTeams.map((team: any) => (
                   <div key={team.id} className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/20 hover-lift transition-all duration-300">
                     <div className="flex items-center mb-4">
-                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-3 text-white font-bold text-lg">
-                        {team.name.charAt(0).toUpperCase()}
-                      </div>
-                      <h3 className="text-xl font-bold text-white text-glow-white">{team.name}</h3>
+                      {(() => {
+                        // Try to extract team number from team name
+                        const match = team.name.match(/(\d+)/);
+                        const teamNum = match ? match[1] : null;
+                        const logoSrc = teamNum ? `/teams/team_logo_${teamNum}.png` : null;
+                        return logoSrc ? (
+                          <Image
+                            src={logoSrc}
+                            alt={team.name}
+                            width={40}
+                            height={40}
+                            className="w-12 h-12 rounded-full mr-3 border-2 shadow bg-white"
+                          />
+                        ) : (
+                          <Image
+                            src={`https://api.dicebear.com/7.x/lorelei/svg?seed=${encodeURIComponent(team.name)}`}
+                            alt={team.name}
+                            width={40}
+                            height={40}
+                            unoptimized
+                            className="w-10 h-10 rounded-full mr-3 border-2 border-blue-400 shadow"
+                          />
+                        );
+                      })()}
+                      <h3 className="text-xl font-extrabold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent drop-shadow">
+                        {team.name}
+                      </h3>
                     </div>
                     {!team.team_players || team.team_players.length === 0 ? (
                       <div className="text-center py-8">
