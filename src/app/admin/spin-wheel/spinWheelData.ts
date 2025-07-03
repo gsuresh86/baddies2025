@@ -26,4 +26,8 @@ export async function fetchTeamPlayers() {
 
 export async function fetchPlayersByCategoryAndStage(category: string, stage: string) {
   return await supabase.from('t_players').select('*').eq('category', category).eq('stage', stage);
+}
+
+export async function fetchPoolPlayers() {
+  return await supabase.from('pool_players').select('*');
 } 

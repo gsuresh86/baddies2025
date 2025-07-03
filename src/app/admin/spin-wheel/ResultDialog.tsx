@@ -34,6 +34,14 @@ function ResultDialog({
     return winner.name;
   };
 
+  const handleClose = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    onClose();
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fade-in">
       <div className="bg-white rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl animate-scale-in">
@@ -64,7 +72,7 @@ function ResultDialog({
           
           <div className="flex justify-center space-x-4">
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="px-6 py-3 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 transition-colors"
             >
               Continue Spinning

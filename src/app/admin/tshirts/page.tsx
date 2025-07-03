@@ -13,8 +13,45 @@ interface PlayerRow {
   partner_tshirt_size?: string;
   old_tshirt_size?: string;
   old_partner_tshirt_size?: string;
+  flat_no?: string;
+  partner_flat_no?: string;
 }
 
+// Add T-shirt size options and mapping
+const TSHIRT_SIZE_OPTIONS = [
+  { value: '28', label: '28' },
+  { value: '30', label: '30' },
+  { value: '32', label: '32' },
+  { value: 'XS/34', label: 'XS/34' },
+  { value: 'S/36', label: 'S/36' },
+  { value: 'M/38', label: 'M/38' },
+  { value: 'L/40', label: 'L/40' },
+  { value: 'XL/42', label: 'XL/42' },
+  { value: 'XXL/44', label: 'XXL/44' },
+  { value: 'XXXL/46', label: 'XXXL/46' },
+  { value: 'XXXXL/48', label: 'XXXXL/48' },
+];
+const TSHIRT_SIZE_MAP: Record<string, string> = {
+  'XS': 'XS/34',
+  'S': 'S/36',
+  'M': 'M/38',
+  'L': 'L/40',
+  'XL': 'XL/42',
+  'XXL': 'XXL/44',
+  'XXXL': 'XXXL/46',
+  'XXXXL': 'XXXXL/48',
+  '28': '28',
+  '30': '30',
+  '32': '32',
+  'XS/34': 'XS/34',
+  'S/36': 'S/36',
+  'M/38': 'M/38',
+  'L/40': 'L/40',
+  'XL/42': 'XL/42',
+  'XXL/44': 'XXL/44',
+  'XXXL/46': 'XXXL/46',
+  'XXXXL/48': 'XXXXL/48',
+};
 
 export default function AdminTShirtsPage() {
   const [players, setPlayers] = useState<PlayerRow[]>([]);
@@ -29,7 +66,7 @@ export default function AdminTShirtsPage() {
       setLoading(true);
       const { data, error } = await supabase
         .from("t_players")
-        .select("id, name, phone, partner_name, partner_phone, tshirt_size, partner_tshirt_size, old_tshirt_size, old_partner_tshirt_size")
+        .select("id, name, phone, partner_name, partner_phone, tshirt_size, partner_tshirt_size, old_tshirt_size, old_partner_tshirt_size, flat_no, partner_flat_no")
         .order("name");
       if (!error && data) {
         setPlayers(data);
@@ -40,18 +77,18 @@ export default function AdminTShirtsPage() {
   }, []);
 
   // Use a Map to ensure uniqueness by name only (spaces removed, lowercased)
-  const uniqueMap = new Map<string, { name: string; phone?: string; tshirt_size?: string; isPartner?: boolean }>();
+  const uniqueMap = new Map<string, { name: string; phone?: string; tshirt_size?: string; isPartner?: boolean; flat_no?: string }>();
   players.forEach((player) => {
     // Main player
     const nameKey = player.name.replace(/\s+/g, '').toLowerCase();
     if (!uniqueMap.has(nameKey)) {
-      uniqueMap.set(nameKey, { name: player.name, phone: player.phone, tshirt_size: player.tshirt_size, isPartner: false });
+      uniqueMap.set(nameKey, { name: player.name, phone: player.phone, tshirt_size: player.tshirt_size, isPartner: false, flat_no: player.flat_no });
     }
     // Partner
     if (player.partner_name) {
       const partnerNameKey = player.partner_name.replace(/\s+/g, '').toLowerCase();
       if (!uniqueMap.has(partnerNameKey)) {
-        uniqueMap.set(partnerNameKey, { name: player.partner_name, phone: player.partner_phone, tshirt_size: player.partner_tshirt_size, isPartner: true });
+        uniqueMap.set(partnerNameKey, { name: player.partner_name, phone: player.partner_phone, tshirt_size: player.partner_tshirt_size, isPartner: true, flat_no: player.partner_flat_no });
       }
     }
   });
@@ -210,13 +247,14 @@ export default function AdminTShirtsPage() {
                 <th className="text-left py-3 px-4 font-semibold text-gray-800 text-sm">Phone</th>
                 <th className="text-left py-3 px-4 font-semibold text-gray-800 text-sm">Old T-Shirt Size</th>
                 <th className="text-left py-3 px-4 font-semibold text-gray-800 text-sm">T-Shirt Size</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-800 text-sm">Flat No</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={5} className="text-center py-6">Loading...</td></tr>
+                <tr><td colSpan={6} className="text-center py-6">Loading...</td></tr>
               ) : filteredRows.length === 0 ? (
-                <tr><td colSpan={5} className="text-center py-6">No players found.</td></tr>
+                <tr><td colSpan={6} className="text-center py-6">No players found.</td></tr>
               ) : (
                 filteredRows.map((row, idx) => {
                   const nameKey = row.name.replace(/\s+/g, '').toLowerCase();
@@ -226,19 +264,24 @@ export default function AdminTShirtsPage() {
                       <td className="py-2 px-4 text-gray-700">{idx + 1}</td>
                       <td className="py-2 px-4 text-gray-900">{row.name}</td>
                       <td className="py-2 px-4 text-gray-700">{row.phone || "-"}</td>
-                      <td className="py-2 px-4 text-gray-700">{oldTshirtSize || "-"}</td>
+                      <td className="py-2 px-4 text-gray-700">{oldTshirtSize ? (TSHIRT_SIZE_MAP[oldTshirtSize] || oldTshirtSize) : "-"}</td>
                       <td className="py-2 px-4 text-gray-700">
-                        <input
-                          type="text"
+                        <select
                           className="border rounded px-2 py-1 w-24"
-                          value={editSizes[nameKey] !== undefined ? editSizes[nameKey] : row.tshirt_size || ''}
+                          value={editSizes[nameKey] !== undefined ? editSizes[nameKey] : (row.tshirt_size ? (TSHIRT_SIZE_MAP[row.tshirt_size] || row.tshirt_size) : '')}
                           onChange={e => handleSizeChange(row, nameKey, e.target.value)}
                           disabled={saving[nameKey]}
-                        />
+                        >
+                          <option value="">Select</option>
+                          {TSHIRT_SIZE_OPTIONS.map(option => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                          ))}
+                        </select>
                         {saving[nameKey] && (
                           <span className="ml-2 text-blue-600 text-xs">Saving...</span>
                         )}
                       </td>
+                      <td className="py-2 px-4 text-gray-700">{row.flat_no || "-"}</td>
                     </tr>
                   );
                 })

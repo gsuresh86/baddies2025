@@ -11,6 +11,7 @@ function SpinWheel({ items, onSpin, disabled, playersPerPool, categoryType }: {
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const resultAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // Debug: Log the first few items to see their structure
   // console.log('SpinWheel items:', items.slice(0, 3));
@@ -22,23 +23,24 @@ function SpinWheel({ items, onSpin, disabled, playersPerPool, categoryType }: {
 
   const handleSpin = () => {
     if (items.length === 0 || disabled || isSpinning) return;
-    
-    // Play sound (disabled for testing)
     if (audioRef.current) {
       audioRef.current.currentTime = 0;
       audioRef.current.play();
     }
     setIsSpinning(true);
-    const spins = 5 + Math.random() * 5; // 5-10 full rotations
+    const spins = 8 + Math.random() * 4; // 8-12 full rotations for a dramatic effect
     const finalRotation = rotation + (spins * 360);
     setRotation(finalRotation);
-    
-    // Simulate spinning animation (reduced to 0.5s for testing)
+    // Spin for 2 seconds, then show result dialog and play cheering sound
     setTimeout(() => {
       const winner = items[Math.floor(Math.random() * items.length)];
       setIsSpinning(false);
-      onSpin(winner);
-    }, 500);
+      onSpin(winner); // Show result dialog immediately
+      if (resultAudioRef.current) {
+        resultAudioRef.current.currentTime = 0;
+        resultAudioRef.current.play();
+      }
+    }, 2000);
   };
 
   if (items.length === 0) {
@@ -58,7 +60,7 @@ function SpinWheel({ items, onSpin, disabled, playersPerPool, categoryType }: {
         className="w-80 h-80 rounded-full border-8 border-white shadow-lg mb-4 flex items-center justify-center relative overflow-hidden"
         style={{
           transform: `rotate(${rotation}deg)`,
-          transition: isSpinning ? 'transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)' : 'none'
+          transition: isSpinning ? 'transform 2s cubic-bezier(0.25, 0.46, 0.45, 0.94)' : 'none'
         }}
       >
         {items.length === 0 ? (
@@ -81,13 +83,28 @@ function SpinWheel({ items, onSpin, disabled, playersPerPool, categoryType }: {
                 const fontSizes = ['text-lg', 'text-xl', 'text-2xl', 'text-3xl'];
                 const fontWeights = ['font-normal', 'font-semibold', 'font-bold'];
                 const rotations = ['rotate-0', 'rotate-1', '-rotate-1', 'rotate-2', '-rotate-2'];
+                const colorPalette = [
+                  'text-red-500',
+                  'text-blue-500',
+                  'text-green-500',
+                  'text-yellow-500',
+                  'text-purple-500',
+                  'text-pink-500',
+                  'text-orange-500',
+                  'text-teal-500',
+                  'text-indigo-500',
+                  'text-emerald-500',
+                  'text-fuchsia-500',
+                  'text-cyan-500',
+                ];
                 const size = fontSizes[index % fontSizes.length];
                 const weight = fontWeights[index % fontWeights.length];
                 const rotation = rotations[index % rotations.length];
+                const color = colorPalette[index % colorPalette.length];
                 return (
                   <span
                     key={index}
-                    className={`inline-block mx-2 my-1 ${size} ${weight} ${rotation} text-gray-800`}
+                    className={`inline-block mx-2 my-1 ${size} ${weight} ${rotation} ${color}`}
                     style={{lineHeight: 1.1}}
                   >
                     {displayName}
@@ -110,6 +127,7 @@ function SpinWheel({ items, onSpin, disabled, playersPerPool, categoryType }: {
         {isSpinning ? 'Spinning...' : 'Spin'}
       </button>
       <audio ref={audioRef} src="/spin.mp3" preload="auto" />
+      <audio ref={resultAudioRef} src="/cheering.mp3" preload="auto" />
       <div className="mt-3 text-gray-700 text-sm text-center">
         {items.length} players remaining • {playersPerPool} per pool
       </div>

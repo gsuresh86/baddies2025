@@ -17,7 +17,8 @@ import {
   fetchPoolsByCategoryId,
   fetchTeams,
   fetchTeamPlayers,
-  fetchPlayersByCategoryAndStage
+  fetchPlayersByCategoryAndStage,
+  fetchPoolPlayers
 } from './spinWheelData';
 import ResultDialog from './ResultDialog';
 import SpinWheel from './SpinWheel';
@@ -124,16 +125,31 @@ export default function SpinWheelPage() {
           setLoading(false);
           return;
         }
-        const [playersRes, poolsRes] = await Promise.all([
+        // Fetch players, pools, and pool-player assignments in parallel
+        const [playersRes, poolsRes, poolPlayersRes] = await Promise.all([
           fetchPlayersByCategory(playerCategoryValue),
-          fetchPoolsByCategoryId(selectedCategory)
+          fetchPoolsByCategoryId(selectedCategory),
+          fetchPoolPlayers()
         ]);
         if (playersRes.error) throw playersRes.error;
         if (poolsRes.error) throw poolsRes.error;
+        if (poolPlayersRes.error) throw poolPlayersRes.error;
         setPlayers(playersRes.data || []);
         setPools(poolsRes.data || []);
-        setAssignments([]);
-        setSpunPlayers([]);
+        // Build assignments from poolPlayersRes
+        const assignmentsInit = (poolPlayersRes.data || []).map(pp => {
+          const player = (playersRes.data || []).find(p => p.id === pp.player_id);
+          const pool = (poolsRes.data || []).find(p => p.id === pp.pool_id);
+          return player && pool ? {
+            player,
+            pool,
+            team: null,
+            timestamp: pp.created_at ? new Date(pp.created_at).toLocaleTimeString() : '',
+            stage: pp.stage || null,
+          } : null;
+        }).filter((a): a is any => !!a);
+        setAssignments(assignmentsInit);
+        setSpunPlayers(assignmentsInit.map(a => a.player));
         setPlayersPerPool(4);
       } catch {
         // No need to setError here, as the error handling is done in the component
