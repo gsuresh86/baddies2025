@@ -1,4 +1,4 @@
-import { TournamentStandings } from '@/types';
+import { TournamentStandings, Team } from '@/types';
 
 const statLabels = [
   { key: 'matchesPlayed', label: 'MP' },
@@ -18,7 +18,21 @@ const statColor = {
   points: 'text-yellow-300 font-extrabold',
 };
 
-export default function StandingsTab({ standings }: { standings: TournamentStandings[] }) {
+interface StandingsTabProps {
+  standings: TournamentStandings[];
+  teams?: Team[];
+  isMensTeam?: boolean;
+  expandedTeams?: Set<string>;
+  onToggleTeamExpansion?: (teamId: string) => void;
+}
+
+export default function StandingsTab({ 
+  standings, 
+  teams = [], 
+  isMensTeam = false, 
+  expandedTeams = new Set(), 
+  onToggleTeamExpansion 
+}: StandingsTabProps) {
   return (
     <div>
       <table className="w-full text-xs sm:text-sm">
@@ -39,22 +53,68 @@ export default function StandingsTab({ standings }: { standings: TournamentStand
               </td>
             </tr>
           ) : (
-            standings.map((standing) => (
-              <tr
-                key={standing.teamId}
-                className="transition-all duration-200 hover:bg-white/10"
-              >
-                <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-white font-semibold">{standing.teamName}</td>
-                {statLabels.map(stat => (
-                  <td
-                    key={stat.key}
-                    className={`px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-center ${statColor[stat.key as keyof typeof statColor] || 'text-white'}`}
+            standings.map((standing) => {
+              const team = teams.find(t => t.id === standing.teamId);
+              const isExpanded = expandedTeams.has(standing.teamId);
+              const hasPlayers = team?.players && team.players.length > 0;
+              
+              return (
+                <>
+                  <tr
+                    key={standing.teamId}
+                    className="transition-all duration-200 hover:bg-white/10"
                   >
-                    {standing[stat.key as keyof TournamentStandings]}
-                  </td>
-                ))}
-              </tr>
-            ))
+                    <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-white font-semibold">
+                      <div className="flex items-center gap-2">
+                        <span>{standing.teamName}</span>
+                        {isMensTeam && hasPlayers && onToggleTeamExpansion && (
+                          <button
+                            onClick={() => onToggleTeamExpansion(standing.teamId)}
+                            className="text-white/70 hover:text-white transition-colors"
+                            title={isExpanded ? "Hide players" : "Show players"}
+                          >
+                            {isExpanded ? (
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            ) : (
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                              </svg>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                    {statLabels.map(stat => (
+                      <td
+                        key={stat.key}
+                        className={`px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-center ${statColor[stat.key as keyof typeof statColor] || 'text-white'}`}
+                      >
+                        {standing[stat.key as keyof TournamentStandings]}
+                      </td>
+                    ))}
+                  </tr>
+                  {/* Players list row */}
+                  {isMensTeam && isExpanded && hasPlayers && (
+                    <tr key={`${standing.teamId}-players`} className="bg-white/5">
+                      <td colSpan={7} className="px-2 sm:px-4 py-3">
+                        <div className="ml-4">
+                          <div className="flex flex-wrap gap-2">
+                            {team.players?.map((player) => (
+                              <span key={player.id} className="text-white text-xs bg-white/10 px-2 py-1 rounded">
+                                {player.name}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </>
+              );
+            })
           )}
         </tbody>
       </table>

@@ -127,6 +127,7 @@ export default function StandingsPage() {
   const [matchesByPool, setMatchesByPool] = useState<{ [poolId: string]: Match[] }>({});
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     async function fetchAll() {
@@ -166,6 +167,27 @@ export default function StandingsPage() {
           }
         });
       }
+
+      // Fetch team players for Men's Team category
+      const mensTeamPools = (poolData as Pool[]).filter(pool => pool.category?.code === 'MT');
+      if (mensTeamPools.length > 0) {
+        const { data: teamPlayersData } = await supabase
+          .from('team_players')
+          .select('*, player:t_players(*)')
+          .in('team_id', (teamData || []).map((t: Team) => t.id));
+        
+        if (teamPlayersData) {
+          teamPlayersData.forEach((tp: any) => {
+            if (tp.player) {
+              const team = (teamData || []).find((t: Team) => t.id === tp.team_id);
+              if (team) {
+                if (!team.players) team.players = [];
+                team.players.push(tp.player);
+              }
+            }
+          });
+        }
+      }
       
       setTeamsByPool(teamsByPool);
       setPlayersByPool(playersByPool);
@@ -181,15 +203,30 @@ export default function StandingsPage() {
     return pool.category?.code === selectedCategory;
   });
 
-  // Group pools by category for standings
-  const poolsByCategory: { [categoryCode: string]: Pool[] } = {};
-  filteredPools.forEach(pool => {
-    const categoryCode = pool.category?.code || 'unknown';
-    if (!poolsByCategory[categoryCode]) {
-      poolsByCategory[categoryCode] = [];
-    }
-    poolsByCategory[categoryCode].push(pool);
+  // Sort pools: Men's Team first, then alphabetically by pool name
+  const sortedPools = [...filteredPools].sort((a, b) => {
+    // Men's Team pools always come first
+    const aIsMensTeam = a.category?.code === 'MT';
+    const bIsMensTeam = b.category?.code === 'MT';
+    
+    if (aIsMensTeam && !bIsMensTeam) return -1;
+    if (!aIsMensTeam && bIsMensTeam) return 1;
+    
+    // Then sort by pool name
+    return a.name.localeCompare(b.name);
   });
+
+  const toggleTeamExpansion = (teamId: string) => {
+    setExpandedTeams(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(teamId)) {
+        newSet.delete(teamId);
+      } else {
+        newSet.add(teamId);
+      }
+      return newSet;
+    });
+  };
 
   if (loading) {
     return (
@@ -218,7 +255,7 @@ export default function StandingsPage() {
     );
   } else {
     // If 'all', show all pools in one table; otherwise, show only the selected category
-    const poolsToShow = selectedCategory === 'all' ? filteredPools : filteredPools;
+    const poolsToShow = selectedCategory === 'all' ? sortedPools : sortedPools;
     // For each pool, show its standings directly (no cards)
     poolsToShow.forEach((pool) => {
       const standings = calculateStandings(
@@ -233,7 +270,13 @@ export default function StandingsPage() {
             <div className="mb-2">
               <h3 className="text-lg font-semibold text-white/90">{pool.name}</h3>
             </div>
-            <StandingsTab standings={standings} />
+            <StandingsTab 
+              standings={standings} 
+              teams={teamsByPool[pool.id] || []}
+              isMensTeam={pool.category?.code === 'MT'}
+              expandedTeams={expandedTeams}
+              onToggleTeamExpansion={toggleTeamExpansion}
+            />
           </div>
         </div>
       );
