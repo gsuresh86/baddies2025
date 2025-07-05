@@ -38,11 +38,13 @@ export interface Game {
 
 export interface Match {
   id: string;
-  team1_id: string;
-  team2_id: string;
+  team1_id?: string;
+  team2_id?: string;
+  player1_id?: string;
+  player2_id?: string;
   team1_score?: number;
   team2_score?: number;
-  winner?: 'team1' | 'team2';
+  winner?: 'team1' | 'team2' | 'player1' | 'player2';
   status?: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   pool_id: string;
   scheduled_date?: string;
@@ -52,6 +54,8 @@ export interface Match {
   // Joined data from Supabase queries
   team1?: Team;
   team2?: Team;
+  player1?: Player;
+  player2?: Player;
   pool?: Pool;
   games?: Game[];
   completed?: boolean;
