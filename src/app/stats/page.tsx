@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/store';
+import { useData } from '@/contexts/DataContext';
 
 export default function StatsPage() {
+  const { players } = useData();
   const [loading, setLoading] = useState(true);
   const [playerStats, setPlayerStats] = useState({
     totalRegistrations: 0,
@@ -12,11 +13,12 @@ export default function StatsPage() {
   });
 
   useEffect(() => {
-    async function fetchStats() {
+    async function calculateStats() {
       setLoading(true);
-      const playersRes = await supabase.from('t_players').select('id,name,email,phone,partner_name,partner_phone,category');
-      // Calculate player stats
-      const allPlayers = Array.isArray(playersRes.data) ? playersRes.data : [];
+      
+      // Calculate player stats from cached data
+      const allPlayers = players || [];
+      
       // Unique by name (spaces removed, lowercased)
       const uniqueMap = new Map();
       allPlayers.forEach((p) => {
@@ -33,6 +35,7 @@ export default function StatsPage() {
           }
         }
       });
+      
       // Players by category (main player only, as before)
       const byCategory: Record<string, number> = {};
       allPlayers.forEach((p) => {
@@ -42,6 +45,7 @@ export default function StatsPage() {
           byCategory['Unspecified'] = (byCategory['Unspecified'] || 0) + 1;
         }
       });
+      
       setPlayerStats({
         totalRegistrations: allPlayers.length,
         uniqueParticipants: uniqueMap.size,
@@ -49,8 +53,11 @@ export default function StatsPage() {
       });
       setLoading(false);
     }
-    fetchStats();
-  }, []);
+    
+    if (players.length > 0) {
+      calculateStats();
+    }
+  }, [players]);
 
   const categoryLabels: Record<string, { code: string; label: string }> = {
     "Men's Singles & Doubles (Team Event)": { code: "MT", label: "Men's Team" },

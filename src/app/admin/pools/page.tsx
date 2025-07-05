@@ -6,9 +6,11 @@ import { Pool, Team, Category, Player } from '@/types';
 import AuthGuard from '@/components/AuthGuard';
 import { categoryLabels } from '@/lib/utils';
 import { useToast } from '@/contexts/ToastContext';
+import { useData } from '@/contexts/DataContext';
 
 export default function AdminPoolsPage() {
   const { showSuccess, showError } = useToast();
+  const { players: cachedPlayers, teams: cachedTeams, pools: cachedPools, teamPlayers, matches: cachedMatches } = useData();
   const [pools, setPools] = useState<Pool[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,7 +28,7 @@ export default function AdminPoolsPage() {
   const [showAssignTeam, setShowAssignTeam] = useState(false);
   const [selectedPool, setSelectedPool] = useState<Pool | null>(null);
   const [availableTeams, setAvailableTeams] = useState<Team[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [poolCategories, setPoolCategories] = useState<Category[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const [showAssignPlayer, setShowAssignPlayer] = useState(false);
   const [selectedPlayerPool, setSelectedPlayerPool] = useState<Pool | null>(null);
@@ -38,68 +40,29 @@ export default function AdminPoolsPage() {
     try {
       console.log('Fetching data...');
       
-      // Use simple queries like the dashboard first
-      const [poolsResult, teamsResult, matchesResult] = await Promise.all([
-        supabase.from('pools').select('*').order('name'),
-        supabase.from('teams').select('*').order('name'),
-        supabase.from('matches').select('pool_id').order('created_at')
-      ]);
+      // Use cached data for pools, teams, and players
+      setPools(cachedPools);
+      setTeams(cachedTeams);
       
-      console.log('Pools result:', poolsResult);
-      console.log('Teams result:', teamsResult);
-      console.log('Matches result:', matchesResult);
-      
-      if (poolsResult.error) {
-        console.error('Error fetching pools:', poolsResult.error);
-        showError('Error fetching pools', poolsResult.error.message);
-      }
-      if (teamsResult.error) {
-        console.error('Error fetching teams:', teamsResult.error);
-      }
-      if (matchesResult.error) {
-        console.error('Error fetching matches:', matchesResult.error);
-      }
-      
-      // Set basic data first
-      setPools(poolsResult.data || []);
-      setTeams(teamsResult.data || []);
-      
-      // Calculate match count per pool
+      // Calculate match counts from cached matches data
       const matchCounts: Record<string, number> = {};
-      if (matchesResult.data) {
-        matchesResult.data.forEach((match: any) => {
+      cachedMatches.forEach(match => {
+        if (match.pool_id) {
           matchCounts[match.pool_id] = (matchCounts[match.pool_id] || 0) + 1;
-        });
-      }
+        }
+      });
       setPoolMatches(matchCounts);
-      
-      // Now try to get detailed data with relationships
-      try {
-        const detailedPools = await tournamentStore.getPools();
-        console.log('Detailed pools:', detailedPools);
-        setPools(detailedPools);
-      } catch (error) {
-        console.error('Error fetching detailed pools:', error);
-      }
-      
-      try {
-        const detailedTeams = await tournamentStore.getTeams();
-        console.log('Detailed teams:', detailedTeams);
-        setTeams(detailedTeams);
-      } catch (error) {
-        console.error('Error fetching detailed teams:', error);
-      }
       
     } catch (err) {
       console.error('Error fetching data:', err);
     }
     setLoading(false);
-  }, [showError]);
+  }, [cachedPools, cachedTeams, cachedMatches]);
 
   const fetchCategories = useCallback(async () => {
     try {
       const cats = await tournamentStore.getCategories();
-      setCategories(cats);
+      setPoolCategories(cats);
       if (cats.length > 0) setSelectedCategoryId(cats[0].id);
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -118,7 +81,7 @@ export default function AdminPoolsPage() {
       setNewPoolName('');
       setMaxTeams(4);
       setShowCreatePool(false);
-      setSelectedCategoryId(categories[0]?.id || '');
+      setSelectedCategoryId(poolCategories[0]?.id || '');
       showSuccess('Pool created successfully');
       fetchData();
     } catch (error) {
@@ -198,13 +161,27 @@ export default function AdminPoolsPage() {
 
   const openAssignTeamModal = async (pool: Pool) => {
     setSelectedPool(pool);
-    try {
-      const availableTeamsData = await tournamentStore.getTeamsNotInPool();
-      setAvailableTeams(availableTeamsData);
-      setShowAssignTeam(true);
-    } catch (error) {
-      console.error('Error fetching available teams:', error);
-    }
+    
+    // Use cached data to get teams not in any pool
+    const teamsNotInPool = cachedTeams.filter(team => !team.pool_id);
+    
+    // Build detailed teams data using cached team_players
+    const availableTeamsData = teamsNotInPool.map(team => {
+      // Get players for this team from cached team_players
+      const teamPlayerIds = teamPlayers
+        .filter(tp => tp.team_id === team.id)
+        .map(tp => tp.player_id);
+      
+      const teamPlayerDetails = cachedPlayers.filter(p => teamPlayerIds.includes(p.id));
+      
+      return {
+        ...team,
+        players: teamPlayerDetails
+      };
+    });
+    
+    setAvailableTeams(availableTeamsData);
+    setShowAssignTeam(true);
   };
 
   const generateMatchesForPool = async (poolId: string) => {
@@ -228,36 +205,31 @@ export default function AdminPoolsPage() {
 
   const openAssignPlayerModal = async (pool: Pool) => {
     setSelectedPlayerPool(pool);
-    // Fetch all players not already in this pool
-    const { data, error } = await supabase
-      .from('t_players')
-      .select('*')
-      .order('name');
-    if (!error && data) {
-      // Exclude already assigned
-      const assignedIds = new Set((pool.players || []).map(p => p.id));
-      let filtered = data.filter((p: Player) => !assignedIds.has(p.id));
+    
+    // Use cached players data
+    const allPlayers = cachedPlayers || [];
+    
+    // Exclude already assigned
+    const assignedIds = new Set((pool.players || []).map(p => p.id));
+    let filtered = allPlayers.filter((p: Player) => !assignedIds.has(p.id));
+    
+    // Filter by pool category for all categories
+    if (pool.category) {
+      // Get the category information from categoryLabels
+      const categoryInfo = Object.values(categoryLabels).find(cat => cat.code === pool.category?.code);
       
-      // Filter by pool category for all categories
-      if (pool.category) {
-        // Get the category information from categoryLabels
-        const categoryInfo = Object.values(categoryLabels).find(cat => cat.code === pool.category?.code);
-        
-        if (categoryInfo) {
-          // Filter by the category label that matches the pool category
-          filtered = filtered.filter((p: Player) => {
-            // Check if player's category matches the pool category
-            return p.category === categoryInfo.label || 
-                   p.category === pool.category?.label ||
-                   p.category === pool.category?.description;
-          });
-        }
+      if (categoryInfo) {
+        // Filter by the category label that matches the pool category
+        filtered = filtered.filter((p: Player) => {
+          // Check if player's category matches the pool category
+          return p.category === categoryInfo.label || 
+                 p.category === pool.category?.label ||
+                 p.category === pool.category?.description;
+        });
       }
-      
-      setAvailablePlayers(filtered);
-    } else {
-      setAvailablePlayers([]);
     }
+    
+    setAvailablePlayers(filtered);
     setShowAssignPlayer(true);
   };
 
@@ -265,14 +237,10 @@ export default function AdminPoolsPage() {
     try {
       if (selectedPlayerPool?.category?.type === 'pair') {
         // For pair categories, we need to assign the entire pair
-        // First, get the partner of the selected player
-        const { data: player, error: playerError } = await supabase
-          .from('t_players')
-          .select('partner_name')
-          .eq('id', playerId)
-          .single();
+        // Get the partner of the selected player from cached data
+        const player = cachedPlayers.find(p => p.id === playerId);
         
-        if (playerError || !player.partner_name) {
+        if (!player || !player.partner_name) {
           showError('Player must have a partner for pair-based categories');
           return;
         }
@@ -625,7 +593,7 @@ export default function AdminPoolsPage() {
                     onChange={e => setSelectedCategoryId(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white text-sm sm:text-base"
                   >
-                    {categories.map(cat => (
+                    {poolCategories.map(cat => (
                       <option key={cat.id} value={cat.id}>{cat.label}</option>
                     ))}
                   </select>

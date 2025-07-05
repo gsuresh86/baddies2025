@@ -2,16 +2,14 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { tournamentStore, supabase } from '@/lib/store';
-import { Match, Pool, Team, Player, Category } from '@/types';
+import { Match } from '@/types';
 import { useToast } from '@/contexts/ToastContext';
+import { useData } from '@/contexts/DataContext';
 
 export default function AdminMatchesPage() {
   const { showSuccess, showError } = useToast();
+  const { players, teams, pools, categories, matches: cachedMatches } = useData();
   const [matches, setMatches] = useState<Match[]>([]);
-  const [pools, setPools] = useState<Pool[]>([]);
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPool, setSelectedPool] = useState<string>('all');
   const [activeCategoryId, setActiveCategoryId] = useState<string>('all');
@@ -144,33 +142,16 @@ export default function AdminMatchesPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      console.log('Fetching matches data...');
+      console.log('Using cached matches data...');
       
-      // Use simple queries only - remove the double fetching
-      const [matchesResult, poolsResult, teamsResult, playersResult, categoriesResult] = await Promise.all([
-        supabase.from('matches').select('*').order('created_at', { ascending: false }),
-        supabase.from('pools').select('*').order('name'),
-        supabase.from('teams').select('*').order('name'),
-        supabase.from('t_players').select('*').order('name'),
-        supabase.from('categories').select('*').order('label'),
-      ]);
-      
-      if (matchesResult.error) {
-        console.error('Error fetching matches:', matchesResult.error);
-        showError('Error fetching matches', matchesResult.error.message);
-      }
-      
-      setMatches(matchesResult.data || []);
-      setPools(poolsResult.data || []);
-      setTeams(teamsResult.data || []);
-      setPlayers(playersResult.data || []);
-      setCategories(categoriesResult.data || []);
+      // Use cached matches data from DataContext
+      setMatches(cachedMatches);
       
     } catch (err) {
       console.error('Error fetching data:', err);
     }
     setLoading(false);
-  }, [showError]);
+  }, [cachedMatches]);
 
   useEffect(() => {
     fetchData();

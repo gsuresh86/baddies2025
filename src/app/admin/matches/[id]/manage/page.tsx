@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/store";
-import { Match, Game as GameBase, Team } from "@/types";
-import Link from "next/link";
+import { Match, Game as GameBase, Team } from '@/types';
+import Link from 'next/link';
 import { useToast } from '@/contexts/ToastContext';
-import { tournamentStore } from '@/lib/store';
+import { useData } from '@/contexts/DataContext';
 
 type Game = GameBase & {
   player1_id?: string;
@@ -80,6 +80,7 @@ function mergeGamesWithStructure(dbGames: Game[]): Game[] {
 
 export default function AdminManageMatchPage() {
   const { showSuccess, showError } = useToast();
+  const { players: cachedPlayers, teams: cachedTeams, teamPlayers, matches: cachedMatches } = useData();
   const params = useParams();
   const matchId = params?.id as string;
 
@@ -103,21 +104,12 @@ export default function AdminManageMatchPage() {
 
   useEffect(() => {
     async function fetchData() {
+      if (!matchId) return;
       setLoading(true);
       setError(null);
       try {
-        // Fetch match details
-        const { data: matchData, error: matchError } = await supabase
-          .from("matches")
-          .select("*")
-          .eq("id", matchId)
-          .single();
-        
-        if (matchError) {
-          setError(matchError.message);
-          setLoading(false);
-          return;
-        }
+        // Get match from cached data first
+        const matchData = cachedMatches.find(m => m.id === matchId);
         
         if (!matchData) {
           setError("Match not found");
@@ -127,21 +119,43 @@ export default function AdminManageMatchPage() {
         
         setMatch(matchData);
         
-        // Fetch teams
-        const team1 = await tournamentStore.getTeamById(matchData.team1_id);
-        const team2 = await tournamentStore.getTeamById(matchData.team2_id);
-        if (!team1) {
+        // Get teams from cached data
+        const team1Data = cachedTeams.find(t => t.id === matchData.team1_id);
+        const team2Data = cachedTeams.find(t => t.id === matchData.team2_id);
+        
+        if (!team1Data) {
           console.error("Error fetching team1");
           showError("Error fetching team1");
         }
-        if (!team2) {
+        if (!team2Data) {
           console.error("Error fetching team2");
           showError("Error fetching team2");
         }
+        
+        // Build detailed team data using cached team_players
+        const buildTeamWithPlayers = (teamData: any) => {
+          if (!teamData) return null;
+          
+          // Get players for this team from cached team_players
+          const teamPlayerIds = teamPlayers
+            .filter(tp => tp.team_id === teamData.id)
+            .map(tp => tp.player_id);
+          
+          const teamPlayerDetails = cachedPlayers.filter(p => teamPlayerIds.includes(p.id));
+          
+          return {
+            ...teamData,
+            players: teamPlayerDetails
+          };
+        };
+        
+        const team1 = buildTeamWithPlayers(team1Data);
+        const team2 = buildTeamWithPlayers(team2Data);
+        
         setTeam1(team1);
         setTeam2(team2);
         
-        // Fetch games
+        // Fetch games (this still needs to be an API call since games are not cached)
         const { data: gamesData, error: gamesError } = await supabase
           .from("games")
           .select("*")
@@ -179,8 +193,11 @@ export default function AdminManageMatchPage() {
       }
       setLoading(false);
     }
-    if (matchId) fetchData();
-  }, [matchId, showError]);
+    
+    if (matchId && cachedMatches.length > 0) {
+      fetchData();
+    }
+  }, [matchId, showError, cachedPlayers, cachedTeams, teamPlayers, cachedMatches]);
 
   // Helper to count wins and update match score in DB
   useEffect(() => {

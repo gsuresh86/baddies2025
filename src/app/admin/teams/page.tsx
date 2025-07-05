@@ -1,150 +1,108 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { tournamentStore, supabase } from '@/lib/store';
-import { Team, Player, Pool } from '@/types';
+import { Team, Pool, Player } from '@/types';
 import { useToast } from '@/contexts/ToastContext';
+import { useData } from '@/contexts/DataContext';
 
 export default function AdminTeamsPage() {
   const { showSuccess, showError } = useToast();
+  const { players, teams: cachedTeams, pools: cachedPools, categories, teamPlayers } = useData();
   const [teams, setTeams] = useState<Team[]>([]);
   const [, setPools] = useState<Pool[]>([]);
+  const [mensTeamPlayerCount, setMensTeamPlayerCount] = useState(0);
+  const [mensTeamPlayers, setMensTeamPlayers] = useState<Player[]>([]);
+  const [playersByLevel, setPlayersByLevel] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // Form states
-  const [newTeamName, setNewTeamName] = useState('');
-  
-  // Modal states
   const [showCreateTeam, setShowCreateTeam] = useState(false);
-
-  // Calculate stats for Men's teams only
-  const [mensTeamPlayerCount, setMensTeamPlayerCount] = useState(0);
-  const [playersByLevel, setPlayersByLevel] = useState<Record<string, number>>({});
-  const [mensTeamPlayers, setMensTeamPlayers] = useState<Player[]>([]);
-  const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
-
-  // Pools with players section
-  const [categories, setCategories] = useState<any[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [newTeamName, setNewTeamName] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [poolsWithPlayers, setPoolsWithPlayers] = useState<any[]>([]);
   const [poolsLoading, setPoolsLoading] = useState(false);
+  const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  // Fetch categories on mount
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  // Fetch pools with players when category changes
-  useEffect(() => {
-    if (selectedCategory) {
-      fetchPoolsWithPlayers(selectedCategory);
-    } else {
-      setPoolsWithPlayers([]);
-    }
-  }, [selectedCategory]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       console.log('Fetching teams data...');
       
-      // Use simple queries first
-      const [teamsResult, poolsResult, playersResult] = await Promise.all([
-        supabase.from('teams').select('*').order('name'),
-        supabase.from('pools').select('*').order('name'),
-        supabase.from('t_players').select('*').order('name')
-      ]);
+      // Use cached data for teams, pools, and players
+      setPools(cachedPools);
       
-      console.log('Teams result:', teamsResult);
-      console.log('Pools result:', poolsResult);
-      console.log('Players result:', playersResult);
-      
-      setTeams(teamsResult.data || []);
-      setPools(poolsResult.data || []);
-      
-      // Calculate Men's team players count
-      try {
-        // Get all players with Men's category from t_players table
-        const { data: mensPlayersData, error: mensPlayersError } = await supabase
-          .from('t_players')
-          .select('*')
-          .eq('category', "Men's Singles & Doubles (Team Event)");
+      // Build detailed teams data using cached team_players
+      const detailedTeams = cachedTeams.map(team => {
+        // Get pool info from cached data
+        const pool = team.pool_id ? cachedPools.find(p => p.id === team.pool_id) : undefined;
         
-        if (!mensPlayersError && mensPlayersData) {
-          setMensTeamPlayerCount(mensPlayersData.length);
-          setMensTeamPlayers(mensPlayersData);
-          
-          // Count by level
-          const levelCounts = mensPlayersData.reduce((acc, player) => {
-            const level = player.level || 'Unspecified';
-            acc[level] = (acc[level] || 0) + 1;
-            return acc;
-          }, {} as Record<string, number>);
-          
-          setPlayersByLevel(levelCounts);
-        }
-      } catch (error) {
-        console.error('Error calculating Men\'s team stats:', error);
-      }
+        // Get players for this team from cached team_players
+        const teamPlayerIds = teamPlayers
+          .filter(tp => tp.team_id === team.id)
+          .map(tp => tp.player_id);
+        
+        const teamPlayerDetails = players.filter(p => teamPlayerIds.includes(p.id));
+        
+        return {
+          ...team,
+          pool,
+          players: teamPlayerDetails
+        };
+      });
       
-      // Try to get detailed data with relationships
-      try {
-        const detailedTeams = await tournamentStore.getTeams();
-        console.log('Detailed teams:', detailedTeams);
-        setTeams(detailedTeams);
-      } catch (error) {
-        console.error('Error fetching detailed teams:', error);
-      }
+      setTeams(detailedTeams);
+      
+      // Calculate Men's team players count from cached data
+      const mensPlayersData = players.filter(p => p.category === "Men's Singles & Doubles (Team Event)");
+      setMensTeamPlayerCount(mensPlayersData.length);
+      setMensTeamPlayers(mensPlayersData);
+      
+      // Count by level
+      const levelCounts = mensPlayersData.reduce((acc, player) => {
+        const level = player.level || 'Unspecified';
+        acc[level] = (acc[level] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      setPlayersByLevel(levelCounts);
       
     } catch (err) {
       console.error('Error fetching data:', err);
     }
     setLoading(false);
-  };
+  }, [cachedTeams, cachedPools, players, teamPlayers]);
 
-  // Fetch categories for pools with players section
-  const fetchCategories = async () => {
-    try {
-      const { data, error } = await supabase.from('categories').select('*').order('label');
-      if (error) throw error;
-      setCategories(data || []);
-    } catch (err) {
-      console.error('Error fetching categories:', err);
-    }
-  };
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   // Fetch pools with players for selected category
-  const fetchPoolsWithPlayers = async (categoryId: string) => {
+  const fetchPoolsWithPlayers = useCallback(async (categoryId: string) => {
     if (!categoryId) return;
     
     setPoolsLoading(true);
     try {
-      // Get pools for the selected category
-      const { data: poolsData, error: poolsError } = await supabase
-        .from('pools')
-        .select('*, category:categories(*)')
-        .eq('category_id', categoryId);
-      
-      if (poolsError) throw poolsError;
+      // Get pools for the selected category from cached data
+      const poolsData = cachedPools.filter(p => p.category_id === categoryId);
       
       // Get pool players for each pool
       const poolsWithPlayersData = await Promise.all(
-        (poolsData || []).map(async (pool) => {
+        poolsData.map(async (pool) => {
           const { data: poolPlayersData, error: poolPlayersError } = await supabase
             .from('pool_players')
-            .select('*, player:t_players(*)')
+            .select('player_id')
             .eq('pool_id', pool.id);
           
           if (poolPlayersError) throw poolPlayersError;
           
+          // Get player details from cached data
+          const poolPlayers = poolPlayersData?.map(pp => 
+            players.find(p => p.id === pp.player_id)
+          ).filter(Boolean) || [];
+          
           return {
             ...pool,
-            players: poolPlayersData?.map(pp => pp.player).filter(Boolean) || []
+            players: poolPlayers
           };
         })
       );
@@ -155,7 +113,15 @@ export default function AdminTeamsPage() {
     } finally {
       setPoolsLoading(false);
     }
-  };
+  }, [cachedPools, players]);
+
+  useEffect(() => {
+    if (selectedCategory) {
+      fetchPoolsWithPlayers(selectedCategory);
+    } else {
+      setPoolsWithPlayers([]);
+    }
+  }, [selectedCategory, fetchPoolsWithPlayers]);
 
   const handleCreateTeam = async () => {
     if (!newTeamName.trim()) return;

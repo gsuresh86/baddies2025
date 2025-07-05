@@ -7,6 +7,7 @@ import PublicLayout from './PublicLayout';
 import AdminLayout from './AdminLayout';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { ToastProvider } from '@/contexts/ToastContext';
+import { DataProvider } from '@/contexts/DataContext';
 
 // Define route categories
 const PUBLIC_ROUTES = ['/', '/standings', '/teams', '/rules', '/tournaments', '/match'];
@@ -49,7 +50,9 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
   if (isAuthRoute) {
     return (
       <ToastProvider>
-        {children}
+        <DataProvider>
+          {children}
+        </DataProvider>
       </ToastProvider>
     );
   }
@@ -58,9 +61,11 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
   if (isAdminRoute) {
     return (
       <ToastProvider>
-        <AdminLayout user={user}>
-          {children}
-        </AdminLayout>
+        <DataProvider>
+          <AdminLayout user={user}>
+            {children}
+          </AdminLayout>
+        </DataProvider>
       </ToastProvider>
     );
   }
@@ -69,9 +74,11 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
   if (isPublicRoute) {
     return (
       <ToastProvider>
-        <PublicLayout>
-          {children}
-        </PublicLayout>
+        <DataProvider>
+          <PublicLayout>
+            {children}
+          </PublicLayout>
+        </DataProvider>
       </ToastProvider>
     );
   }
@@ -79,9 +86,11 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
   // Default to public layout
   return (
     <ToastProvider>
-      <PublicLayout>
-        {children}
-      </PublicLayout>
+      <DataProvider>
+        <PublicLayout>
+          {children}
+        </PublicLayout>
+      </DataProvider>
     </ToastProvider>
   );
 } 

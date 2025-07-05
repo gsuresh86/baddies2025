@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/store";
+import { useData } from '@/contexts/DataContext';
 import AuthGuard from "@/components/AuthGuard";
 import * as XLSX from 'xlsx';
 
@@ -46,6 +47,7 @@ const TSHIRT_SIZE_MAP: Record<string, string> = {
 };
 
 export default function AdminTShirtsPage() {
+  const { players: cachedPlayers } = useData();
   const [players, setPlayers] = useState<PlayerRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [editSizes, setEditSizes] = useState<Record<string, string>>({});
@@ -54,19 +56,12 @@ export default function AdminTShirtsPage() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    async function fetchPlayers() {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from("t_players")
-        .select("id, name, phone, partner_name, partner_phone, tshirt_size, partner_tshirt_size, old_tshirt_size, old_partner_tshirt_size, flat_no, partner_flat_no")
-        .order("name");
-      if (!error && data) {
-        setPlayers(data);
-      }
+    // Use cached players data
+    if (cachedPlayers.length > 0) {
+      setPlayers(cachedPlayers);
       setLoading(false);
     }
-    fetchPlayers();
-  }, []);
+  }, [cachedPlayers]);
 
   // Use a Map to ensure uniqueness by name only (spaces removed, lowercased)
   const uniqueMap = new Map<string, { name: string; phone?: string; tshirt_size?: string; isPartner?: boolean; flat_no?: string }>();

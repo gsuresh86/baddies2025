@@ -5,6 +5,7 @@ import { supabase } from '@/lib/store';
 import { Pool, Team, Match, TournamentStandings, Player } from '@/types';
 import StandingsTab from './pool/StandingsTab';
 import { categoryLabels } from '@/lib/utils';
+import { useData } from '@/contexts/DataContext';
 
 function calculateStandings(teams: Team[], players: Player[], matches: Match[], categoryCode?: string): TournamentStandings[] {
   const standings: { [id: string]: TournamentStandings } = {};
@@ -121,81 +122,80 @@ function calculateStandings(teams: Team[], players: Player[], matches: Match[], 
 }
 
 export default function StandingsPage() {
-  const [pools, setPools] = useState<Pool[]>([]);
+  const { teams, pools, matches: cachedMatches } = useData();
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [teamsByPool, setTeamsByPool] = useState<{ [poolId: string]: Team[] }>({});
   const [playersByPool, setPlayersByPool] = useState<{ [poolId: string]: Player[] }>({});
   const [matchesByPool, setMatchesByPool] = useState<{ [poolId: string]: Match[] }>({});
-  const [loading, setLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchAll() {
       setLoading(true);
-      // Fetch all pools with categories
-      const { data: poolData } = await supabase.from('pools').select('*, category:categories(*)');
-      if (!poolData) return setLoading(false);
-      setPools(poolData as Pool[]);
-      
-      // Fetch all teams
-      const { data: teamData } = await supabase.from('teams').select('*');
-      
-      // Fetch all matches
-      const { data: matchData } = await supabase.from('matches').select('*');
-      
-      // Group teams and matches by pool
-      const teamsByPool: { [poolId: string]: Team[] } = {};
-      const playersByPool: { [poolId: string]: Player[] } = {};
-      const matchesByPool: { [poolId: string]: Match[] } = {};
-      
-      (poolData as Pool[]).forEach(pool => {
-        teamsByPool[pool.id] = (teamData || []).filter((t: Team) => t.pool_id === pool.id);
-        matchesByPool[pool.id] = (matchData || []).filter((m: Match) => m.pool_id === pool.id);
-        playersByPool[pool.id] = [];
-      });
-      
-      // Fetch pool players for player-based categories
-      const { data: poolPlayersData } = await supabase
-        .from('pool_players')
-        .select('*, player:t_players(*)')
-        .in('pool_id', (poolData as Pool[]).map(p => p.id));
-      
-      if (poolPlayersData) {
-        poolPlayersData.forEach((pp: any) => {
-          if (pp.player && playersByPool[pp.pool_id]) {
-            playersByPool[pp.pool_id].push(pp.player);
-          }
-        });
-      }
-
-      // Fetch team players for Men's Team category
-      const mensTeamPools = (poolData as Pool[]).filter(pool => pool.category?.code === 'MT');
-      if (mensTeamPools.length > 0) {
-        const { data: teamPlayersData } = await supabase
-          .from('team_players')
-          .select('*, player:t_players(*)')
-          .in('team_id', (teamData || []).map((t: Team) => t.id));
+      try {
+        // Use cached data for pools, teams, and matches
+        const poolData = pools;
+        const teamData = teams;
+        const matchData = cachedMatches;
         
-        if (teamPlayersData) {
-          teamPlayersData.forEach((tp: any) => {
-            if (tp.player) {
-              const team = (teamData || []).find((t: Team) => t.id === tp.team_id);
-              if (team) {
-                if (!team.players) team.players = [];
-                team.players.push(tp.player);
-              }
+        // Group teams and matches by pool
+        const teamsByPool: { [poolId: string]: Team[] } = {};
+        const playersByPool: { [poolId: string]: Player[] } = {};
+        const matchesByPool: { [poolId: string]: Match[] } = {};
+        
+        (poolData as Pool[]).forEach(pool => {
+          teamsByPool[pool.id] = (teamData || []).filter((t: Team) => t.pool_id === pool.id);
+          matchesByPool[pool.id] = (matchData || []).filter((m: Match) => m.pool_id === pool.id);
+          playersByPool[pool.id] = [];
+        });
+        
+        // Fetch pool players for player-based categories (this still needs to be an API call)
+        const { data: poolPlayersData } = await supabase
+          .from('pool_players')
+          .select('*, player:t_players(*)')
+          .in('pool_id', (poolData as Pool[]).map(p => p.id));
+        
+        if (poolPlayersData) {
+          poolPlayersData.forEach((pp: any) => {
+            if (pp.player && playersByPool[pp.pool_id]) {
+              playersByPool[pp.pool_id].push(pp.player);
             }
           });
         }
+
+        // Fetch team players for Men's Team category (this still needs to be an API call)
+        const mensTeamPools = (poolData as Pool[]).filter(pool => pool.category?.code === 'MT');
+        if (mensTeamPools.length > 0) {
+          const { data: teamPlayersData } = await supabase
+            .from('team_players')
+            .select('*, player:t_players(*)')
+            .in('team_id', (teamData || []).map((t: Team) => t.id));
+          
+          if (teamPlayersData) {
+            teamPlayersData.forEach((tp: any) => {
+              if (tp.player) {
+                const team = (teamData || []).find((t: Team) => t.id === tp.team_id);
+                if (team) {
+                  if (!team.players) team.players = [];
+                  team.players.push(tp.player);
+                }
+              }
+            });
+          }
+        }
+        
+        setTeamsByPool(teamsByPool);
+        setPlayersByPool(playersByPool);
+        setMatchesByPool(matchesByPool);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        setLoading(false);
       }
-      
-      setTeamsByPool(teamsByPool);
-      setPlayersByPool(playersByPool);
-      setMatchesByPool(matchesByPool);
-      setLoading(false);
     }
     fetchAll();
-  }, []);
+  }, [pools, teams, cachedMatches]);
 
   // Filter pools by selected category
   const filteredPools = pools.filter(pool => {
