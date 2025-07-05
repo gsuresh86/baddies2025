@@ -244,11 +244,11 @@ export default function AdminMatchesPage() {
     const matchType = matchCategory?.type;
     let participant1 = '', participant2 = '';
     if (matchType === 'team') {
-      participant1 = getTeamName(selectedMatch.team1_id);
-      participant2 = getTeamName(selectedMatch.team2_id);
+      participant1 = getTeamName(selectedMatch.team1_id || '');
+      participant2 = getTeamName(selectedMatch.team2_id || '');
     } else if (matchType === 'player') {
-      participant1 = getPlayerName((selectedMatch as any).player1_id);
-      participant2 = getPlayerName((selectedMatch as any).player2_id);
+      participant1 = getPlayerName((selectedMatch as any).player1_id || '');
+      participant2 = getPlayerName((selectedMatch as any).player2_id || '');
     } else if (matchType === 'pair') {
       participant1 = 'Pair 1';
       participant2 = 'Pair 2';
@@ -471,7 +471,7 @@ export default function AdminMatchesPage() {
                       {/* Participants and Scores */}
                       <div className="flex flex-col items-center w-full py-4">
                         <div className="flex items-center justify-center gap-2 w-full mb-2">
-                          <span className={`font-semibold text-center ${team1Wins ? 'text-green-700 font-bold' : 'text-gray-800'}`} title={getTeamName(match.team1_id)}>{getTeamName(match.team1_id)}</span>
+                          <span className={`font-semibold text-center ${team1Wins ? 'text-green-700 font-bold' : 'text-gray-800'}`} title={getTeamName(match.team1_id || '')}>{getTeamName(match.team1_id || '')}</span>
                         </div>
                         <div className="flex items-center justify-center gap-4 w-full">
                           <span className="text-2xl sm:text-3xl font-extrabold text-blue-700 drop-shadow">{match.team1_score ?? '-'}</span>
@@ -479,7 +479,7 @@ export default function AdminMatchesPage() {
                       </div>
                       <div className="flex flex-col items-center w-full py-4">
                         <div className="flex items-center justify-center gap-2 w-full mb-2">
-                          <span className={`font-semibold text-center ${team2Wins ? 'text-green-700 font-bold' : 'text-gray-800'}`} title={getTeamName(match.team2_id)}>{getTeamName(match.team2_id)}</span>
+                          <span className={`font-semibold text-center ${team2Wins ? 'text-green-700 font-bold' : 'text-gray-800'}`} title={getTeamName(match.team2_id || '')}>{getTeamName(match.team2_id || '')}</span>
                         </div>
                         <div className="flex items-center justify-center gap-4 w-full">
                           <span className="text-2xl sm:text-3xl font-extrabold text-red-700 drop-shadow">{match.team2_score ?? '-'}</span>
