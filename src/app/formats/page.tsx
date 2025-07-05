@@ -148,7 +148,7 @@ const tournamentFormats: FormatData[] = [
         matches: [
           { id: "Group A", team1: "", team2: "", description: "Arnav Prakash, Purab, Vihaan BK, Taarush Pandit" },
           { id: "Group B", team1: "", team2: "", description: "Akhil Reddy Annapureddy, Arjun Bhattacharya, ShriAnsh Y, Praneesh Mandal" },
-          { id: "Group C", team1: "", team2: "", description: "Darshith, Vibhuparikshith P, Divyansh Gupta, Shanaya krishna" },
+          { id: "Group C", team1: "", team2: "", description: "Darshith, Vibhuparikshith P, Divyansh Gupta" },
           { id: "Group D", team1: "", team2: "", description: "Kush Malik, Sashank Reddy Uppada, Kartik Srivastava" },
           { id: "Group E", team1: "", team2: "", description: "Sayooj Singh, Akhil Vadlamani, Vishnu Sathish, Angelo Abhinav" },
           { id: "Group F", team1: "", team2: "", description: "Kanireddy Hemanth Reddy, Mohammed Daniyal Ameen, Shivaan Selvan, Naeem Zakir" },
@@ -297,7 +297,7 @@ const tournamentFormats: FormatData[] = [
       {
         name: "ROUND 1",
         matches: [
-          { id: "Group A", team1: "", team2: "", description: "Aditi pattamatta, Anya Anne Noronha, Sakshi Singh" },
+          { id: "Group A", team1: "", team2: "", description: "Aditi pattamatta, Anya Anne Noronha, Sakshi Singh, Shanaya krishna" },
           { id: "Group B", team1: "", team2: "", description: "Kaushika Narayana, Intika Malik, Syed Izma" },
           { id: "Group C", team1: "", team2: "", description: "Myra Kona, Twisha Agarwal, Arisha Nishaj" },
           { id: "Group D", team1: "", team2: "", description: "Sahasra Rupavatharam, Shreya jampa, Saindhavi Suresh" },
