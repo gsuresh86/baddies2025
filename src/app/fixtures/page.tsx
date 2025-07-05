@@ -261,11 +261,20 @@ export default function FixturesPage() {
       // For other categories, use player names
       const player = isFirst ? match.player1 : match.player2;
       if (player) {
+        // Format: FirstName L. (first letter of last name)
+        const formatName = (name: string) => {
+          const parts = name.trim().split(' ');
+          if (parts.length >= 2) {
+            return `${parts[0]} ${parts[1][0]}.`;
+          }
+          return name;
+        };
+        
         // For pair categories, show both names if partner exists
         if (player.partner_name) {
-          return `${player.name}\n${player.partner_name}`;
+          return `${formatName(player.name)}\n${formatName(player.partner_name)}`;
         }
-        return player.name;
+        return formatName(player.name);
       }
       
       // Better fallback - try to get player name from database if not already loaded
@@ -320,22 +329,20 @@ export default function FixturesPage() {
         </p>
       </div>
 
-      {/* Category Selector */}
+      {/* Category Selector as Tabs */}
       <div className="flex justify-center mb-8">
-        <div className="flex items-center gap-2">
-          <label className="text-white/90 text-sm font-medium whitespace-nowrap" htmlFor="category-select">Category:</label>
-          <select
-            id="category-select"
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm"
-          >
-            {categories.map(cat => (
-              <option key={cat.id} value={cat.code} className="text-gray-800">
-                {cat.label}
-              </option>
-            ))}
-          </select>
+        <div className="flex flex-wrap gap-2">
+          {categories.map(cat => (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategory(cat.code)}
+              className={`px-4 py-2 rounded-xl font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm
+                ${selectedCategory === cat.code ? 'bg-blue-600 text-white shadow-lg' : 'bg-white/10 text-white/80 hover:bg-blue-500/60'}`}
+              style={{ minWidth: 120 }}
+            >
+              {cat.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -347,47 +354,6 @@ export default function FixturesPage() {
           <p className="text-white/60 mb-4">
             No matches have been scheduled for {categoryLabels[selectedCategory] || selectedCategory} yet.
           </p>
-          <div className="space-y-2">
-            <button 
-              onClick={async () => {
-                console.log('Debug: Checking database...');
-                const { data: allMatches } = await supabase.from('matches').select('*');
-                const { data: allPools } = await supabase.from('pools').select('*');
-                const { data: allCategories } = await supabase.from('categories').select('*');
-                console.log('Debug - All matches:', allMatches?.length);
-                console.log('Debug - All pools:', allPools?.length);
-                console.log('Debug - All categories:', allCategories);
-              }}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mr-2"
-            >
-              Debug Database
-            </button>
-            <button 
-              onClick={() => {
-                console.log('Debug: Current fixtures data:', fixtures);
-                if (fixtures) {
-                  const fixtureData = fixtures as FixtureData;
-                  console.log('Debug: Sample match structure:', fixtureData.matches[0]);
-                  fixtureData.matches.forEach((match: Match, index: number) => {
-                    console.log(`Match ${index}:`, {
-                      id: match.id,
-                      player1_id: match.player1_id,
-                      player2_id: match.player2_id,
-                      team1_id: match.team1_id,
-                      team2_id: match.team2_id,
-                      player1: match.player1,
-                      player2: match.player2,
-                      team1: match.team1,
-                      team2: match.team2
-                    });
-                  });
-                }
-              }}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
-              Debug Match Data
-            </button>
-          </div>
         </div>
       ) : (
         <div className="space-y-8">
@@ -399,60 +365,47 @@ export default function FixturesPage() {
                 <div className="h-1 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full w-24"></div>
               </div>
 
-              {/* Matches Grid */}
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {/* Matches List */}
+              <div className="space-y-2">
                 {matches.map((match, index) => (
-                  <div key={match.id} className="bg-white/5 rounded-xl p-4 border border-white/10 hover:bg-white/10 transition-all duration-200">
-                    {/* Match Header */}
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-medium text-white/70 bg-white/10 px-2 py-1 rounded">
-                        Match {match.match_no || (index + 1)}
-                      </span>
-                      <div className={`w-2 h-2 rounded-full ${getStatusColor(match.status || 'scheduled')}`}></div>
-                    </div>
-
-                    {/* Schedule Date and Court */}
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs text-white/70">
-                        {match.scheduled_date ? new Date(match.scheduled_date).toLocaleDateString('en-US', { 
-                          month: 'short', 
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        }) : new Date(Date.now() + Math.random() * 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { 
-                          month: 'short', 
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </span>
-                      <span className="text-xs font-medium text-white/80 bg-white/10 px-2 py-1 rounded">
-                        Court {match.court || ['C', 'G', 'K'][Math.floor(Math.random() * 3)]}
-                      </span>
-                    </div>
-
-                    {/* Players/Teams in Single Row */}
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2 flex-1">
-                        <div className="text-sm font-medium text-white">
-                          {getPlayerDisplayName(match, true).split('\n').map((line, index) => (
-                            <div key={index} className={index > 0 ? 'text-xs text-white/80' : ''}>
+                  <div key={match.id} className="bg-white/5 rounded-lg p-3 border border-white/10 hover:bg-white/10 transition-all duration-200">
+                    {/* Mobile Layout */}
+                    <div className="block sm:hidden">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-medium text-white/70 bg-white/10 px-2 py-1 rounded">
+                          {match.match_no || `Match ${index + 1}`}
+                        </span>
+                        <div className={`w-2 h-2 rounded-full ${getStatusColor(match.status || 'scheduled')}`}></div>
+                      </div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-white/70">
+                          {match.scheduled_date ? new Date(match.scheduled_date).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          }) : 'TBD'}
+                        </span>
+                        <span className="text-xs text-white/50">
+                          Court {match.court || 'TBD'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs font-medium text-white text-center flex-1">
+                          {getPlayerDisplayName(match, true).split('\n').map((line, idx) => (
+                            <div key={idx} className={idx > 0 ? 'text-xs text-white/80' : ''}>
                               {line}
                             </div>
                           ))}
                         </div>
-                        {match.winner === (selectedCategory === 'MT' ? 'team1' : 'player1') && (
-                          <span className="text-green-400 text-xs">✓</span>
-                        )}
-                      </div>
-                      <span className="text-xs text-white/50 mx-2">vs</span>
-                      <div className="flex items-center gap-2 flex-1 justify-end">
-                        {match.winner === (selectedCategory === 'MT' ? 'team2' : 'player2') && (
-                          <span className="text-green-400 text-xs">✓</span>
-                        )}
-                        <div className="text-sm font-medium text-white text-right">
-                          {getPlayerDisplayName(match, false).split('\n').map((line, index) => (
-                            <div key={index} className={index > 0 ? 'text-xs text-white/80' : ''}>
+                        <div className="flex items-center gap-1 mx-2">
+                          <span className="text-sm font-bold text-blue-400">{match.team1_score ?? '-'}</span>
+                          <span className="text-xs text-white/50">vs</span>
+                          <span className="text-sm font-bold text-red-400">{match.team2_score ?? '-'}</span>
+                        </div>
+                        <div className="text-xs font-medium text-white text-center flex-1">
+                          {getPlayerDisplayName(match, false).split('\n').map((line, idx) => (
+                            <div key={idx} className={idx > 0 ? 'text-xs text-white/80' : ''}>
                               {line}
                             </div>
                           ))}
@@ -460,11 +413,68 @@ export default function FixturesPage() {
                       </div>
                     </div>
 
-                    {/* Status */}
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-white/60">
-                        {getStatusText(match.status || 'scheduled')}
-                      </span>
+                    {/* Desktop Layout */}
+                    <div className="hidden sm:flex items-center justify-between">
+                      {/* Match Number and Schedule */}
+                      <div className="flex items-center gap-4 min-w-0 flex-1">
+                        <span className="text-sm font-medium text-white/70 bg-white/10 px-2 py-1 rounded whitespace-nowrap">
+                          {match.match_no || `Match ${index + 1}`}
+                        </span>
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-sm text-white/70">
+                            {match.scheduled_date ? new Date(match.scheduled_date).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            }) : 'TBD'}
+                          </span>
+                          <span className="text-xs text-white/50">
+                            Court {match.court || 'TBD'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Participants */}
+                      <div className="flex items-center gap-4 min-w-0 flex-1">
+                        <div className="flex flex-col items-end min-w-0">
+                          <div className="text-sm font-medium text-white text-right">
+                            {getPlayerDisplayName(match, true).split('\n').map((line, idx) => (
+                              <div key={idx} className={idx > 0 ? 'text-xs text-white/80' : ''}>
+                                {line}
+                              </div>
+                            ))}
+                          </div>
+                          {match.winner === (selectedCategory === 'MT' ? 'team1' : 'player1') && (
+                            <span className="text-green-400 text-xs">✓</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg font-bold text-blue-400">{match.team1_score ?? '-'}</span>
+                          <span className="text-sm text-white/50">vs</span>
+                          <span className="text-lg font-bold text-red-400">{match.team2_score ?? '-'}</span>
+                        </div>
+                        <div className="flex flex-col items-start min-w-0">
+                          <div className="text-sm font-medium text-white text-left">
+                            {getPlayerDisplayName(match, false).split('\n').map((line, idx) => (
+                              <div key={idx} className={idx > 0 ? 'text-xs text-white/80' : ''}>
+                                {line}
+                              </div>
+                            ))}
+                          </div>
+                          {match.winner === (selectedCategory === 'MT' ? 'team2' : 'player2') && (
+                            <span className="text-green-400 text-xs">✓</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Status */}
+                      <div className="flex items-center gap-2 ml-4">
+                        <div className={`w-2 h-2 rounded-full ${getStatusColor(match.status || 'scheduled')}`}></div>
+                        <span className="text-xs text-white/60 whitespace-nowrap">
+                          {getStatusText(match.status || 'scheduled')}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 ))}
