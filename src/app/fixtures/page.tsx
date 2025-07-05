@@ -401,12 +401,12 @@ export default function FixturesPage() {
 
               {/* Matches Grid */}
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {matches.map((match) => (
+                {matches.map((match, index) => (
                   <div key={match.id} className="bg-white/5 rounded-xl p-4 border border-white/10 hover:bg-white/10 transition-all duration-200">
                     {/* Match Header */}
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-xs font-medium text-white/70 bg-white/10 px-2 py-1 rounded">
-                        Match {match.id.slice(0, 8)}
+                        Match {match.match_no || (index + 1)}
                       </span>
                       <div className={`w-2 h-2 rounded-full ${getStatusColor(match.status || 'scheduled')}`}></div>
                     </div>
@@ -465,9 +465,6 @@ export default function FixturesPage() {
                       <span className="text-xs text-white/60">
                         {getStatusText(match.status || 'scheduled')}
                       </span>
-                      <button className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
-                        View Details
-                      </button>
                     </div>
                   </div>
                 ))}

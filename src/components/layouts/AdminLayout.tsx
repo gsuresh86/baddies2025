@@ -197,6 +197,12 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
                 👥 View Teams
               </Link>
               <Link
+                href="/formats"
+                className="px-4 py-2 bg-white text-gray-700 rounded-lg text-sm font-medium shadow-sm hover:bg-gray-50 transition-all duration-200 border border-gray-200"
+              >
+                📊 View Formats
+              </Link>
+              <Link
                 href="/rules"
                 className="px-4 py-2 bg-white text-gray-700 rounded-lg text-sm font-medium shadow-sm hover:bg-gray-50 transition-all duration-200 border border-gray-200"
               >
