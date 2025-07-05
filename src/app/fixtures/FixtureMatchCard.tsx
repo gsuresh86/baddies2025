@@ -5,9 +5,9 @@ import { Category } from '@/types';
 const getFirstName = (name: string) => name?.split(' ')[0] || '';
 
 // Helper to pick an avatar based on category and match type
-const getAvatar = (side: 'left' | 'right', category: Category, match: any) => {
+  const getAvatar = (side: 'left' | 'right', category: Category, match: any) => {
   const isPair = !!(side === 'left' ? match.player1?.partner_name : match.player2?.partner_name);
-  const code = category.code;
+  const code = category?.code || 'MT';
   const men = ['👨', '🧑‍🦱', '👦', '🧔', '👱‍♂️', '👨‍🦰', '👨‍🦳', '👨‍🦲'];
   const women = ['👩', '🧑‍🦰', '👧', '👩‍🦱', '👱‍♀️', '👩‍🦳', '👩‍🦲'];
   const mixed = ['👩‍❤️‍👨', '👩‍❤️‍👩', '👨‍❤️‍👨', '👫', '👭', '👬'];
@@ -40,7 +40,9 @@ export interface FixtureMatchCardProps {
 
 export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({ match, category }) => {
   let leftName = '', rightName = '', leftAvatar = '', rightAvatar = '';
-  if (category.code === 'MT') {
+  const categoryCode = category?.code || 'MT'; // Fallback to MT if category is undefined
+  
+  if (categoryCode === 'MT') {
     leftName = match.team1?.name || 'Team 1';
     rightName = match.team2?.name || 'Team 2';
     leftAvatar = getAvatar('left', category, match);
@@ -62,12 +64,13 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({ match, categ
     } else {
       rightName = 'Player 2';
     }
-    leftAvatar = getAvatar('left', category, match);
-    rightAvatar = getAvatar('right', category, match);
+    leftAvatar = getAvatar('left', category || { code: 'MT' }, match);
+    rightAvatar = getAvatar('right', category || { code: 'MT' }, match);
   }
   const dateObj = match.scheduled_date ? new Date(match.scheduled_date) : null;
-  const dateStr = dateObj ? dateObj.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }) : 'TBD';
-  const timeStr = dateObj ? dateObj.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
+  const isValidDate = dateObj && !isNaN(dateObj.getTime());
+  const dateStr = isValidDate ? dateObj.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }) : 'TBD';
+  const timeStr = isValidDate ? dateObj.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
   const court = match.court ? `Court ${match.court}` : 'Court TBD';
   const status = match.status || 'scheduled';
   const getStatusColor = (status: string) => {
@@ -79,41 +82,54 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({ match, categ
       default: return 'bg-gray-400';
     }
   };
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'completed': return 'Completed';
-      case 'in_progress': return 'In Progress';
-      case 'cancelled': return 'Cancelled';
-      case 'live': return 'LIVE';
-      default: return 'Scheduled';
-    }
-  };
+
   return (
-    <div className="w-full max-w-2xl mx-auto rounded-3xl bg-neutral-900/90 border border-white/10 shadow-xl px-4 py-3 flex flex-col items-center mb-4">
-      <div className="flex items-center justify-between w-full text-xs text-white/80 mb-2">
-        <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full ${getStatusColor(status)}`}></span>
-          <span className={status === 'live' ? 'text-red-400 font-bold' : ''}>{getStatusText(status)}</span>
+    <div className="w-full max-w-2xl mx-auto rounded-3xl bg-neutral-900/90 border border-white/10 shadow-xl px-3 py-2 flex items-center mb-3">
+      {/* Left Side - Category-Pool Vertical Text */}
+      <div className="flex flex-col items-center justify-center min-w-[30px] mr-2">
+        <div 
+          className="text-center"
+          style={{ 
+            writingMode: 'vertical-rl',
+            textOrientation: 'mixed',
+            minHeight: '60px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <span className="text-xs font-medium transform rotate-180">
+            {match.pool?.name || 'Unknown'}
+          </span>
         </div>
-        <span>{dateStr} {timeStr && <span className="ml-1">{timeStr}</span>}</span>
-        <span className="ml-2 font-semibold text-white/90">{court}</span>
       </div>
-      <div className="flex items-center justify-between w-full gap-4 py-2">
-        <div className="flex flex-col items-center flex-1">
-          <span className="text-3xl mb-1">{leftAvatar}</span>
-          <span className="font-bold text-white text-base truncate max-w-[90px] text-center whitespace-pre-line">{leftName}</span>
-        </div>
-        <div className="flex flex-col items-center min-w-[80px]">
-          <div className="flex items-center gap-2">
-            <span className="text-xl font-bold text-blue-400">{match.team1_score ?? '-'}</span>
-            <span className="text-xs text-white/60">vs</span>
-            <span className="text-xl font-bold text-red-400">{match.team2_score ?? '-'}</span>
+
+      {/* Main Content */}
+      <div className="flex-1">
+        <div className="flex items-center justify-between w-full text-xs text-white/80 mb-1">
+          <div className="flex items-center gap-1">
+            <span className={`w-1.5 h-1.5 rounded-full ${getStatusColor(status)}`}></span>
           </div>
-          <span className="text-xs text-white/60 mt-1">{category.code === 'MT' ? 'Teams' : 'Players'}</span>
+          <span className="text-xs">{dateStr} {timeStr && <span className="ml-1">{timeStr}</span>}</span>
+          <span className="ml-1 font-semibold text-white/90 text-xs">{court}</span>
         </div>
-        <div className="flex flex-col items-center flex-1">
-          <span className="text-3xl mb-1">{rightAvatar}</span>
-          <span className="font-bold text-white text-base truncate max-w-[90px] text-center whitespace-pre-line">{rightName}</span>
+        <div className="flex items-center justify-between w-full gap-2 py-1">
+          <div className="flex flex-col items-center flex-1">
+            <span className="text-2xl mb-1">{leftAvatar}</span>
+            <span className="font-bold text-white text-sm truncate max-w-[80px] text-center whitespace-pre-line">{leftName}</span>
+          </div>
+          <div className="flex flex-col items-center min-w-[60px]">
+            <div className="flex items-center gap-1">
+              <span className="text-lg font-bold text-blue-400">{match.team1_score ?? '-'}</span>
+              <span className="text-xs text-white/60">vs</span>
+              <span className="text-lg font-bold text-red-400">{match.team2_score ?? '-'}</span>
+            </div>
+            <span className="text-xs text-white/60 mt-1">{categoryCode === 'MT' ? 'Teams' : 'Players'}</span>
+          </div>
+          <div className="flex flex-col items-center flex-1">
+            <span className="text-2xl mb-1">{rightAvatar}</span>
+            <span className="font-bold text-white text-sm truncate max-w-[80px] text-center whitespace-pre-line">{rightName}</span>
+          </div>
         </div>
       </div>
     </div>

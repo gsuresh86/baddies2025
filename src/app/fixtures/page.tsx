@@ -24,9 +24,11 @@ const categoryLabels: Record<string, string> = {
 
 export default function FixturesPage() {
   const { players, teams, pools, categories, matches: cachedMatches } = useData();
-  const [selectedCategory, setSelectedCategory] = useState<string>('MT');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [fixtures, setFixtures] = useState<FixtureData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'pool' | 'schedule'>('pool');
+  const [selectedDate, setSelectedDate] = useState<string>('');
 
   const fetchCategories = async () => {
     // Categories are now provided by DataContext, no need to fetch separately
@@ -78,31 +80,13 @@ export default function FixturesPage() {
     try {
       console.log('Fetching fixtures for category:', categoryCode);
       
-      // Get category data from cached data
-      const categoryData = categories.find(c => c.code === categoryCode);
-      if (!categoryData) {
-        console.error('Category not found:', categoryCode);
-        setFixtures(null);
-        setLoading(false);
-        return;
-      }
-
-      // Get pools for this category from cached data
-      const poolsData = pools.filter(p => p.category_id === categoryData.id);
       let matchesData: any[] = [];
+      let categoryLabel = '';
 
-      if (!poolsData || poolsData.length === 0) {
-        console.log('No pools found for category:', categoryCode);
-        // Use all cached matches if no pools found
-        matchesData = cachedMatches;
-        console.log('Using all cached matches as fallback:', matchesData.length);
-      } else {
-        // Get matches for these pools from cached data
-        matchesData = cachedMatches.filter(match => 
-          poolsData.some(pool => pool.id === match.pool_id)
-        );
-        console.log('Matches data for pools:', matchesData);
-      }
+      // Always show all matches regardless of category selection
+      matchesData = cachedMatches;
+      categoryLabel = categoryCode === 'all' ? 'All Categories' : 'Tournament Schedule';
+      console.log('Showing all matches:', matchesData.length);
 
       if (!matchesData || matchesData.length === 0) {
         console.log('No matches found at all');
@@ -112,15 +96,15 @@ export default function FixturesPage() {
       }
 
       // Enrich matches with player/team data based on category type
-      const enrichedMatches = enrichMatchesWithDetails(matchesData, categoryData);
+      const enrichedMatches = enrichMatchesWithDetails(matchesData, categories[0] || { code: 'MT' });
 
       setFixtures({
-        category: categoryData.label,
+        category: categoryLabel,
         matches: enrichedMatches
       });
 
       console.log('Fixtures set successfully:', {
-        category: categoryData.label,
+        category: categoryLabel,
         matchCount: enrichedMatches.length
       });
 
@@ -129,17 +113,43 @@ export default function FixturesPage() {
       setFixtures(null);
     }
     setLoading(false);
-  }, [categories, pools, cachedMatches, enrichMatchesWithDetails]);
+  }, [categories, cachedMatches, enrichMatchesWithDetails]);
 
   useEffect(() => {
     fetchCategories();
   }, []);
 
+  // Set "all" as the default category when categories are loaded
   useEffect(() => {
-    if (selectedCategory) {
+    if (categories.length > 0 && !selectedCategory) {
+      setSelectedCategory('all');
+    }
+  }, [categories, selectedCategory]);
+
+  useEffect(() => {
+    if (selectedCategory && categories.length > 0) {
       fetchFixtures(selectedCategory);
     }
-  }, [selectedCategory, fetchFixtures]);
+  }, [selectedCategory, fetchFixtures, categories]);
+
+  // Function to get the correct category for a match
+  const getMatchCategory = (match: Match) => {
+    // Try to get category from pool's category
+    if (match.pool?.category) {
+      return match.pool.category;
+    }
+    
+    // Try to get category from pool's category_id
+    if (match.pool?.category_id) {
+      const category = categories.find(c => c.id === match.pool?.category_id);
+      if (category) {
+        return category;
+      }
+    }
+    
+    // Fallback to first category
+    return categories[0] || { code: 'MT', label: 'Men\'s Team' };
+  };
 
   const groupMatchesByPool = (matches: Match[]) => {
     const grouped: { [poolName: string]: Match[] } = {};
@@ -155,7 +165,81 @@ export default function FixturesPage() {
     return grouped;
   };
 
-  if (loading) {
+  const groupMatchesBySchedule = (matches: Match[]) => {
+    console.log('Grouping matches by schedule:', matches.length);
+    
+    // Convert to IST and group matches by date
+    const groupedByDate: { [dateKey: string]: (Match & { _istDate: Date })[] } = {};
+    
+    matches.forEach(match => {
+      // Only process matches that have a scheduled date
+      if (!match.scheduled_date) {
+        console.log('Skipping match without scheduled_date:', match.id);
+        return; // Skip matches without scheduled date
+      }
+      
+      // Convert UTC to IST using proper timezone conversion
+      const utcDate = new Date(match.scheduled_date);
+      
+      // Create date key directly in IST timezone
+      const dateKey = utcDate.toLocaleDateString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+      
+      // Create IST date for sorting
+      const istDate = new Date(utcDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+      
+      console.log(`Match ${match.id}: UTC=${match.scheduled_date}, IST=${istDate.toISOString()}, DateKey=${dateKey}`);
+      
+      if (!groupedByDate[dateKey]) {
+        groupedByDate[dateKey] = [];
+      }
+      groupedByDate[dateKey].push({
+        ...match,
+        _istDate: istDate // Store IST date for sorting
+      });
+    });
+    
+    // Sort matches within each date by actual scheduled time
+    Object.keys(groupedByDate).forEach(dateKey => {
+      groupedByDate[dateKey].sort((a, b) => {
+        // Use the stored IST date for sorting
+        const timeA = a._istDate.getTime();
+        const timeB = b._istDate.getTime();
+        
+        // Sort by actual scheduled time (earliest first)
+        return timeA - timeB;
+      });
+    });
+    
+    // Sort the dates and create final sorted groups
+    const sortedGroups: { [dateTime: string]: Match[] } = {};
+    Object.keys(groupedByDate)
+      .sort((a, b) => {
+        // Sort by IST date
+        const dateA = new Date(a.split('/').reverse().join('-'));
+        const dateB = new Date(b.split('/').reverse().join('-'));
+        return dateA.getTime() - dateB.getTime(); // Ascending order by date
+      })
+      .forEach(dateKey => {
+        // Remove the _istDate property before returning
+        sortedGroups[`${dateKey} - All Times`] = groupedByDate[dateKey].map((matchObj) => {
+          const match = { ...matchObj };
+          delete (match as any)._istDate;
+          return match;
+        });
+      });
+    
+    console.log('Sorted matches by IST date and time:', Object.keys(sortedGroups).length, 'date groups');
+    console.log('Date groups:', Object.keys(sortedGroups));
+    
+    return sortedGroups;
+  };
+
+  if (loading || categories.length === 0) {
     return (
       <div className="text-center py-12">
         <div className="animate-pulse">
@@ -182,22 +266,52 @@ export default function FixturesPage() {
         </p>
       </div>
 
-      {/* Category Selector as Tabs */}
+      {/* View Mode Toggle */}
       <div className="flex justify-center mb-8">
-        <div className="flex flex-wrap gap-2">
-          {categories.map(cat => (
-            <button
-              key={cat.id}
-              onClick={() => setSelectedCategory(cat.code)}
-              className={`px-4 py-2 rounded-xl font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm
-                ${selectedCategory === cat.code ? 'bg-blue-600 text-white shadow-lg' : 'bg-white/10 text-white/80 hover:bg-blue-500/60'}`}
-              style={{ minWidth: 120 }}
-            >
-              {cat.label}
-            </button>
-          ))}
+        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-1 flex">
+          <button
+            onClick={() => setViewMode('pool')}
+            className={`px-6 py-2 rounded-lg font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+              ${viewMode === 'pool' ? 'bg-blue-600 text-white shadow-lg' : 'text-white/80 hover:bg-blue-500/60'}`}
+          >
+            📊 By Pool
+          </button>
+          <button
+            onClick={() => setViewMode('schedule')}
+            className={`px-6 py-2 rounded-lg font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+              ${viewMode === 'schedule' ? 'bg-blue-600 text-white shadow-lg' : 'text-white/80 hover:bg-blue-500/60'}`}
+          >
+            📅 By Schedule
+          </button>
         </div>
       </div>
+
+      {/* Category Selector as Tabs */}
+      {categories.length > 0 && (
+        <div className="flex justify-center mb-8">
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setSelectedCategory('all')}
+              className={`px-4 py-2 rounded-xl font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm
+                ${selectedCategory === 'all' ? 'bg-blue-600 text-white shadow-lg' : 'bg-white/10 text-white/80 hover:bg-blue-500/60'}`}
+              style={{ minWidth: 120 }}
+            >
+              🏆 All Categories
+            </button>
+            {categories.map(cat => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.code)}
+                className={`px-4 py-2 rounded-xl font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm
+                  ${selectedCategory === cat.code ? 'bg-blue-600 text-white shadow-lg' : 'bg-white/10 text-white/80 hover:bg-blue-500/60'}`}
+                style={{ minWidth: 120 }}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Fixtures Display */}
       {!fixtures ? (
@@ -210,22 +324,126 @@ export default function FixturesPage() {
         </div>
       ) : (
         <div className="space-y-8">
-          {Object.entries(groupMatchesByPool(fixtures.matches)).map(([poolName, matches]) => (
-            <div key={poolName} className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
-              {/* Pool Header */}
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-white mb-2">{poolName}</h2>
-                <div className="h-1 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full w-24"></div>
-              </div>
+          {viewMode === 'pool' ? (
+            // Pool View
+            Object.entries(groupMatchesByPool(fixtures.matches)).map(([poolName, matches]) => (
+              <div key={poolName} className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+                {/* Pool Header */}
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold text-white mb-2">{poolName}</h2>
+                  <div className="h-1 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full w-24"></div>
+                </div>
 
-              {/* Matches List */}
-              <div className="space-y-2">
-                {matches.map((match) => (
-                  <FixtureMatchCard key={match.id} match={match} category={categories.find(c => c.code === selectedCategory)!} />
-                ))}
+                {/* Matches List */}
+                <div className="space-y-2">
+                  {matches.map((match) => (
+                    <FixtureMatchCard 
+                      key={match.id} 
+                      match={match} 
+                      category={getMatchCategory(match)} 
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            // Schedule View with Vertical Date Tabs Inside Card
+            (() => {
+              const dateGroups = groupMatchesBySchedule(fixtures.matches);
+              const dateKeys = Object.keys(dateGroups);
+              
+              // Set the first date as selected if none is selected
+              if (dateKeys.length > 0 && !selectedDate) {
+                setSelectedDate(dateKeys[0]);
+              }
+              
+              const selectedMatches = selectedDate ? dateGroups[selectedDate] : [];
+              const selectedDateFormatted = selectedDate ? (() => {
+                const [dateKey] = selectedDate.split(' - ');
+                const [day, month, year] = dateKey.split('/');
+                // Create date in IST by adding IST offset
+                const dateObj = new Date(`${year}-${month}-${day}T00:00:00+05:30`);
+                return dateObj.toLocaleDateString('en-IN', {
+                  timeZone: 'Asia/Kolkata',
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                });
+              })() : '';
+              
+              return (
+                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+                  {/* Schedule Header */}
+                  <div className="mb-6">
+                    <div className="h-1 bg-gradient-to-r from-green-400 to-blue-400 rounded-full w-24"></div>
+                  </div>
+
+                  {/* Content with Vertical Tabs */}
+                  <div className="flex gap-6">
+                    {/* Vertical Date Tabs */}
+                    <div className="flex flex-col gap-1 min-w-[40px]">
+                      {dateKeys.map((dateKey) => {
+                        const [date] = dateKey.split(' - ');
+                        const [day, month, year] = date.split('/');
+                        // Create date in IST by adding IST offset
+                        const dateObj = new Date(`${year}-${month}-${day}T00:00:00+05:30`);
+                        const shortDate = dateObj.toLocaleDateString('en-IN', {
+                          timeZone: 'Asia/Kolkata',
+                          weekday: 'short',
+                          month: 'short',
+                          day: 'numeric'
+                        });
+                        
+                        return (
+                          <button
+                            key={dateKey}
+                            onClick={() => setSelectedDate(dateKey)}
+                            className={`px-1 py-2 rounded-lg font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm writing-mode-vertical
+                              ${selectedDate === dateKey ? 'bg-blue-600 text-white shadow-lg' : 'bg-white/10 text-white/80 hover:bg-blue-500/60'}`}
+                            style={{ 
+                              writingMode: 'vertical-rl',
+                              textOrientation: 'mixed',
+                              minHeight: '80px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            <span className="text-xs font-medium transform rotate-180">{shortDate}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Selected Date Matches */}
+                    {selectedDate && (
+                      <div className="flex-1">
+                        <div className="mb-4">
+                          <h3 className="text-xl font-semibold text-white mb-2">{selectedDateFormatted}</h3>
+                          <div className="flex items-center gap-4">
+                            <span className="text-white/80">⏰ All Times</span>
+                            <span className="text-sm text-white/60">({selectedMatches.length} matches)</span>
+                          </div>
+                        </div>
+
+                        {/* Matches List */}
+                        <div className="space-y-2">
+                          {selectedMatches.map((match) => (
+                            <FixtureMatchCard 
+                              key={match.id} 
+                              match={match} 
+                              category={getMatchCategory(match)} 
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()
+          )}
         </div>
       )}
 
