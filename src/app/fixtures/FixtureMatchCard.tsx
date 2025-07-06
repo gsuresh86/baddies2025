@@ -1,36 +1,36 @@
 import React from 'react';
+import Image from 'next/image';
 import { Category } from '@/types';
 
 // Helper to get first name
 const getFirstName = (name: string) => name?.split(' ')[0] || '';
 
-// Helper to pick an avatar based on category and match type
-  const getAvatar = (side: 'left' | 'right', category: Category, match: any) => {
-  const isPair = !!(side === 'left' ? match.player1?.partner_name : match.player2?.partner_name);
+// Helper to get avatar URL based on category and match type
+const getAvatarUrl = (side: 'left' | 'right', category: Category, match: any) => {
   const code = category?.code || 'MT';
-  const men = ['👨', '🧑‍🦱', '👦', '🧔', '👱‍♂️', '👨‍🦰', '👨‍🦳', '👨‍🦲'];
-  const women = ['👩', '🧑‍🦰', '👧', '👩‍🦱', '👱‍♀️', '👩‍🦳', '👩‍🦲'];
-  const mixed = ['👩‍❤️‍👨', '👩‍❤️‍👩', '👨‍❤️‍👨', '👫', '👭', '👬'];
-  const family = ['👨‍👩‍👧', '👨‍👩‍👦', '👩‍👩‍👦', '👨‍👨‍👧', '👨‍👩‍👧‍👦'];
-  const all = [...men, ...women, ...mixed, ...family];
-  const pick = (arr: string[], name: string) => arr[Math.abs(name.split('').reduce((a, c) => a + c.charCodeAt(0), 0)) % arr.length];
-  if (code === 'FM') {
-    if (isPair) {
-      return Math.abs((side === 'left' ? match.player1?.name : match.player2?.name || '').length) % 2 === 0 ? '👩‍❤️‍👨' : '👫';
-    } else {
-      return side === 'left' ? '👩' : '👨';
-    }
+  
+  // Get the name for avatar generation
+  let name = '';
+  if (code === 'MT') {
+    name = side === 'left' ? (match.team1?.name || 'Team1') : (match.team2?.name || 'Team2');
+  } else {
+    name = side === 'left' ? (match.player1?.name || 'Player1') : (match.player2?.name || 'Player2');
   }
-  if (code === 'MT' || code === 'BU18' || code === 'BU13') {
-    return isPair ? '👬' : pick(men, side === 'left' ? match.team1?.name || '' : match.team2?.name || '');
-  }
-  if (code === 'WS' || code === 'WD' || code === 'GU18' || code === 'GU13') {
-    return isPair ? '👭' : pick(women, side === 'left' ? match.player1?.name || '' : match.player2?.name || '');
-  }
-  if (code === 'XD') {
-    return isPair ? pick(mixed, (side === 'left' ? match.player1?.name : match.player2?.name) || '') : (side === 'left' ? '👩' : '👨');
-  }
-  return pick(all, side === 'left' ? (match.player1?.name || match.team1?.name || '') : (match.player2?.name || match.team2?.name || ''));
+  
+  // Generate initials for the avatar
+  const initials = name
+    .split(' ')
+    .map(word => word.charAt(0))
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+  
+  // Use UI Avatars service for simple, reliable avatars
+  const colors = ['FF6B6B', '4ECDC4', '45B7D1', '96CEB4', 'FFEAA7', 'DDA0DD', '98D8C8', 'F7DC6F'];
+  const colorIndex = (name.length + side.length) % colors.length;
+  const backgroundColor = colors[colorIndex];
+  
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&background=${backgroundColor}&color=fff&size=48&bold=true&font-size=0.4`;
 };
 
 export interface FixtureMatchCardProps {
@@ -45,8 +45,8 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({ match, categ
   if (categoryCode === 'MT') {
     leftName = match.team1?.name || 'Team 1';
     rightName = match.team2?.name || 'Team 2';
-    leftAvatar = getAvatar('left', category, match);
-    rightAvatar = getAvatar('right', category, match);
+    leftAvatar = getAvatarUrl('left', category, match);
+    rightAvatar = getAvatarUrl('right', category, match);
   } else {
     if (match.player1) {
       leftName = getFirstName(match.player1.name);
@@ -64,8 +64,8 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({ match, categ
     } else {
       rightName = 'Player 2';
     }
-    leftAvatar = getAvatar('left', category || { code: 'MT' }, match);
-    rightAvatar = getAvatar('right', category || { code: 'MT' }, match);
+    leftAvatar = getAvatarUrl('left', category || { code: 'MT' }, match);
+    rightAvatar = getAvatarUrl('right', category || { code: 'MT' }, match);
   }
   const dateObj = match.scheduled_date ? new Date(match.scheduled_date) : null;
   const isValidDate = dateObj && !isNaN(dateObj.getTime());
@@ -120,7 +120,16 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({ match, categ
         </div>
         <div className="flex items-center justify-between w-full gap-2 py-1">
           <div className="flex flex-col items-center flex-1">
-            <span className="text-2xl mb-1">{leftAvatar}</span>
+            <Image 
+              src={leftAvatar} 
+              alt={leftName}
+              width={48}
+              height={48}
+              className="w-12 h-12 rounded-full mb-1 border-2 border-white/20"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
             <span className="font-bold text-white text-sm truncate max-w-[80px] text-center whitespace-pre-line">{leftName}</span>
           </div>
           <div className="flex flex-col items-center min-w-[60px]">
@@ -132,7 +141,16 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({ match, categ
             <span className="text-xs text-white/60 mt-1">{categoryCode === 'MT' ? 'Teams' : 'Players'}</span>
           </div>
           <div className="flex flex-col items-center flex-1">
-            <span className="text-2xl mb-1">{rightAvatar}</span>
+            <Image 
+              src={rightAvatar} 
+              alt={rightName}
+              width={48}
+              height={48}
+              className="w-12 h-12 rounded-full mb-1 border-2 border-white/20"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
             <span className="font-bold text-white text-sm truncate max-w-[80px] text-center whitespace-pre-line">{rightName}</span>
           </div>
         </div>
