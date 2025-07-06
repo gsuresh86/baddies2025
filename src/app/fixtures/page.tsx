@@ -510,6 +510,7 @@ export default function FixturesPage() {
             (() => {
               const dateGroups = groupMatchesBySchedule(fixtures.matches);
               const dateKeys = Object.keys(dateGroups);
+              const visibleDateKeys = dateKeys.slice(0, 2); // Only show first two tabs
               
               console.log('Schedule view - Total matches:', fixtures.matches.length);
               console.log('Schedule view - Date groups:', dateKeys);
@@ -547,7 +548,7 @@ export default function FixturesPage() {
                   <div className="flex gap-6">
                     {/* Vertical Date Tabs */}
                     <div className="flex flex-col gap-1 min-w-[40px]">
-                      {dateKeys.map((dateKey) => {
+                      {visibleDateKeys.map((dateKey) => {
                         let shortDate = dateKey;
                         try {
                           const [date] = dateKey.split(' - ');
