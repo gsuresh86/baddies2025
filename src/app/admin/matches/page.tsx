@@ -5,10 +5,11 @@ import { tournamentStore, supabase } from '@/lib/store';
 import { Match } from '@/types';
 import { useToast } from '@/contexts/ToastContext';
 import { useData } from '@/contexts/DataContext';
+import * as XLSX from 'xlsx';
 
 export default function AdminMatchesPage() {
   const { showSuccess, showError } = useToast();
-  const { players, teams, pools, categories, matches: cachedMatches } = useData();
+  const { players, teams, pools, categories, poolPlayers, matches: cachedMatches } = useData();
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPool, setSelectedPool] = useState<string>('all');
@@ -30,10 +31,51 @@ export default function AdminMatchesPage() {
   const [team2Score, setTeam2Score] = useState('');
   const [matchStatus, setMatchStatus] = useState('scheduled');
 
-  // Add this derived variable for modal team filtering
-  const teamsInSelectedModalPool = newMatchPool
-    ? teams.filter(team => team.pool_id === newMatchPool)
-    : [];
+  // Get participants (teams or players) for the selected pool
+  const participantsInSelectedModalPool = useMemo(() => {
+    if (!newMatchPool) return [];
+    
+    const selectedPool = pools.find(p => p.id === newMatchPool);
+    if (!selectedPool) return [];
+    
+    // Check if this is a team-based category (like Men's Team)
+    const isTeamCategory = selectedPool.category?.type === 'team';
+    
+    if (isTeamCategory) {
+      // For team categories, return teams in this pool
+      const teamsInPool = teams.filter(team => team.pool_id === newMatchPool);
+      return teamsInPool;
+    } else {
+      // For player/pair categories, return players in this pool
+      const poolPlayerIds = poolPlayers
+        .filter(pp => pp.pool_id === newMatchPool)
+        .map(pp => pp.player_id);
+      
+      const playersInPool = players.filter(player => poolPlayerIds.includes(player.id));
+      return playersInPool;
+    }
+  }, [newMatchPool, pools, teams, poolPlayers, players]);
+
+  // Get the selected pool to determine if it's team-based or player-based
+  const selectedPoolForModal = useMemo(() => {
+    return pools.find(p => p.id === newMatchPool);
+  }, [newMatchPool, pools]);
+
+  // Check if the selected pool is for a team category
+  const isTeamCategory = selectedPoolForModal?.category?.type === 'team';
+
+  // Get display name for a participant (team name or player name)
+  const getParticipantDisplayName = (participant: any) => {
+    if (isTeamCategory) {
+      return participant.name; // Team name
+    } else {
+      // For player categories, show player name with partner if available
+      if (participant.partner_name) {
+        return `${participant.name} / ${participant.partner_name}`;
+      }
+      return participant.name;
+    }
+  };
 
   // Add state for editing
   const [editingMatchId, setEditingMatchId] = useState<string | null>(null);
@@ -103,7 +145,7 @@ export default function AdminMatchesPage() {
         timeZone: 'Asia/Kolkata',
         hour: '2-digit',
         minute: '2-digit',
-        hour12: false
+        hour12: true
       });
       return { date: istDate, time: istTime };
     } catch (error) {
@@ -161,14 +203,30 @@ export default function AdminMatchesPage() {
     if (!newMatchTeam1 || !newMatchTeam2 || !newMatchPool) return;
     
     try {
-      const matchData = {
-        team1_id: newMatchTeam1,
-        team2_id: newMatchTeam2,
+      // Determine if this is a team-based or player-based category
+      const selectedPool = pools.find(p => p.id === newMatchPool);
+      const isTeamCategory = selectedPool?.category?.type === 'team';
+      
+      // Get the next match number for this category and pool
+      const nextMatchNumber = getNextMatchNumber(selectedPool?.category_id || '', newMatchPool);
+      
+      const matchData: any = {
         pool_id: newMatchPool,
         scheduled_date: newMatchDate ? `${newMatchDate}T${newMatchTime || '00:00'}:00` : undefined,
         court: newMatchCourt || undefined,
-        status: 'scheduled' as const
+        status: 'scheduled' as const,
+        match_no: nextMatchNumber
       };
+      
+      if (isTeamCategory) {
+        // For team categories, use team1_id and team2_id
+        matchData.team1_id = newMatchTeam1;
+        matchData.team2_id = newMatchTeam2;
+      } else {
+        // For player categories, use player1_id and player2_id
+        matchData.player1_id = newMatchTeam1;
+        matchData.player2_id = newMatchTeam2;
+      }
       
       await tournamentStore.createMatch(matchData);
       
@@ -250,6 +308,98 @@ export default function AdminMatchesPage() {
     }
   };
 
+  // Excel Export function
+  const exportToExcel = () => {
+    const headers = [
+      'Match ID',
+      'Team 1',
+      'Team 2', 
+      'Pool',
+      'Category',
+      'Date',
+      'Time',
+      'Court',
+      'Status',
+      'Team 1 Score',
+      'Team 2 Score',
+      'Created At'
+    ];
+
+    const data = filteredMatches.map((match) => {
+      const matchCategory = getCategoryForMatch(match);
+      const matchType = matchCategory?.type;
+      const { date, time } = formatISTDateTime(match.scheduled_date);
+      
+      // Helper to get participant names
+      const getParticipantNames = () => {
+        if (matchType === 'team') {
+          return {
+            participant1: getTeamName(match.team1_id || ''),
+            participant2: getTeamName(match.team2_id || '')
+          };
+        } else if (matchType === 'player') {
+          const player1 = players.find(p => p.id === (match as any).player1_id);
+          const player2 = players.find(p => p.id === (match as any).player2_id);
+          return {
+            participant1: player1 ? player1.name : '-',
+            participant2: player2 ? player2.name : '-'
+          };
+        } else if (matchType === 'pair') {
+          const player1 = players.find(p => p.id === (match as any).player1_id);
+          const player2 = players.find(p => p.id === (match as any).player2_id);
+          const player1Full = player1 ? (player1.partner_name ? `${player1.name} / ${player1.partner_name}` : player1.name) : '-';
+          const player2Full = player2 ? (player2.partner_name ? `${player2.name} / ${player2.partner_name}` : player2.name) : '-';
+          return {
+            participant1: player1Full,
+            participant2: player2Full
+          };
+        }
+        return { participant1: '-', participant2: '-' };
+      };
+      
+      const { participant1, participant2 } = getParticipantNames();
+      
+      return [
+        match.id,
+        participant1,
+        participant2,
+        getPoolName(match.pool_id),
+        matchCategory?.label || '-',
+        date,
+        time,
+        match.court || '-',
+        match.status || 'scheduled',
+        match.team1_score || '-',
+        match.team2_score || '-',
+        match.created_at ? new Date(match.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : '-'
+      ];
+    });
+
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...data]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Matches');
+    
+    // Auto-size columns
+    const columnWidths = [
+      { wch: 15 }, // Match ID
+      { wch: 25 }, // Team 1
+      { wch: 25 }, // Team 2
+      { wch: 15 }, // Pool
+      { wch: 20 }, // Category
+      { wch: 12 }, // Date
+      { wch: 10 }, // Time
+      { wch: 8 },  // Court
+      { wch: 12 }, // Status
+      { wch: 12 }, // Team 1 Score
+      { wch: 12 }, // Team 2 Score
+      { wch: 20 }  // Created At
+    ];
+    worksheet['!cols'] = columnWidths;
+    
+    const fileName = `tournament-matches-${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
+
   // Memoize expensive computations
   const getCategoryForMatch = useCallback((match: Match) => {
     const pool = pools.find(p => p.id === match.pool_id);
@@ -266,17 +416,24 @@ export default function AdminMatchesPage() {
     if (activeCategoryId !== 'all') {
       ms = ms.filter(match => getCategoryForMatch(match)?.id === activeCategoryId);
     }
+    
+    // Sort by scheduled date and time when "All Categories" is selected
+    if (activeCategoryId === 'all') {
+      ms = ms.sort((a, b) => {
+        // Handle matches without scheduled dates
+        if (!a.scheduled_date && !b.scheduled_date) return 0;
+        if (!a.scheduled_date) return 1; // Put unscheduled matches at the end
+        if (!b.scheduled_date) return -1;
+        
+        // Sort by scheduled date and time
+        const dateA = new Date(a.scheduled_date);
+        const dateB = new Date(b.scheduled_date);
+        return dateA.getTime() - dateB.getTime();
+      });
+    }
+    
     return ms;
   }, [matches, selectedPool, activeCategoryId, getCategoryForMatch]);
-
-  function getStatusBorderColor(status: string) {
-    switch (status) {
-      case 'completed': return 'border-green-500';
-      case 'in_progress': return 'border-yellow-400';
-      case 'cancelled': return 'border-red-500';
-      default: return 'border-blue-400'; // scheduled or unknown
-    }
-  }
 
   function renderUpdateScoreModal() {
     if (!showUpdateScore || !selectedMatch) return null;
@@ -580,6 +737,39 @@ export default function AdminMatchesPage() {
     setGenerateLoading(false);
   };
 
+  // Get the next match number for a given category and pool
+  const getNextMatchNumber = useCallback((categoryId: string, poolId: string) => {
+    const category = categories.find(c => c.id === categoryId);
+    if (!category) return 'CAT-001';
+    
+    const code = category.code || category.label.replace(/\s/g, '').substring(0, 3);
+    
+    // Get existing matches for this category and pool
+    const existingMatches = matches.filter(match => {
+      const matchPool = pools.find(p => p.id === match.pool_id);
+      return matchPool?.category_id === categoryId && match.pool_id === poolId;
+    });
+    
+    // Find the highest sequence number
+    let maxSequence = 0;
+    existingMatches.forEach(existingMatch => {
+      if (existingMatch.match_no) {
+        const matchNoPattern = new RegExp(`^${code}-(\\d+)$`);
+        const matchResult = existingMatch.match_no.match(matchNoPattern);
+        if (matchResult && matchResult[1]) {
+          const sequence = parseInt(matchResult[1]);
+          if (sequence > maxSequence) {
+            maxSequence = sequence;
+          }
+        }
+      }
+    });
+    
+    // Return next sequence number
+    const nextSequence = maxSequence + 1;
+    return `${code}-${String(nextSequence).padStart(3, '0')}`;
+  }, [categories, matches, pools]);
+
   return (
     <div className="mx-auto">
       <div className="mb-8">
@@ -588,57 +778,57 @@ export default function AdminMatchesPage() {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-200">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-8">
+        <div className="bg-white rounded-xl p-4 md:p-6 shadow-lg border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Matches</p>
-              <p className="text-3xl font-bold text-blue-600">{matches.length}</p>
+              <p className="text-xs md:text-sm font-medium text-gray-600">Total Matches</p>
+              <p className="text-2xl md:text-3xl font-bold text-blue-600">{matches.length}</p>
             </div>
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <span className="text-2xl">🏸</span>
+            <div className="p-2 md:p-3 bg-blue-100 rounded-lg">
+              <span className="text-xl md:text-2xl">🏸</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-200">
+        <div className="bg-white rounded-xl p-4 md:p-6 shadow-lg border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Completed</p>
-              <p className="text-3xl font-bold text-green-600">
+              <p className="text-xs md:text-sm font-medium text-gray-600">Completed</p>
+              <p className="text-2xl md:text-3xl font-bold text-green-600">
                 {matches.filter(m => m.status === 'completed').length}
               </p>
             </div>
-            <div className="p-3 bg-green-100 rounded-lg">
-              <span className="text-2xl">✅</span>
+            <div className="p-2 md:p-3 bg-green-100 rounded-lg">
+              <span className="text-xl md:text-2xl">✅</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-200">
+        <div className="bg-white rounded-xl p-4 md:p-6 shadow-lg border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">In Progress</p>
-              <p className="text-3xl font-bold text-yellow-600">
+              <p className="text-xs md:text-sm font-medium text-gray-600">In Progress</p>
+              <p className="text-2xl md:text-3xl font-bold text-yellow-600">
                 {matches.filter(m => m.status === 'in_progress').length}
               </p>
             </div>
-            <div className="p-3 bg-yellow-100 rounded-lg">
-              <span className="text-2xl">🔄</span>
+            <div className="p-2 md:p-3 bg-yellow-100 rounded-lg">
+              <span className="text-xl md:text-2xl">🔄</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-200">
+        <div className="bg-white rounded-xl p-4 md:p-6 shadow-lg border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Scheduled</p>
-              <p className="text-3xl font-bold text-gray-600">
+              <p className="text-xs md:text-sm font-medium text-gray-600">Scheduled</p>
+              <p className="text-2xl md:text-3xl font-bold text-gray-600">
                 {matches.filter(m => m.status === 'scheduled').length}
               </p>
             </div>
-            <div className="p-3 bg-gray-100 rounded-lg">
-              <span className="text-2xl">⏰</span>
+            <div className="p-2 md:p-3 bg-gray-100 rounded-lg">
+              <span className="text-xl md:text-2xl">⏰</span>
             </div>
           </div>
         </div>
@@ -675,6 +865,12 @@ export default function AdminMatchesPage() {
               🎲 Generate Matches
             </button>
           )}
+          <button
+            onClick={exportToExcel}
+            className="px-6 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors"
+          >
+            📊 Export Excel
+          </button>
         </div>
       </div>
 
@@ -719,203 +915,170 @@ export default function AdminMatchesPage() {
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {filteredMatches.map((match) => {
-                const matchCategory = getCategoryForMatch(match);
-                const matchType = matchCategory?.type;
-                const team1Wins = (match.team1_score ?? 0) > (match.team2_score ?? 0);
-                const team2Wins = (match.team2_score ?? 0) > (match.team1_score ?? 0);
-                const isEditing = editingMatchId === match.id;
-                // Team match card
-                if (matchType === 'team') {
-                  return (
-                    <div key={match.id} className={`flex flex-col sm:flex-row items-stretch rounded-xl shadow-sm border-l-8 ${getStatusBorderColor(match.status || '')} p-0 overflow-hidden gap-0`}> 
-                      {/* Participants and Scores */}
-                      <div className="flex flex-col items-center w-full py-4">
-                        <div className="flex items-center justify-center gap-2 w-full mb-2">
-                          <span className={`font-semibold text-center ${team1Wins ? 'text-green-700 font-bold' : 'text-gray-800'}`} title={getTeamName(match.team1_id || '')}>{getTeamName(match.team1_id || '')}</span>
-                        </div>
-                        <div className="flex items-center justify-center gap-4 w-full">
-                          <span className="text-2xl sm:text-3xl font-extrabold text-blue-700 drop-shadow">{match.team1_score ?? '-'}</span>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-center w-full py-4">
-                        <div className="flex items-center justify-center gap-2 w-full mb-2">
-                          <span className={`font-semibold text-center ${team2Wins ? 'text-green-700 font-bold' : 'text-gray-800'}`} title={getTeamName(match.team2_id || '')}>{getTeamName(match.team2_id || '')}</span>
-                        </div>
-                        <div className="flex items-center justify-center gap-4 w-full">
-                          <span className="text-2xl sm:text-3xl font-extrabold text-red-700 drop-shadow">{match.team2_score ?? '-'}</span>
-                        </div>
-                      </div>
-                      {/* Info and Actions */}
-                      <div className="flex flex-col gap-2 w-full sm:flex-row sm:items-center sm:justify-between bg-white/80 px-4 py-3 border-t sm:border-t-0 sm:border-l border-blue-100">
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <span className="text-lg font-bold text-gray-800 truncate max-w-[180px]" title={getPoolName(match.pool_id)}>{getPoolName(match.pool_id)}</span>
-                          <span className="mx-1 text-gray-400">•</span>
-                          <span className="text-lg font-bold text-blue-700 truncate max-w-[180px]" title={matchCategory?.label}>{matchCategory?.label}</span>
-                          <span className={`ml-3 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(match.status || 'scheduled')}`}>{getStatusIcon(match.status || 'scheduled')}</span>
-                        </div>
-                        <div className="flex flex-col sm:flex-row gap-2 mt-2 sm:mt-0 sm:ml-4 w-full sm:w-auto sm:justify-end">
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white border border-gray-200 rounded-lg">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Match</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Match No</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Time</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Court</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Score</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredMatches.map((match) => {
+                    const matchCategory = getCategoryForMatch(match);
+                    const matchType = matchCategory?.type;
+                    const isEditing = editingMatchId === match.id;
+                    
+                    // Helper to get participant names
+                    const getParticipantNames = () => {
+                      if (matchType === 'team') {
+                        return {
+                          participant1: getTeamName(match.team1_id || ''),
+                          participant2: getTeamName(match.team2_id || '')
+                        };
+                      } else if (matchType === 'player') {
+                        const player1 = players.find(p => p.id === (match as any).player1_id);
+                        const player2 = players.find(p => p.id === (match as any).player2_id);
+                        return {
+                          participant1: player1 ? player1.name.split(' ')[0] : '-',
+                          participant2: player2 ? player2.name.split(' ')[0] : '-'
+                        };
+                      } else if (matchType === 'pair') {
+                        const player1 = players.find(p => p.id === (match as any).player1_id);
+                        const player2 = players.find(p => p.id === (match as any).player2_id);
+                        const player1FirstName = player1 ? player1.name.split(' ')[0] : '-';
+                        const player2FirstName = player2 ? player2.name.split(' ')[0] : '-';
+                        const player1PartnerFirstName = player1?.partner_name ? player1.partner_name.split(' ')[0] : '';
+                        const player2PartnerFirstName = player2?.partner_name ? player2.partner_name.split(' ')[0] : '';
+                        return {
+                          participant1: player1PartnerFirstName ? `${player1FirstName} / ${player1PartnerFirstName}` : player1FirstName,
+                          participant2: player2PartnerFirstName ? `${player2FirstName} / ${player2PartnerFirstName}` : player2FirstName
+                        };
+                      }
+                      return { participant1: '-', participant2: '-' };
+                    };
+                    
+                    const { participant1, participant2 } = getParticipantNames();
+                    const { date, time } = formatISTDateTime(match.scheduled_date);
+                    
+                    return (
+                      <tr key={match.id} className={`hover:bg-gray-50 ${isEditing ? 'bg-yellow-50' : ''}`}>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">
+                            <div className="font-semibold">{participant1}</div>
+                            <div className="text-gray-500 text-xs">vs</div>
+                            <div className="font-semibold">{participant2}</div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                          {match.match_no || '-'}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                           {isEditing ? (
-                            <>
-                              <input type="date" value={editDate} onChange={e => setEditDate(e.target.value)} className="px-2 py-1 border rounded mr-2" />
-                              <input type="time" value={editTime} onChange={e => setEditTime(e.target.value)} className="px-2 py-1 border rounded mr-2" />
-                              <select value={editCourt} onChange={e => setEditCourt(e.target.value)} className="px-2 py-1 border rounded mr-2">
-                                <option value="">Select Court</option>
-                                <option value="C">C</option>
-                                <option value="G">G</option>
-                              </select>
-                              <button onClick={() => saveEditMatch(match)} className="px-3 py-1 bg-green-600 text-white rounded mr-2">Save</button>
-                              <button onClick={cancelEditMatch} className="px-3 py-1 bg-gray-400 text-white rounded">Cancel</button>
-                            </>
+                            <input 
+                              type="date" 
+                              value={editDate} 
+                              onChange={e => setEditDate(e.target.value)} 
+                              className="px-2 py-1 border rounded text-sm w-full"
+                            />
                           ) : (
-                            <>
-                              <span className="text-sm text-gray-800 mr-2">{formatISTDateTime(match.scheduled_date).date}</span>
-                              <span className="text-sm text-gray-800 mr-2">{formatISTDateTime(match.scheduled_date).time}</span>
-                              <span className="text-sm text-gray-800 mr-2">Court: {match.court || '-'}</span>
-                              <button onClick={() => startEditMatch(match)} className="px-3 py-1 bg-yellow-500 text-white rounded">Edit</button>
-                            </>
+                            date
                           )}
-                          <button onClick={() => openUpdateScoreModal(match)} className="px-4 py-2 bg-blue-600 text-white rounded text-sm font-bold hover:bg-blue-700 w-full sm:w-auto">Score</button>
-                          {matchType === 'team' && (
-                            <a href={`/admin/matches/${match.id}/manage`} className="px-2 py-1 bg-gray-200 text-gray-800 rounded text-xs font-medium hover:bg-gray-300 w-full sm:w-auto text-center" style={{ textDecoration: 'none' }}>Lineup</a>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
-                // Player match card
-                if (matchType === 'player') {
-                  const player1Name = getPlayerName((match as any).player1_id);
-                  const player2Name = getPlayerName((match as any).player2_id);
-                  const player1Wins = (match.team1_score ?? 0) > (match.team2_score ?? 0);
-                  const player2Wins = (match.team2_score ?? 0) > (match.team1_score ?? 0);
-                  return (
-                    <div key={match.id} className={`flex flex-col sm:flex-row items-stretch rounded-xl shadow-sm border-l-8 ${getStatusBorderColor(match.status || '')} p-0 overflow-hidden gap-0`}> 
-                      {/* Participants and Scores */}
-                      <div className="flex flex-col items-center w-full py-4">
-                        <div className="flex items-center justify-center gap-2 w-full mb-2">
-                          <span className={`font-semibold text-center ${player1Wins ? 'text-green-700 font-bold' : 'text-gray-800'}`} title={player1Name}>{player1Name}</span>
-                        </div>
-                        <div className="flex items-center justify-center gap-4 w-full">
-                          <span className="text-2xl sm:text-3xl font-extrabold text-blue-700 drop-shadow">{match.team1_score ?? '-'}</span>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-center w-full py-4">
-                        <div className="flex items-center justify-center gap-2 w-full mb-2">
-                          <span className={`font-semibold text-center ${player2Wins ? 'text-green-700 font-bold' : 'text-gray-800'}`} title={player2Name}>{player2Name}</span>
-                        </div>
-                        <div className="flex items-center justify-center gap-4 w-full">
-                          <span className="text-2xl sm:text-3xl font-extrabold text-red-700 drop-shadow">{match.team2_score ?? '-'}</span>
-                        </div>
-                      </div>
-                      {/* Info and Actions */}
-                      <div className="flex flex-col gap-2 w-full sm:flex-row sm:items-center sm:justify-between bg-white/80 px-4 py-3 border-t sm:border-t-0 sm:border-l border-blue-100">
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <span className="text-lg font-bold text-gray-800 truncate max-w-[180px]" title={getPoolName(match.pool_id)}>{getPoolName(match.pool_id)}</span>
-                          <span className="mx-1 text-gray-400">•</span>
-                          <span className="text-lg font-bold text-blue-700 truncate max-w-[180px]" title={matchCategory?.label}>{matchCategory?.label}</span>
-                          <span className={`ml-3 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(match.status || 'scheduled')}`}>{getStatusIcon(match.status || 'scheduled')}</span>
-                        </div>
-                        <div className="flex flex-col sm:flex-row gap-2 mt-2 sm:mt-0 sm:ml-4 w-full sm:w-auto sm:justify-end">
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                           {isEditing ? (
-                            <>
-                              <input type="date" value={editDate} onChange={e => setEditDate(e.target.value)} className="px-2 py-1 border rounded mr-2" />
-                              <input type="time" value={editTime} onChange={e => setEditTime(e.target.value)} className="px-2 py-1 border rounded mr-2" />
-                              <select value={editCourt} onChange={e => setEditCourt(e.target.value)} className="px-2 py-1 border rounded mr-2">
-                                <option value="">Select Court</option>
-                                <option value="C">C</option>
-                                <option value="G">G</option>
-                              </select>
-                              <button onClick={() => saveEditMatch(match)} className="px-3 py-1 bg-green-600 text-white rounded mr-2">Save</button>
-                              <button onClick={cancelEditMatch} className="px-3 py-1 bg-gray-400 text-white rounded">Cancel</button>
-                            </>
+                            <input 
+                              type="time" 
+                              value={editTime} 
+                              onChange={e => setEditTime(e.target.value)} 
+                              className="px-2 py-1 border rounded text-sm w-full"
+                            />
                           ) : (
-                            <>
-                              <span className="text-sm text-gray-800 mr-2">{formatISTDateTime(match.scheduled_date).date}</span>
-                              <span className="text-sm text-gray-800 mr-2">{formatISTDateTime(match.scheduled_date).time}</span>
-                              <span className="text-sm text-gray-800 mr-2">Court: {match.court || '-'}</span>
-                              <button onClick={() => startEditMatch(match)} className="px-3 py-1 bg-yellow-500 text-white rounded">Edit</button>
-                            </>
+                            time
                           )}
-                          <button onClick={() => openUpdateScoreModal(match)} className="px-4 py-2 bg-blue-600 text-white rounded text-sm font-bold hover:bg-blue-700 w-full sm:w-auto">Score</button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
-                // Pair match card
-                if (matchType === 'pair') {
-                  // Helper to get player and partner name
-                  function getPairNames(playerId: string) {
-                    const player = players.find(p => p.id === playerId);
-                    if (!player) return ['-', '-'];
-                    return [player.name, player.partner_name || '-'];
-                  }
-                  const [pair1Name, pair1Partner] = getPairNames((match as any).player1_id);
-                  const [pair2Name, pair2Partner] = getPairNames((match as any).player2_id);
-                  const pair1Wins = (match.team1_score ?? 0) > (match.team2_score ?? 0);
-                  const pair2Wins = (match.team2_score ?? 0) > (match.team1_score ?? 0);
-                  
-                  return (
-                    <div key={match.id} className={`flex flex-col sm:flex-row items-stretch rounded-xl shadow-sm border-l-8 ${getStatusBorderColor(match.status || '')} p-0 overflow-hidden gap-0`}> 
-                      {/* Pair 1 and Scores */}
-                      <div className="flex flex-col items-center w-full py-4">
-                        <div className="flex flex-col items-center justify-center gap-1 w-full mb-2">
-                          <span className={`font-semibold text-center ${pair1Wins ? 'text-green-700 font-bold' : 'text-gray-800'}`}>{pair1Name}</span>
-                          <span className={`text-sm text-center ${pair1Wins ? 'text-green-600' : 'text-gray-600'}`}>{pair1Partner}</span>
-                        </div>
-                        <div className="flex items-center justify-center gap-4 w-full">
-                          <span className="text-2xl sm:text-3xl font-extrabold text-blue-700 drop-shadow">{match.team1_score ?? '-'}</span>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-center w-full py-4">
-                        <div className="flex flex-col items-center justify-center gap-1 w-full mb-2">
-                          <span className={`font-semibold text-center ${pair2Wins ? 'text-green-700 font-bold' : 'text-gray-800'}`}>{pair2Name}</span>
-                          <span className={`text-sm text-center ${pair2Wins ? 'text-green-600' : 'text-gray-600'}`}>{pair2Partner}</span>
-                        </div>
-                        <div className="flex items-center justify-center gap-4 w-full">
-                          <span className="text-2xl sm:text-3xl font-extrabold text-red-700 drop-shadow">{match.team2_score ?? '-'}</span>
-                        </div>
-                      </div>
-                      {/* Info and Actions */}
-                      <div className="flex flex-col gap-2 w-full sm:flex-row sm:items-center sm:justify-between bg-white/80 px-4 py-3 border-t sm:border-t-0 sm:border-l border-purple-100">
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <span className="text-lg font-bold text-gray-800 truncate max-w-[180px]" title={getPoolName(match.pool_id)}>{getPoolName(match.pool_id)}</span>
-                          <span className="mx-1 text-gray-400">•</span>
-                          <span className="text-lg font-bold text-purple-700 truncate max-w-[180px]" title={matchCategory?.label}>{matchCategory?.label}</span>
-                          <span className={`ml-3 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(match.status || 'scheduled')}`}>{getStatusIcon(match.status || 'scheduled')}</span>
-                        </div>
-                        <div className="flex flex-col sm:flex-row gap-2 mt-2 sm:mt-0 sm:ml-4 w-full sm:w-auto sm:justify-end">
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                           {isEditing ? (
-                            <>
-                              <input type="date" value={editDate} onChange={e => setEditDate(e.target.value)} className="px-2 py-1 border rounded mr-2" />
-                              <input type="time" value={editTime} onChange={e => setEditTime(e.target.value)} className="px-2 py-1 border rounded mr-2" />
-                              <select value={editCourt} onChange={e => setEditCourt(e.target.value)} className="px-2 py-1 border rounded mr-2">
-                                <option value="">Select Court</option>
-                                <option value="C">C</option>
-                                <option value="G">G</option>
-                              </select>
-                              <button onClick={() => saveEditMatch(match)} className="px-3 py-1 bg-green-600 text-white rounded mr-2">Save</button>
-                              <button onClick={cancelEditMatch} className="px-3 py-1 bg-gray-400 text-white rounded">Cancel</button>
-                            </>
+                            <select 
+                              value={editCourt} 
+                              onChange={e => setEditCourt(e.target.value)} 
+                              className="px-2 py-1 border rounded text-sm w-full"
+                            >
+                              <option value="">-</option>
+                              <option value="C">C</option>
+                              <option value="G">G</option>
+                            </select>
                           ) : (
-                            <>
-                              <span className="text-sm text-gray-800 mr-2">{formatISTDateTime(match.scheduled_date).date}</span>
-                              <span className="text-sm text-gray-800 mr-2">{formatISTDateTime(match.scheduled_date).time}</span>
-                              <span className="text-sm text-gray-800 mr-2">Court: {match.court || '-'}</span>
-                              <button onClick={() => startEditMatch(match)} className="px-3 py-1 bg-yellow-500 text-white rounded">Edit</button>
-                            </>
+                            match.court || '-'
                           )}
-                          <button onClick={() => openUpdateScoreModal(match)} className="px-4 py-2 bg-blue-600 text-white rounded text-sm font-bold hover:bg-blue-700 w-full sm:w-auto">Score</button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
-                return null;
-              })}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(match.status || 'scheduled')}`}>
+                            {getStatusIcon(match.status || 'scheduled')}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-blue-600">{match.team1_score ?? '-'}</span>
+                            <span className="text-gray-400">-</span>
+                            <span className="font-bold text-red-600">{match.team2_score ?? '-'}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
+                          <div className="flex gap-2">
+                            {isEditing ? (
+                              <>
+                                <button 
+                                  onClick={() => saveEditMatch(match)} 
+                                  className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
+                                >
+                                  Save
+                                </button>
+                                <button 
+                                  onClick={cancelEditMatch} 
+                                  className="px-2 py-1 bg-gray-400 text-white rounded text-xs hover:bg-gray-500"
+                                >
+                                  Cancel
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button 
+                                  onClick={() => startEditMatch(match)} 
+                                  className="px-2 py-1 bg-yellow-500 text-white rounded text-xs hover:bg-yellow-600"
+                                >
+                                  Edit
+                                </button>
+                                <button 
+                                  onClick={() => openUpdateScoreModal(match)} 
+                                  className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
+                                >
+                                  Score
+                                </button>
+                                {matchType === 'team' && (
+                                  <a 
+                                    href={`/admin/matches/${match.id}/manage`} 
+                                    className="px-2 py-1 bg-gray-200 text-gray-800 rounded text-xs hover:bg-gray-300 text-center"
+                                    style={{ textDecoration: 'none' }}
+                                  >
+                                    Lineup
+                                  </a>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
@@ -947,33 +1110,37 @@ export default function AdminMatchesPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Team 1 *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {isTeamCategory ? 'Team 1' : 'Player 1'} *
+                </label>
                 <select
                   value={newMatchTeam1}
                   onChange={(e) => setNewMatchTeam1(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                   disabled={!newMatchPool}
                 >
-                  <option value="">Select Team 1</option>
-                  {teamsInSelectedModalPool.map((team) => (
-                    <option key={team.id} value={team.id}>
-                      {team.name}
+                  <option value="">Select {isTeamCategory ? 'Team' : 'Player'} 1</option>
+                  {participantsInSelectedModalPool.map((participant) => (
+                    <option key={participant.id} value={participant.id}>
+                      {getParticipantDisplayName(participant)}
                     </option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Team 2 *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {isTeamCategory ? 'Team 2' : 'Player 2'} *
+                </label>
                 <select
                   value={newMatchTeam2}
                   onChange={(e) => setNewMatchTeam2(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                   disabled={!newMatchPool}
                 >
-                  <option value="">Select Team 2</option>
-                  {teamsInSelectedModalPool.map((team) => (
-                    <option key={team.id} value={team.id}>
-                      {team.name}
+                  <option value="">Select {isTeamCategory ? 'Team' : 'Player'} 2</option>
+                  {participantsInSelectedModalPool.map((participant) => (
+                    <option key={participant.id} value={participant.id}>
+                      {getParticipantDisplayName(participant)}
                     </option>
                   ))}
                 </select>

@@ -404,9 +404,7 @@ export default function FixturesPage() {
             Tournament Fixtures
           </h1>
         </div>
-        <p className="text-white/80 text-lg max-w-2xl mx-auto">
-          Follow the complete tournament journey from Round 1 to the Finals
-        </p>
+
       </div>
 
       {/* View Mode Toggle */}

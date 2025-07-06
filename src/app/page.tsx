@@ -65,13 +65,14 @@ export default function LandingPage() {
     <>
       <div className="w-full max-w-6xl mt-8 px-2 sm:px-4 mx-auto font-body">
         {/* Top Navigation for Hash Links */}
-        <nav className="flex flex-wrap justify-center gap-4 mb-8 sticky top-0 z-30 bg-black/70 rounded-xl py-2 px-4 border border-white/10 shadow-lg backdrop-blur-md">
-          <a href="#tournament-info" className="text-white font-bold hover:text-green-300 transition">Info</a>
-          <a href="#countdown" className="text-white font-bold hover:text-green-300 transition">Countdown</a>
-          <a href="#format" className="text-white font-bold hover:text-green-300 transition">Format</a>
-          <a href="#enhanced-info" className="text-white font-bold hover:text-green-300 transition">Highlights</a>
-          <a href="#sponsors" className="text-white font-bold hover:text-green-300 transition">Sponsors</a>
-          <a href="#quick-stats" className="text-white font-bold hover:text-green-300 transition">Stats</a>
+        <nav className="flex flex-wrap justify-center gap-2 sm:gap-4 mb-8 sticky top-0 z-30 bg-black/70 rounded-xl py-2 px-4 border border-white/10 shadow-lg backdrop-blur-md">
+          <a href="#tournament-info" className="text-white font-bold hover:text-green-300 transition text-sm sm:text-base">Info</a>
+          <a href="#countdown" className="text-white font-bold hover:text-green-300 transition text-sm sm:text-base">Countdown</a>
+          <a href="#format" className="text-white font-bold hover:text-green-300 transition text-sm sm:text-base">Format</a>
+          <a href="#enhanced-info" className="text-white font-bold hover:text-green-300 transition text-sm sm:text-base">Highlights</a>
+          <a href="#sponsors" className="text-white font-bold hover:text-green-300 transition text-sm sm:text-base">Sponsors</a>
+          <a href="#quick-stats" className="text-white font-bold hover:text-green-300 transition text-sm sm:text-base">Stats</a>
+          
         </nav>
         {/* Tournament Info Section */}
         <div id="tournament-info" className="bg-gradient-to-r from-blue-900/40 to-green-900/40 rounded-3xl p-8 mb-10 border border-white/20 shadow-2xl animate-fade-in-scale scroll-mt-24">
@@ -121,6 +122,26 @@ export default function LandingPage() {
         {/* Countdown to Tournament Start Section */}
         <div id="countdown" className="scroll-mt-24">
           <CountdownToTournament />
+        </div>
+
+        {/* Fixtures & Standings CTA Section */}
+        <div className="mb-8 flex justify-center gap-6">
+          <a 
+            href="/fixtures" 
+            className="bg-gradient-to-r from-green-600 to-green-700 text-white font-bold px-8 py-4 rounded-2xl hover:from-green-700 hover:to-green-800 transition-all duration-300 shadow-2xl hover:shadow-green-500/25 hover:scale-105 text-lg flex items-center gap-3"
+          >
+            <span className="text-2xl">🏸</span>
+            <span>View Tournament Fixtures</span>
+            <span className="text-xl">→</span>
+          </a>
+          <a 
+            href="/standings" 
+            className="bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold px-8 py-4 rounded-2xl hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-2xl hover:shadow-blue-500/25 hover:scale-105 text-lg flex items-center gap-3"
+          >
+            <span className="text-2xl">📊</span>
+            <span>View Tournament Standings</span>
+            <span className="text-xl">→</span>
+          </a>
         </div>
 
         {/* Important Format & Highlights Section */}
@@ -295,7 +316,7 @@ export default function LandingPage() {
                   />
                 </div>
               </div>
-              {/* Second row: Co-Powered By and Game Zone Partner */}
+              {/* Second row: Co-Powered By and Associate Sponsor */}
               <div className="flex flex-col md:flex-row justify-center items-center gap-8">
                 {/* Co-Powered By (bigger logos) */}
                 <div className="bg-gradient-to-br from-blue-700/30 to-blue-900/30 rounded-2xl p-8 border-2 border-blue-300/30 shadow-xl hover:scale-105 hover:shadow-2xl transition-all duration-300 flex flex-col items-center min-w-[260px]">
@@ -318,6 +339,19 @@ export default function LandingPage() {
                       style={{ maxWidth: '170px' }}
                     />
                   </div>
+                </div>
+                
+                {/* Associate Sponsor */}
+                <div className="bg-gradient-to-br from-purple-700/30 to-purple-900/30 rounded-2xl p-8 border-2 border-purple-300/30 shadow-xl hover:scale-105 hover:shadow-2xl transition-all duration-300 flex flex-col items-center min-w-[260px]">
+                  <span className="text-xs uppercase tracking-widest text-purple-100 mb-3 font-bold drop-shadow">Associate Sponsor</span>
+                  <Image
+                    src="/gamepoint-logo.png"
+                    alt="GamePoint Logo"
+                    width={200}
+                    height={90}
+                    className="h-24 w-auto drop-shadow-lg bg-white rounded-xl p-2"
+                    style={{ maxWidth: '200px' }}
+                  />
                 </div>
               </div>
             </div>

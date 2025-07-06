@@ -60,6 +60,12 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
         {/* Navigation - Desktop only */}
         <nav className="hidden sm:flex flex-wrap justify-end gap-2 md:gap-4 ml-auto">
           <Link
+            href="/fixtures"
+            className="px-3 sm:px-5 py-2 bg-green-600 text-white rounded-xl text-sm sm:text-lg font-bold shadow hover:bg-green-700 transition border-2 border-green-500 hover-lift relative overflow-hidden"
+          >
+            <span className="relative">🏸 Fixtures</span>
+          </Link>
+          <Link
             href="/standings"
             className="px-3 sm:px-5 py-2 bg-black text-white rounded-xl text-sm sm:text-lg font-bold shadow hover:bg-gray-900 transition border-2 border-gray-700 hover-lift relative overflow-hidden"
           >
@@ -98,6 +104,11 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
+              <Link
+                href="/fixtures"
+                className="px-4 py-3 rounded-lg text-lg font-bold text-white bg-green-600 hover:bg-green-700 border border-green-500"
+                onClick={() => setMobileMenuOpen(false)}
+              >🏸 Fixtures</Link>
               <Link
                 href="/standings"
                 className="px-4 py-3 rounded-lg text-lg font-bold text-white bg-gray-900 hover:bg-gray-800 border border-gray-700"

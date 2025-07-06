@@ -242,6 +242,9 @@ export default function AdminTeamsPage() {
                     .map((player) => (
                       <div key={player.id} className="p-3 bg-gray-50 rounded-lg">
                         <div className="font-medium text-gray-800">{player.name}</div>
+                        {player.phone && (
+                          <div className="text-sm text-gray-500 mt-1">📞 {player.phone}</div>
+                        )}
                       </div>
                     ))}
                 </div>
@@ -329,8 +332,11 @@ export default function AdminTeamsPage() {
                         <div className="space-y-2">
                           {team.players.map((player) => (
                             <div key={player.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                              <div>
+                              <div className="flex-1">
                                 <div className="text-sm font-medium text-gray-800">{player.name}</div>
+                                {player.phone && (
+                                  <div className="text-xs text-gray-500 mt-1">📞 {player.phone}</div>
+                                )}
                               </div>
                             </div>
                           ))}
@@ -416,11 +422,16 @@ export default function AdminTeamsPage() {
                           return (
                             <div key={player.id} className="p-2 bg-gray-50 rounded">
                               <div className="text-sm font-medium text-gray-800">{displayName}</div>
-                              {player.level && (
-                                <div className="text-xs text-gray-500 mt-1">
-                                  Level: {player.level}
-                                </div>
-                              )}
+                              <div className="flex flex-col gap-1 mt-1">
+                                {player.phone && (
+                                  <div className="text-xs text-gray-500">📞 {player.phone}</div>
+                                )}
+                                {player.level && (
+                                  <div className="text-xs text-gray-500">
+                                    Level: {player.level}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           );
                         })}

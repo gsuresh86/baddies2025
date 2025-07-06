@@ -11,12 +11,21 @@ interface TeamPlayer {
   created_at: string;
 }
 
+interface PoolPlayer {
+  id: string;
+  pool_id: string;
+  player_id: string;
+  pair_id?: string;
+  created_at: string;
+}
+
 interface DataContextType {
   players: Player[];
   teams: Team[];
   pools: Pool[];
   categories: Category[];
   teamPlayers: TeamPlayer[];
+  poolPlayers: PoolPlayer[];
   matches: Match[];
   loading: boolean;
   error: string | null;
@@ -43,6 +52,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const [pools, setPools] = useState<Pool[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [teamPlayers, setTeamPlayers] = useState<TeamPlayer[]>([]);
+  const [poolPlayers, setPoolPlayers] = useState<PoolPlayer[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,12 +62,13 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      const [playersResult, teamsResult, poolsResult, categoriesResult, teamPlayersResult, matchesResult] = await Promise.all([
+      const [playersResult, teamsResult, poolsResult, categoriesResult, teamPlayersResult, poolPlayersResult, matchesResult] = await Promise.all([
         supabase.from('t_players').select('*').order('name'),
         supabase.from('teams').select('*').order('name'),
-        supabase.from('pools').select('*').order('name'),
+        supabase.from('pools').select('*, category:categories(*)').order('name'),
         supabase.from('categories').select('*').order('label'),
         supabase.from('team_players').select('*'),
+        supabase.from('pool_players').select('*'),
         supabase.from('matches').select('*').order('created_at', { ascending: false }),
       ]);
       
@@ -66,6 +77,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       if (poolsResult.error) throw poolsResult.error;
       if (categoriesResult.error) throw categoriesResult.error;
       if (teamPlayersResult.error) throw teamPlayersResult.error;
+      if (poolPlayersResult.error) throw poolPlayersResult.error;
       if (matchesResult.error) throw matchesResult.error;
       
       setPlayers(playersResult.data || []);
@@ -73,6 +85,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       setPools(poolsResult.data || []);
       setCategories(categoriesResult.data || []);
       setTeamPlayers(teamPlayersResult.data || []);
+      setPoolPlayers(poolPlayersResult.data || []);
       setMatches(matchesResult.data || []);
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -96,6 +109,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     pools,
     categories,
     teamPlayers,
+    poolPlayers,
     matches,
     loading,
     error,

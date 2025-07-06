@@ -49,7 +49,7 @@ export interface Match {
   pool_id: string;
   scheduled_date?: string;
   court?: string;
-  match_no?: number;
+  match_no?: string;
   created_at?: string;
   updated_at?: string;
   // Joined data from Supabase queries
