@@ -27,7 +27,7 @@ export default function FixturesPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [fixtures, setFixtures] = useState<FixtureData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'pool' | 'schedule'>('pool');
+  const [viewMode, setViewMode] = useState<'pool' | 'schedule'>('schedule');
   const [selectedDate, setSelectedDate] = useState<string>('');
 
   const fetchCategories = async () => {
@@ -83,20 +83,58 @@ export default function FixturesPage() {
       let matchesData: any[] = [];
       let categoryLabel = '';
 
-      // Always show all matches regardless of category selection
-      matchesData = cachedMatches;
-      categoryLabel = categoryCode === 'all' ? 'All Categories' : 'Tournament Schedule';
-      console.log('Showing all matches:', matchesData.length);
+      if (categoryCode === 'all') {
+        // Show all matches for "All Categories"
+        matchesData = cachedMatches;
+        categoryLabel = 'All Categories';
+        console.log('Showing all matches:', matchesData.length);
+      } else {
+        // Filter matches by selected category
+        const selectedCategory = categories.find(cat => cat.code === categoryCode);
+        if (!selectedCategory) {
+          console.log('Category not found:', categoryCode);
+          setFixtures(null);
+          setLoading(false);
+          return;
+        }
+
+        // Filter matches that belong to the selected category
+        matchesData = cachedMatches.filter(match => {
+          // Find the pool for this match from cached pools data
+          const matchPool = pools.find(pool => pool.id === match.pool_id);
+          if (!matchPool) {
+            console.log(`Pool not found for match ${match.id} with pool_id ${match.pool_id}`);
+            return false;
+          }
+          
+          // Check if the pool's category_id matches the selected category
+          if (matchPool.category_id === selectedCategory.id) {
+            return true;
+          }
+          
+          return false;
+        });
+
+        categoryLabel = selectedCategory.label;
+        console.log(`Showing ${matchesData.length} matches for category ${categoryCode}:`, selectedCategory.label);
+        console.log('Filtered matches:', matchesData.map(m => ({ id: m.id, pool_id: m.pool_id })));
+      }
 
       if (!matchesData || matchesData.length === 0) {
-        console.log('No matches found at all');
+        console.log('No matches found for category:', categoryCode);
         setFixtures(null);
         setLoading(false);
         return;
       }
 
       // Enrich matches with player/team data based on category type
-      const enrichedMatches = enrichMatchesWithDetails(matchesData, categories[0] || { code: 'MT' });
+      const selectedCategory = categoryCode === 'all' ? categories[0] : categories.find(cat => cat.code === categoryCode);
+      const enrichedMatches = enrichMatchesWithDetails(matchesData, selectedCategory || { 
+        id: 'default', 
+        code: 'MT', 
+        label: 'Men\'s Team', 
+        type: 'team' 
+      });
 
       setFixtures({
         category: categoryLabel,
@@ -113,7 +151,7 @@ export default function FixturesPage() {
       setFixtures(null);
     }
     setLoading(false);
-  }, [categories, cachedMatches, enrichMatchesWithDetails]);
+  }, [categories, cachedMatches, enrichMatchesWithDetails, pools]);
 
   useEffect(() => {
     fetchCategories();
@@ -134,21 +172,34 @@ export default function FixturesPage() {
 
   // Function to get the correct category for a match
   const getMatchCategory = (match: Match) => {
-    // Try to get category from pool's category
-    if (match.pool?.category) {
-      return match.pool.category;
+    // Find the pool for this match from cached pools data
+    const matchPool = pools.find(pool => pool.id === match.pool_id);
+    if (!matchPool) {
+      console.log(`Pool not found for match ${match.id} with pool_id ${match.pool_id}`);
+      // Fallback to first category
+      return categories[0] || { 
+        id: 'default', 
+        code: 'MT', 
+        label: 'Men\'s Team', 
+        type: 'team' 
+      };
     }
     
-    // Try to get category from pool's category_id
-    if (match.pool?.category_id) {
-      const category = categories.find(c => c.id === match.pool?.category_id);
+    // Get category from pool's category_id
+    if (matchPool.category_id) {
+      const category = categories.find(c => c.id === matchPool.category_id);
       if (category) {
         return category;
       }
     }
     
     // Fallback to first category
-    return categories[0] || { code: 'MT', label: 'Men\'s Team' };
+    return categories[0] || { 
+      id: 'default', 
+      code: 'MT', 
+      label: 'Men\'s Team', 
+      type: 'team' 
+    };
   };
 
   const groupMatchesByPool = (matches: Match[]) => {
@@ -160,6 +211,16 @@ export default function FixturesPage() {
         grouped[poolName] = [];
       }
       grouped[poolName].push(match);
+    });
+    
+    // Sort matches within each pool by scheduled date (if available)
+    Object.keys(grouped).forEach(poolName => {
+      grouped[poolName].sort((a, b) => {
+        if (!a.scheduled_date && !b.scheduled_date) return 0;
+        if (!a.scheduled_date) return 1;
+        if (!b.scheduled_date) return -1;
+        return new Date(a.scheduled_date).getTime() - new Date(b.scheduled_date).getTime();
+      });
     });
     
     return grouped;
@@ -326,7 +387,25 @@ export default function FixturesPage() {
         <div className="space-y-8">
           {viewMode === 'pool' ? (
             // Pool View
-            Object.entries(groupMatchesByPool(fixtures.matches)).map(([poolName, matches]) => (
+            Object.entries(groupMatchesByPool(fixtures.matches))
+              .sort(([poolNameA], [poolNameB]) => {
+                // Custom sorting for pool names
+                const a = poolNameA.toLowerCase();
+                const b = poolNameB.toLowerCase();
+                
+                // If both contain "pool", sort naturally (Pool A, Pool B, Pool C, etc.)
+                if (a.includes('pool') && b.includes('pool')) {
+                  return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+                }
+                
+                // If only one contains "pool", prioritize it
+                if (a.includes('pool') && !b.includes('pool')) return -1;
+                if (!a.includes('pool') && b.includes('pool')) return 1;
+                
+                // Otherwise, sort alphabetically
+                return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+              })
+              .map(([poolName, matches]) => (
               <div key={poolName} className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
                 {/* Pool Header */}
                 <div className="mb-6">
@@ -374,11 +453,7 @@ export default function FixturesPage() {
               
               return (
                 <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
-                  {/* Schedule Header */}
-                  <div className="mb-6">
-                    <div className="h-1 bg-gradient-to-r from-green-400 to-blue-400 rounded-full w-24"></div>
-                  </div>
-
+                  
                   {/* Content with Vertical Tabs */}
                   <div className="flex gap-6">
                     {/* Vertical Date Tabs */}
@@ -410,7 +485,7 @@ export default function FixturesPage() {
                               justifyContent: 'center'
                             }}
                           >
-                            <span className="text-xs font-medium transform rotate-180">{shortDate}</span>
+                            <span className="text-sm font-bold transform rotate-180">{shortDate}</span>
                           </button>
                         );
                       })}
@@ -419,12 +494,9 @@ export default function FixturesPage() {
                     {/* Selected Date Matches */}
                     {selectedDate && (
                       <div className="flex-1">
-                        <div className="mb-4">
-                          <h3 className="text-xl font-semibold text-white mb-2">{selectedDateFormatted}</h3>
-                          <div className="flex items-center gap-4">
-                            <span className="text-white/80">⏰ All Times</span>
-                            <span className="text-sm text-white/60">({selectedMatches.length} matches)</span>
-                          </div>
+                        <div className="mb-6">
+                          <h3 className="text-xl font-bold text-yellow-300 mb-3 text-center">{selectedDateFormatted}</h3>
+
                         </div>
 
                         {/* Matches List */}

@@ -98,20 +98,25 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({ match, categ
             justifyContent: 'center'
           }}
         >
-          <span className="text-xs font-medium transform rotate-180">
-            {match.pool?.name || 'Unknown'}
+          <span className="text-sm font-bold text-purple-300 transform rotate-180">
+            {match.match_no || 'TBD'}
           </span>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="flex-1">
-        <div className="flex items-center justify-between w-full text-xs text-white/80 mb-1">
+        <div className="flex items-center justify-between w-full mb-2">
           <div className="flex items-center gap-1">
-            <span className={`w-1.5 h-1.5 rounded-full ${getStatusColor(status)}`}></span>
+            <span className={`w-2 h-2 rounded-full ${getStatusColor(status)}`}></span>
           </div>
-          <span className="text-xs">{dateStr} {timeStr && <span className="ml-1">{timeStr}</span>}</span>
-          <span className="ml-1 font-semibold text-white/90 text-xs">{court}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-yellow-300">{dateStr}</span>
+            {timeStr && (
+              <span className="text-lg font-bold text-cyan-300">{timeStr}</span>
+            )}
+          </div>
+          <span className="font-semibold text-white/90 text-xs">{court}</span>
         </div>
         <div className="flex items-center justify-between w-full gap-2 py-1">
           <div className="flex flex-col items-center flex-1">
