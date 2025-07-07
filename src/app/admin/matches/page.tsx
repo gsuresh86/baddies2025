@@ -1071,26 +1071,25 @@ export default function AdminMatchesPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full bg-white border border-gray-200 rounded-lg">
-                <thead className="bg-gray-50">
+              <table className="min-w-full bg-white border border-gray-200 rounded-xl shadow-sm text-sm">
+                <thead className="bg-gray-50 sticky top-0 z-10 border-b border-gray-200">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Match</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Pool</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Match No</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Time</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Court</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Status</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Score</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Actions</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Match</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Pool</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Match No</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Date</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Time</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Court</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Status</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Score</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredMatches.map((match) => {
+                <tbody>
+                  {filteredMatches.map((match, idx) => {
                     const matchCategory = getCategoryForMatch(match);
                     const matchType = matchCategory?.type;
                     const isEditing = editingMatchId === match.id;
-                    
                     // Helper to get participant names
                     const getParticipantNames = () => {
                       if (matchType === 'team') {
@@ -1119,23 +1118,28 @@ export default function AdminMatchesPage() {
                       }
                       return { participant1: '-', participant2: '-' };
                     };
-                    
                     const { participant1, participant2 } = getParticipantNames();
                     const { date, time } = formatISTDateTime(match.scheduled_date);
                     const poolName = pools.find(p => p.id === match.pool_id)?.name || '-';
-                    
                     return (
-                      <tr key={match.id} className={`hover:bg-gray-50 ${isEditing ? 'bg-yellow-50' : ''}`}>
-                        <td className="px-4 py-3 whitespace-nowrap">
+                      <tr
+                        key={match.id}
+                        className={
+                          `${isEditing ? 'bg-yellow-100' : idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} ` +
+                          'hover:bg-blue-50 transition-colors duration-100'
+                        }
+                        style={{ borderRadius: isEditing ? '0.5rem' : undefined }}
+                      >
+                        <td className="px-3 py-2 whitespace-nowrap align-middle">
                           <div className="text-sm font-medium text-gray-900">
                             <div className="font-semibold">{participant1}</div>
                             <div className="text-gray-500 text-xs">vs</div>
                             <div className="font-semibold">{participant2}</div>
                           </div>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{poolName}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{match.match_no || '-'}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 align-middle">{poolName}</td>
+                        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 align-middle">{match.match_no || '-'}</td>
+                        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 align-middle">
                           {isEditing ? (
                             <input 
                               type="date" 
@@ -1147,7 +1151,7 @@ export default function AdminMatchesPage() {
                             date
                           )}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 align-middle">
                           {isEditing ? (
                             <input 
                               type="time" 
@@ -1159,7 +1163,7 @@ export default function AdminMatchesPage() {
                             time
                           )}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 align-middle">
                           {isEditing ? (
                             <select 
                               value={editCourt} 
@@ -1174,17 +1178,17 @@ export default function AdminMatchesPage() {
                             match.court || '-'
                           )}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap">
+                        <td className="px-3 py-2 whitespace-nowrap align-middle">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(match.status || 'scheduled')}`}>{getStatusIcon(match.status || 'scheduled')}</span>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 align-middle">
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-blue-600">{match.team1_score ?? '-'}</span>
                             <span className="text-gray-400">-</span>
                             <span className="font-bold text-red-600">{match.team2_score ?? '-'}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
+                        <td className="px-3 py-2 whitespace-nowrap text-sm font-medium align-middle">
                           <div className="flex gap-2">
                             {isEditing ? (
                               <>
