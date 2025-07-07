@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { useData } from "@/contexts/DataContext";
 import { Player, Match } from "@/types";
-import { categoryLabels, PlayerCategory } from "@/lib/utils";
+import { categoryLabels, PlayerCategory, categoryTypes } from "@/lib/utils";
 
 function getUniquePlayersWithCategories(players: Player[]) {
   const uniqueMap = new Map<string, { name: string; level: string; tshirt_size?: string; categories: Set<string>; id: string }>();
@@ -50,7 +50,7 @@ function getPlayerMatches(playerId: string, matches: Match[]): Match[] {
 }
 
 export default function PlayersPage() {
-  const { players, matches, loading } = useData();
+  const { players, matches, loading, categories, pools } = useData();
   const [search, setSearch] = useState("");
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
   const [showMatches, setShowMatches] = useState(false);
@@ -75,6 +75,36 @@ export default function PlayersPage() {
     setShowMatches(false);
     setSelectedPlayer(null);
   };
+
+  // Helper to get category for a match
+  function getCategoryForMatch(match: Match) {
+    const pool = pools.find((p) => p.id === match.pool_id);
+    if (!pool) return undefined;
+    return categories.find((c) => c.id === pool.category_id);
+  }
+
+  // Helper to get formatted IST date and time
+  function formatISTDateTime(dateString: string | undefined | null) {
+    if (!dateString) return { date: '-', time: '-' };
+    try {
+      const dt = new Date(dateString);
+      const istDate = dt.toLocaleDateString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+      const istTime = dt.toLocaleTimeString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+      return { date: istDate, time: istTime };
+    } catch {
+      return { date: '-', time: '-' };
+    }
+  }
 
   return (
     <div className="bg-black min-h-screen py-8 px-2 md:px-8">
@@ -151,20 +181,64 @@ export default function PlayersPage() {
                 <div className="text-gray-400 text-center py-8">No matches found for this player.</div>
               ) : (
                 <ul className="space-y-4">
-                  {getPlayerMatches(selectedPlayer.id, matches).map((match) => (
-                    <li key={match.id} className="bg-black/60 rounded-lg p-4 border border-white/10 shadow">
-                      <div className="flex flex-col gap-1">
-                        <div className="text-white text-sm font-bold">Match No: <span className="text-gray-300">{match.match_no || '-'}</span></div>
-                        <div className="text-gray-300 text-xs">Date: {match.scheduled_date ? new Date(match.scheduled_date).toLocaleString() : '-'}</div>
-                        <div className="text-gray-300 text-xs">Status: {match.status || '-'}</div>
-                        <div className="text-gray-300 text-xs">Opponent: {/* TODO: Show opponent name */}
-                          {match.player1_id === selectedPlayer.id
-                            ? players.find(p => p.id === match.player2_id)?.name || '-'
-                            : players.find(p => p.id === match.player1_id)?.name || '-'}
+                  {getPlayerMatches(selectedPlayer.id, matches).map((match) => {
+                    const matchCategory = getCategoryForMatch(match);
+                    const matchType = matchCategory ? categoryTypes[matchCategory.label as PlayerCategory] : undefined;
+                    const { date, time } = formatISTDateTime(match.scheduled_date);
+                    // Determine opponent and partner
+                    let opponentName = '-';
+                    let partnerName = '';
+                    if (matchType === 'pair') {
+                      // For pair games, show partner name by always looking up both players
+                      let player: Player | undefined, partner: Player | undefined, opp: Player | undefined;
+                      if (match.player1_id === selectedPlayer.id) {
+                        player = players.find(p => p.id === match.player1_id);
+                        partner = player && player.partner_name
+                          ? players.find(p => p.name === player?.partner_name)
+                          : undefined;
+                        opp = players.find(p => p.id === match.player2_id);
+                        opponentName = opp ? (opp.partner_name ? `${opp.name} / ${opp.partner_name}` : opp.name) : '-';
+                      } else {
+                        player = players.find(p => p.id === match.player2_id);
+                        partner = player && player.partner_name
+                          ? players.find(p => p.name === player?.partner_name)
+                          : undefined;
+                        opp = players.find(p => p.id === match.player1_id);
+                        opponentName = opp ? (opp.partner_name ? `${opp.name} / ${opp.partner_name}` : opp.name) : '-';
+                      }
+                      // Show partner name if found, else fallback to player.partner_name string
+                      if (partner && partner.name) {
+                        partnerName = partner.name;
+                      } else if (player && player.partner_name) {
+                        partnerName = player.partner_name;
+                      } else {
+                        partnerName = '';
+                      }
+                    } else {
+                      // Singles: just show opponent
+                      if (match.player1_id === selectedPlayer.id) {
+                        opponentName = players.find(p => p.id === match.player2_id)?.name || '-';
+                      } else {
+                        opponentName = players.find(p => p.id === match.player1_id)?.name || '-';
+                      }
+                    }
+                    return (
+                      <li key={match.id} className="bg-black/60 rounded-lg p-4 border border-white/10 shadow">
+                        <div className="flex flex-col gap-1">
+                          <div className="text-white text-sm font-bold">Match No: <span className="text-gray-300">{match.match_no || '-'}</span></div>
+                          <div className="flex gap-2 items-center">
+                            <span className="text-xs font-bold text-blue-300 bg-blue-900/40 px-2 py-1 rounded mr-2">{date}</span>
+                            <span className="text-xs font-bold text-pink-200 bg-pink-900/40 px-2 py-1 rounded">{time}</span>
+                          </div>
+                          <div className="text-gray-300 text-xs">Status: {match.status || '-'}</div>
+                          <div className="text-gray-300 text-xs">Opponent: {opponentName}</div>
+                          {matchType === 'pair' && partnerName && (
+                            <div className="text-xs text-amber-300 font-semibold">Partner: {partnerName}</div>
+                          )}
                         </div>
-                      </div>
-                    </li>
-                  ))}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>

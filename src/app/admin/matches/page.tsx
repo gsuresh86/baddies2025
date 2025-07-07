@@ -6,6 +6,7 @@ import { Match } from '@/types';
 import { useToast } from '@/contexts/ToastContext';
 import { useData } from '@/contexts/DataContext';
 import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
 
 export default function AdminMatchesPage() {
   const { showSuccess, showError } = useToast();
@@ -770,6 +771,154 @@ export default function AdminMatchesPage() {
     return `${code}-${String(nextSequence).padStart(3, '0')}`;
   }, [categories, matches, pools]);
 
+  // --- PDF Score Sheet Generation ---
+  function groupMatchesByCourt(matches: Match[]) {
+    const grouped: Record<string, Match[]> = {};
+    matches.forEach((m) => {
+      const court = m.court || 'Unknown';
+      if (!grouped[court]) grouped[court] = [];
+      grouped[court].push(m);
+    });
+    return grouped;
+  }
+
+  function chunkArray<T>(arr: T[], size: number): T[][] {
+    const result: T[][] = [];
+    for (let i = 0; i < arr.length; i += size) {
+      result.push(arr.slice(i, i + size));
+    }
+    return result;
+  }
+
+  function getParticipantNamesForSheet(match: Match) {
+    const matchCategory = getCategoryForMatch(match);
+    const matchType = matchCategory?.type;
+    if (matchType === 'team') {
+      return [getTeamName(match.team1_id || ''), getTeamName(match.team2_id || '')];
+    } else if (matchType === 'player') {
+      const player1 = players.find(p => p.id === match.player1_id);
+      const player2 = players.find(p => p.id === match.player2_id);
+      return [player1?.name || '-', player2?.name || '-'];
+    } else if (matchType === 'pair') {
+      const player1 = players.find(p => p.id === match.player1_id);
+      const player2 = players.find(p => p.id === match.player2_id);
+      // Use only first names for player and partner
+      const player1First = player1 ? player1.name.split(' ')[0] : '-';
+      const player2First = player2 ? player2.name.split(' ')[0] : '-';
+      const player1PartnerFirst = player1?.partner_name ? player1.partner_name.split(' ')[0] : '';
+      const player2PartnerFirst = player2?.partner_name ? player2.partner_name.split(' ')[0] : '';
+      const player1Full = player1PartnerFirst ? `${player1First} / ${player1PartnerFirst}` : player1First;
+      const player2Full = player2PartnerFirst ? `${player2First} / ${player2PartnerFirst}` : player2First;
+      return [player1Full, player2Full];
+    }
+    return ['-', '-'];
+  }
+
+  // Add state for generate matches modal
+  const [showScoreSheetModal, setShowScoreSheetModal] = useState(false);
+  const [scoreSheetDate, setScoreSheetDate] = useState('');
+
+  // Helper to filter matches by selected date
+  const getMatchesForScoreSheet = () => {
+    if (!scoreSheetDate) return filteredMatches;
+    return filteredMatches.filter(m => {
+      if (!m.scheduled_date) return false;
+      const matchDate = new Date(m.scheduled_date);
+      const matchDateStr = matchDate.toISOString().split('T')[0];
+      return matchDateStr === scoreSheetDate;
+    });
+  };
+
+  // PDF generation for selected date
+  function generateScoreSheetPDFForDate() {
+    const matchesToPrint = getMatchesForScoreSheet();
+    const grouped = groupMatchesByCourt(matchesToPrint);
+    const doc = new jsPDF();
+    let firstPage = true;
+    // Base64 PNG for logo
+    Object.entries(grouped).forEach(([court, matches]) => {
+      const matchChunks = chunkArray(matches, 5);
+      matchChunks.forEach((chunk) => {
+        if (!firstPage) doc.addPage();
+        firstPage = false;
+        // Add Baddies logo at top left
+        // Header
+        doc.setFontSize(18);
+        doc.setTextColor(41, 128, 185); // blue
+        doc.text('PBEL City Badminton 2025', 105, 18, { align: 'center' });
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(12);
+        doc.text(`Court: ${court}`, 20, 28);
+        doc.text('Score Sheet (30 Points)', 160, 28, { align: 'right' });
+        doc.setLineWidth(0.5);
+        doc.line(15, 32, 195, 32);
+        let y = 40;
+        chunk.forEach((match, idx) => {
+          const [p1, p2] = getParticipantNamesForSheet(match);
+          // Get category for this match
+          const matchCategory = getCategoryForMatch(match);
+          // Color map for category code
+          const categoryColorMap: Record<string, { bg: [number, number, number], text: [number, number, number] }> = {
+            'MT': { bg: [41, 128, 185], text: [255,255,255] }, // blue (Men's Team)
+            'WS': { bg: [39, 174, 96], text: [255,255,255] }, // green (Women's Singles)
+            'WD': { bg: [142, 68, 173], text: [255,255,255] }, // purple (Women's Doubles)
+            'XD': { bg: [243, 156, 18], text: [255,255,255] }, // orange (Mixed Doubles)
+            'BU18': { bg: [52, 152, 219], text: [255,255,255] }, // light blue (Boys U18)
+            'BU13': { bg: [22, 160, 133], text: [255,255,255] }, // teal (Boys U13)
+            'GU18': { bg: [231, 76, 60], text: [255,255,255] }, // red (Girls U18)
+            'GU13': { bg: [241, 196, 15], text: [0,0,0] }, // yellow (Girls U13)
+            'FM': { bg: [127, 140, 141], text: [255,255,255] }, // gray (Family Mixed)
+            'default': { bg: [155, 89, 182], text: [255,255,255] } // fallback purple
+          };
+          const catCode = matchCategory?.code || 'default';
+          const catColor = categoryColorMap[catCode] || categoryColorMap['default'];
+          // Colored match label
+          doc.setFillColor(...catColor.bg);
+          doc.setTextColor(...catColor.text);
+          doc.setFontSize(12);
+          doc.rect(20, y-5, 40, 8, 'F');
+          doc.text(`Match #${match.match_no || '-'}`, 22, y, { baseline: 'middle' });
+          doc.setTextColor(0,0,0);
+          doc.setFontSize(11);
+          doc.text(`Date: ${formatISTDateTime(match.scheduled_date).date}`, 70, y);
+          doc.text(`Time: ${formatISTDateTime(match.scheduled_date).time}`, 130, y);
+          y += 8;
+          // Player 1 row
+          doc.setFontSize(10);
+          doc.text(p1, 20, y+6);
+          // Draw score boxes on the same row
+          for (let i = 0; i < 30; i++) {
+            doc.rect(70 + i*4, y, 4, 8);
+            doc.setFontSize(7);
+            doc.text(String(i+1), 72 + i*4 - (i+1 >= 10 ? 1 : 0), y+6);
+          }
+          y += 10;
+          // Player 2 row
+          doc.setFontSize(10);
+          doc.text(p2, 20, y+6);
+          for (let i = 0; i < 30; i++) {
+            doc.rect(70 + i*4, y, 4, 8);
+            doc.setFontSize(7);
+            doc.text(String(i+1), 72 + i*4 - (i+1 >= 10 ? 1 : 0), y+6);
+          }
+          y += 14;
+          // Add Referee Name and Signature fields
+          doc.setFontSize(9);
+          doc.text('Referee Name: ____________________', 20, y + 6);
+          doc.text('Signature: ____________________', 120, y + 6);
+          y += 14;
+          if (idx < chunk.length - 1) {
+            doc.setDrawColor(180);
+            doc.line(20, y, 190, y);
+            y += 6;
+          }
+        });
+      });
+    });
+    doc.save('PBEL_Badminton_Score_Sheets.pdf');
+    setShowScoreSheetModal(false);
+  }
+
   return (
     <div className="mx-auto">
       <div className="mb-8">
@@ -871,6 +1020,12 @@ export default function AdminMatchesPage() {
           >
             📊 Export Excel
           </button>
+          <button
+            onClick={() => setShowScoreSheetModal(true)}
+            className="px-6 py-3 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 transition-colors"
+          >
+            📝 Generate Score Sheets (PDF)
+          </button>
         </div>
       </div>
 
@@ -920,6 +1075,7 @@ export default function AdminMatchesPage() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Match</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Pool</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Match No</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Date</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Time</th>
@@ -966,6 +1122,7 @@ export default function AdminMatchesPage() {
                     
                     const { participant1, participant2 } = getParticipantNames();
                     const { date, time } = formatISTDateTime(match.scheduled_date);
+                    const poolName = pools.find(p => p.id === match.pool_id)?.name || '-';
                     
                     return (
                       <tr key={match.id} className={`hover:bg-gray-50 ${isEditing ? 'bg-yellow-50' : ''}`}>
@@ -976,9 +1133,8 @@ export default function AdminMatchesPage() {
                             <div className="font-semibold">{participant2}</div>
                           </div>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                          {match.match_no || '-'}
-                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{poolName}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{match.match_no || '-'}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                           {isEditing ? (
                             <input 
@@ -1019,9 +1175,7 @@ export default function AdminMatchesPage() {
                           )}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(match.status || 'scheduled')}`}>
-                            {getStatusIcon(match.status || 'scheduled')}
-                          </span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(match.status || 'scheduled')}`}>{getStatusIcon(match.status || 'scheduled')}</span>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                           <div className="flex items-center gap-2">
@@ -1288,6 +1442,34 @@ export default function AdminMatchesPage() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {showScoreSheetModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-xs mx-auto flex flex-col items-center">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Select Date for Score Sheet</h3>
+            <input
+              type="date"
+              value={scoreSheetDate}
+              onChange={e => setScoreSheetDate(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white mb-4"
+            />
+            <div className="flex gap-3 w-full">
+              <button
+                onClick={generateScoreSheetPDFForDate}
+                className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700"
+              >
+                Generate
+              </button>
+              <button
+                onClick={() => setShowScoreSheetModal(false)}
+                className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-400"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
