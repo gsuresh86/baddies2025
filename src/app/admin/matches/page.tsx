@@ -984,65 +984,65 @@ export default function AdminMatchesPage() {
       </div>
 
       {/* Filters and Actions */}
-      <div className="flex flex-col md:flex-row gap-4 mb-8">
-        <div className="flex-1">
-          <select
-            value={selectedPool}
-            onChange={(e) => setSelectedPool(e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-          >
-            <option value="all">All Pools</option>
-            {pools.map((pool) => (
-              <option key={pool.id} value={pool.id}>
-                {pool.name}
-              </option>
-            ))}
-          </select>
+      <div className="mb-6 flex flex-col gap-2 w-full max-w-2xl">
+        <div className="flex flex-row gap-2 w-full">
+          <div className="w-[200px] min-w-[200px]">
+            <label htmlFor="category-select" className="text-sm font-medium text-gray-700">Category:</label>
+            <select
+              id="category-select"
+              value={activeCategoryId}
+              onChange={e => setActiveCategoryId(e.target.value)}
+              className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white text-sm"
+            >
+              <option value="all">All</option>
+              {categories.map(cat => (
+                <option key={cat.id} value={cat.id}>{cat.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="w-[200px] min-w-[200px]">
+            <label htmlFor="pool-select" className="text-sm font-medium text-gray-700">Pool:</label>
+            <select
+              id="pool-select"
+              value={selectedPool}
+              onChange={e => setSelectedPool(e.target.value)}
+              className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white text-sm"
+            >
+              <option value="all">All</option>
+              {pools
+                .filter(pool => activeCategoryId === 'all' || pool.category_id === activeCategoryId)
+                .map(pool => (
+                  <option key={pool.id} value={pool.id}>{pool.name}</option>
+                ))}
+            </select>
+          </div>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-2 flex-wrap mt-1">
           <button
             onClick={() => setShowCreateMatch(true)}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            className="px-3 py-1.5 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center gap-1 text-sm"
           >
-            ➕ Create Match
+            <span>➕</span> <span>Match</span>
           </button>
-          {selectedPool !== 'all' && (
-            <button
-              onClick={openGenerateModal}
-              className="px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
-            >
-              🎲 Generate Matches
-            </button>
-          )}
+          <button
+            onClick={openGenerateModal}
+            className="px-3 py-1.5 bg-green-600 text-white rounded-md font-medium hover:bg-green-700 transition-colors flex items-center gap-1 text-sm"
+          >
+            <span>🎲</span> <span>Matches</span>
+          </button>
           <button
             onClick={exportToExcel}
-            className="px-6 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors"
+            className="px-3 py-1.5 bg-purple-600 text-white rounded-md font-medium hover:bg-purple-700 transition-colors flex items-center gap-1 text-sm"
           >
-            📊 Export Excel
+            <span>📊</span> <span>Excel</span>
           </button>
           <button
             onClick={() => setShowScoreSheetModal(true)}
-            className="px-6 py-3 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 transition-colors"
+            className="px-3 py-1.5 bg-orange-600 text-white rounded-md font-medium hover:bg-orange-700 transition-colors flex items-center gap-1 text-sm"
           >
-            📝 Generate Score Sheets (PDF)
+            <span>📝</span> <span>Sheets</span>
           </button>
         </div>
-      </div>
-
-      {/* Category Selector */}
-      <div className="mb-6 flex flex-col sm:flex-row gap-4 items-center">
-        <label htmlFor="category-select" className="text-sm font-medium text-gray-700">Category:</label>
-        <select
-          id="category-select"
-          value={activeCategoryId}
-          onChange={e => setActiveCategoryId(e.target.value)}
-          className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-        >
-          <option value="all">All</option>
-          {categories.map(cat => (
-            <option key={cat.id} value={cat.id}>{cat.label}</option>
-          ))}
-        </select>
       </div>
 
       {/* Matches List */}
