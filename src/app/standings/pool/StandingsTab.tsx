@@ -1,4 +1,5 @@
 import { TournamentStandings, Team } from '@/types';
+import React from 'react';
 
 const statLabels = [
   { key: 'matchesPlayed', label: 'MP' },
@@ -59,7 +60,7 @@ export default function StandingsTab({
               const hasPlayers = team?.players && team.players.length > 0;
               
               return (
-                <>
+                <React.Fragment key={standing.teamId}>
                   <tr
                     key={standing.teamId}
                     className="transition-all duration-200 hover:bg-white/10"
@@ -112,7 +113,7 @@ export default function StandingsTab({
                       </td>
                     </tr>
                   )}
-                </>
+                </React.Fragment>
               );
             })
           )}

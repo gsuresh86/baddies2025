@@ -59,7 +59,7 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
         <div 
-          className="fixed inset-0 bg-gray-300/60 z-40 lg:hidden"
+          className="fixed inset-0 bg-gray-300/60 z-40 lg:hidden backdrop-blur-sm"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
@@ -68,14 +68,14 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
         {/* Enhanced Sidebar */}
         <aside className={`
           fixed lg:static inset-y-0 left-0 z-50
-          bg-gradient-to-b from-white to-gray-50 border-r border-gray-200 shadow-lg 
-          flex flex-col py-6 px-4 min-h-screen transition-all duration-300 ease-in-out
+          glass bg-gradient-to-b from-white/80 to-gray-100/60 border-r border-gray-200 shadow-2xl
+          flex flex-col py-8 px-3 min-h-screen transition-all duration-300 ease-in-out
           ${sidebarCollapsed ? 'w-16' : 'w-64'}
           ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           lg:flex-shrink-0
         `}>
           {/* Header */}
-          <div className={`mb-8 p-4 bg-gradient-to-r from-blue-600 to-green-600 rounded-xl text-white transition-all duration-300 ${
+          <div className={`mb-8 p-4 bg-gradient-to-r from-blue-600/90 to-green-600/80 rounded-2xl text-white shadow-lg backdrop-blur-md transition-all duration-300 ${
             sidebarCollapsed ? 'px-2' : 'px-4'
           }`}>
             {sidebarCollapsed ? (
@@ -84,7 +84,7 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
               </div>
             ) : (
               <div>
-                <h1 className="text-xl font-bold mb-1">🏸 Baddies 2025</h1>
+                <h1 className="text-xl font-bold mb-1 tracking-tight">🏸 Baddies 2025</h1>
                 <p className="text-xs opacity-90">Admin Panel</p>
               </div>
             )}
@@ -92,9 +92,9 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
           
           {/* User Info */}
           {!sidebarCollapsed && (
-            <div className="mb-6 p-3 bg-gray-100 rounded-lg">
-              <div className="text-sm text-gray-600 mb-1">Logged in as:</div>
-              <div className="text-sm font-medium text-gray-800 truncate">{user.email}</div>
+            <div className="mb-6 p-3 bg-gray-100/80 rounded-xl shadow-inner">
+              <div className="text-xs text-gray-600 mb-1">Logged in as:</div>
+              <div className="text-sm font-semibold text-gray-800 truncate">{user.email}</div>
             </div>
           )}
 
@@ -107,13 +107,13 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
                   key={item.href}
                   href={item.href}
                   className={`
-                    flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors
+                    flex items-center px-4 py-2 text-sm font-medium rounded-xl transition-all
                     ${isActive 
-                      ? 'bg-blue-100 text-blue-700' 
-                      : 'text-gray-700 hover:bg-gray-100'
-                    }
+                      ? 'bg-blue-100/80 text-blue-700 shadow-md scale-[1.03]' 
+                      : 'text-gray-700 hover:bg-blue-50/80 hover:scale-[1.03] hover:shadow-lg'}
                     ${sidebarCollapsed ? 'justify-center px-2' : 'px-4'}
                   `}
+                  style={{ transition: 'all 0.18s cubic-bezier(.4,2,.6,1)' }}
                   title={sidebarCollapsed ? item.label : undefined}
                   onClick={() => { if (mobileMenuOpen) setMobileMenuOpen(false); }}
                 >
@@ -129,10 +129,11 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
             <button
               onClick={handleSignOut}
               className={`
-                w-full px-3 py-3 rounded-lg bg-red-50 text-red-700 font-medium 
-                transition-all duration-200 hover:bg-red-100 hover:shadow-md
+                w-full px-3 py-3 rounded-xl bg-red-50 text-red-700 font-semibold 
+                transition-all duration-200 hover:bg-red-100 hover:shadow-lg hover:scale-[1.03]
                 ${sidebarCollapsed ? 'px-2' : 'px-3'}
               `}
+              style={{ transition: 'all 0.18s cubic-bezier(.4,2,.6,1)' }}
               title={sidebarCollapsed ? 'Sign Out' : undefined}
             >
               {sidebarCollapsed ? '🚪' : '🚪 Sign Out'}
@@ -142,12 +143,12 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
 
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col min-h-screen">
-          <header className="w-full flex flex-col md:flex-row items-center justify-between px-4 sm:px-6 pt-3 pb-2 z-10 relative bg-white shadow-sm">
+          <header className="w-full flex flex-col md:flex-row items-center justify-between px-4 sm:px-8 pt-4 pb-2 z-10 relative bg-white/80 shadow-xl backdrop-blur-md border-b border-gray-200">
             <div className="flex items-center gap-4 w-full md:w-auto">
               {/* Mobile Menu Button */}
               <button
                 onClick={toggleMobileMenu}
-                className="lg:hidden p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
+                className="lg:hidden p-2 rounded-xl bg-gray-100/80 hover:bg-gray-200 transition-colors shadow"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -157,7 +158,7 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
               {/* Desktop Toggle Button */}
               <button
                 onClick={toggleSidebar}
-                className="hidden lg:block p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
+                className="hidden lg:block p-2 rounded-xl bg-gray-100/80 hover:bg-gray-200 transition-colors shadow"
                 title={sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -176,42 +177,10 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
                 />
               </div>
             </div>
-            {/* Quick Navigation Buttons moved here */}
-            <div className="flex flex-wrap gap-3 mt-3 md:mt-0 justify-end w-full md:w-auto">
-              <Link
-                href="/"
-                className="px-4 py-2 bg-white text-gray-700 rounded-lg text-sm font-medium shadow-sm hover:bg-gray-50 transition-all duration-200 border border-gray-200"
-              >
-                👁️ Public View
-              </Link>
-              <Link
-                href="/standings"
-                className="px-4 py-2 bg-white text-gray-700 rounded-lg text-sm font-medium shadow-sm hover:bg-gray-50 transition-all duration-200 border border-gray-200"
-              >
-                🏆 View Standings
-              </Link>
-              <Link
-                href="/teams"
-                className="px-4 py-2 bg-white text-gray-700 rounded-lg text-sm font-medium shadow-sm hover:bg-gray-50 transition-all duration-200 border border-gray-200"
-              >
-                👥 View Teams
-              </Link>
-              <Link
-                href="/formats"
-                className="px-4 py-2 bg-white text-gray-700 rounded-lg text-sm font-medium shadow-sm hover:bg-gray-50 transition-all duration-200 border border-gray-200"
-              >
-                📊 View Formats
-              </Link>
-              <Link
-                href="/rules"
-                className="px-4 py-2 bg-white text-gray-700 rounded-lg text-sm font-medium shadow-sm hover:bg-gray-50 transition-all duration-200 border border-gray-200"
-              >
-                📋 View Rules
-              </Link>
-            </div>
+            {/* Quick Navigation Buttons removed as per request */}
           </header>
 
-          <main className="flex-1 px-4 sm:px-6 py-6 bg-gradient-to-br from-gray-50 to-gray-100 overflow-y-auto">
+          <main className="flex-1 px-4 sm:px-8 py-8 bg-gradient-to-br from-gray-50/80 to-gray-100/80 overflow-y-auto rounded-2xl mt-4 shadow-xl">
             {children}
           </main>
         </div>
