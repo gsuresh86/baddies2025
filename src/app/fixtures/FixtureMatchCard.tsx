@@ -1,5 +1,6 @@
 import React from 'react';
 import { Category } from '@/types';
+import Link from 'next/link';
 
 // Helper to get first name
 const getFirstName = (name: string) => name?.split(' ')[0] || '';
@@ -7,9 +8,10 @@ const getFirstName = (name: string) => name?.split(' ')[0] || '';
 export interface FixtureMatchCardProps {
   match: any;
   category: Category;
+  showDetailsLink?: boolean;
 }
 
-export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({ match, category }) => {
+export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({ match, category, showDetailsLink = false }) => {
   let leftName = '', rightName = '';
   const categoryCode = category?.code || 'MT'; // Fallback to MT if category is undefined
   
@@ -51,9 +53,18 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({ match, categ
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto rounded-3xl bg-neutral-900/90 border border-white/10 shadow-xl px-3 py-2 flex items-center mb-3">
-      {/* Main Content */}
-      <div className="flex-1">
+    <Link href={`/match/${match.id}`} className="block">
+      <div className="w-full max-w-2xl mx-auto rounded-3xl bg-neutral-900/90 border border-white/10 shadow-xl px-3 py-2 flex items-center mb-3 hover:bg-neutral-800/90 transition-colors cursor-pointer">
+        {/* Main Content */}
+        <div className="flex-1">
+        {showDetailsLink && (
+          <Link
+            href={`/match/${match.id}`}
+            className="absolute top-2 right-2 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+          >
+            View Details →
+          </Link>
+        )}
         <div className="flex items-center justify-between w-full mb-2">
           <div className="flex items-center gap-1">
             <span className={`w-2 h-2 rounded-full ${getStatusColor(status)}`}></span>
@@ -90,6 +101,7 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({ match, categ
         </div>
       </div>
     </div>
+    </Link>
   );
 };
 

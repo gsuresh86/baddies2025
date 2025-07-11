@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/store';
 import Link from 'next/link';
 import AuthGuard from '@/components/AuthGuard';
+import ActivityLogSection from './ActivityLogSection';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ pools: 0, teams: 0, players: 0, categories: 0 });
@@ -182,32 +183,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Recent Activity */}
-        <div className="bg-white rounded-xl p-4 sm:p-6 shadow-lg border border-gray-200">
-          <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-3 sm:mb-4">Recent Activity</h3>
-          <div className="space-y-3">
-            <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-              <span className="text-base sm:text-lg mr-3">📊</span>
-              <div>
-                <p className="font-medium text-gray-800 text-sm sm:text-base">Tournament Statistics Updated</p>
-                <p className="text-xs sm:text-sm text-gray-600">Latest standings and match results</p>
-              </div>
-            </div>
-            <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-              <span className="text-base sm:text-lg mr-3">🏸</span>
-              <div>
-                <p className="font-medium text-gray-800 text-sm sm:text-base">Match Schedule Generated</p>
-                <p className="text-xs sm:text-sm text-gray-600">New fixtures created for all pools</p>
-              </div>
-            </div>
-            <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-              <span className="text-base sm:text-lg mr-3">👥</span>
-              <div>
-                <p className="font-medium text-gray-800 text-sm sm:text-base">Team Registration</p>
-                <p className="text-xs sm:text-sm text-gray-600">New teams added to the tournament</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ActivityLogSection />
       </div>
     </AuthGuard>
   );

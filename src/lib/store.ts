@@ -1,4 +1,4 @@
-import { Pool, Team, Player, Match, Category } from '@/types';
+import { Pool, Team, Player, Match, Category, MatchMedia, MatchHistory, MatchHighlight } from '@/types';
 import { createClient } from '@supabase/supabase-js';
 
 // TODO: Replace with your actual Supabase URL and anon key
@@ -979,6 +979,21 @@ class TournamentStore {
       throw error;
     }
     console.log('Match score updated');
+    // Log activity
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from('activity_logs').insert([
+        {
+          match_id: matchId,
+          activity_type: scoreData.status === 'completed' ? 'MATCH_COMPLETED' : 'MATCH_UPDATED',
+          description: scoreData.status === 'completed'
+            ? `Match marked as completed. Final score: ${scoreData.team1_score} - ${scoreData.team2_score}`
+            : `Match score updated to ${scoreData.team1_score} - ${scoreData.team2_score}`,
+          performed_by_user_id: user.id,
+          metadata: { ...scoreData },
+        }
+      ]);
+    }
   }
 
   async deleteMatch(matchId: string): Promise<void> {
@@ -1010,6 +1025,19 @@ class TournamentStore {
       throw error;
     }
     console.log('Match result updated');
+    // Log activity
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from('activity_logs').insert([
+        {
+          match_id: matchId,
+          activity_type: 'MATCH_COMPLETED',
+          description: `Match completed. Winner: ${winner}. Final score: ${team1Score} - ${team2Score}`,
+          performed_by_user_id: user.id,
+          metadata: { team1Score, team2Score, winner },
+        }
+      ]);
+    }
   }
 
   // Standings calculation
@@ -1070,6 +1098,231 @@ class TournamentStore {
     });
     
     return Object.values(standings).sort((a, b) => b.points - a.points);
+  }
+
+  // Match media management
+  async uploadMatchMedia(matchId: string, file: File, mediaType: 'photo' | 'video', description?: string): Promise<MatchMedia> {
+    console.log('Uploading match media:', { matchId, fileName: file.name, mediaType });
+    
+    // Check authentication
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Upload file to Supabase Storage
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${matchId}/${Date.now()}.${fileExt}`;
+    const filePath = `match-media/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('tournament-media')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (uploadError) {
+      console.error('Error uploading file:', uploadError);
+      throw uploadError;
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('tournament-media')
+      .getPublicUrl(filePath);
+
+    // Insert media record
+    const { data, error } = await supabase
+      .from('match_media')
+      .insert([{
+        match_id: matchId,
+        media_type: mediaType,
+        file_name: file.name,
+        file_url: urlData.publicUrl,
+        file_size: file.size,
+        mime_type: file.type,
+        description,
+        uploaded_by_user_id: user.id,
+        is_public: true,
+        is_featured: false
+      }])
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error('Error inserting media record:', error);
+      throw error;
+    }
+
+    console.log('Media uploaded successfully:', data);
+    return data as MatchMedia;
+  }
+
+  async getMatchMedia(matchId: string): Promise<MatchMedia[]> {
+    console.log('Fetching match media for:', matchId);
+    
+    try {
+      const { data, error } = await supabase
+        .from('match_media')
+        .select('*')
+        .eq('match_id', matchId)
+        .eq('is_public', true)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching match media:', error);
+        console.error('Error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        throw error;
+      }
+
+      console.log('Match media fetched successfully:', data);
+      return data as MatchMedia[];
+    } catch (err) {
+      console.error('Exception in getMatchMedia:', err);
+      throw err;
+    }
+  }
+
+  async deleteMatchMedia(mediaId: string): Promise<void> {
+    console.log('Deleting match media:', mediaId);
+    
+    // Check authentication
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Get media record to check ownership and get file path
+    const { data: mediaData, error: fetchError } = await supabase
+      .from('match_media')
+      .select('*')
+      .eq('id', mediaId)
+      .single();
+
+    if (fetchError || !mediaData) {
+      throw new Error('Media not found');
+    }
+
+    // Check if user owns the media or is admin
+    if (mediaData.uploaded_by_user_id !== user.id) {
+      throw new Error('Not authorized to delete this media');
+    }
+
+    // Delete from storage
+    const filePath = mediaData.file_url.split('/').slice(-2).join('/');
+    const { error: storageError } = await supabase.storage
+      .from('tournament-media')
+      .remove([`match-media/${filePath}`]);
+
+    if (storageError) {
+      console.error('Error deleting from storage:', storageError);
+    }
+
+    // Delete from database
+    const { error } = await supabase
+      .from('match_media')
+      .delete()
+      .eq('id', mediaId);
+
+    if (error) {
+      console.error('Error deleting media record:', error);
+      throw error;
+    }
+
+    console.log('Media deleted successfully');
+  }
+
+  // Match history management
+  async addMatchHistory(matchId: string, gameNumber: number, team1Score: number, team2Score: number, winner: 'team1' | 'team2' | 'draw', gameNotes?: string): Promise<MatchHistory> {
+    console.log('Adding match history:', { matchId, gameNumber, team1Score, team2Score, winner });
+    
+    const { data, error } = await supabase
+      .from('match_history')
+      .insert([{
+        match_id: matchId,
+        game_number: gameNumber,
+        team1_score: team1Score,
+        team2_score: team2Score,
+        winner,
+        game_notes: gameNotes
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error adding match history:', error);
+      throw error;
+    }
+
+    console.log('Match history added:', data);
+    return data as MatchHistory;
+  }
+
+  async getMatchHistory(matchId: string): Promise<MatchHistory[]> {
+    console.log('Fetching match history for:', matchId);
+    
+    const { data, error } = await supabase
+      .from('match_history')
+      .select('*')
+      .eq('match_id', matchId)
+      .order('game_number', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching match history:', error);
+      throw error;
+    }
+
+    console.log('Match history fetched:', data);
+    return data as MatchHistory[];
+  }
+
+  // Match highlights management
+  async addMatchHighlight(matchId: string, highlightType: string, description?: string, timestamp?: number, mediaId?: string): Promise<MatchHighlight> {
+    console.log('Adding match highlight:', { matchId, highlightType, description });
+    
+    const { data, error } = await supabase
+      .from('match_highlights')
+      .insert([{
+        match_id: matchId,
+        highlight_type: highlightType,
+        description,
+        timestamp,
+        media_id: mediaId
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error adding match highlight:', error);
+      throw error;
+    }
+
+    console.log('Match highlight added:', data);
+    return data as MatchHighlight;
+  }
+
+  async getMatchHighlights(matchId: string): Promise<MatchHighlight[]> {
+    console.log('Fetching match highlights for:', matchId);
+    
+    const { data, error } = await supabase
+      .from('match_highlights')
+      .select('*, media:match_media(*)')
+      .eq('match_id', matchId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching match highlights:', error);
+      throw error;
+    }
+
+    console.log('Match highlights fetched:', data);
+    return data as MatchHighlight[];
   }
 }
 

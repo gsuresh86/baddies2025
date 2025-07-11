@@ -52,6 +52,13 @@ export interface Match {
   match_no?: string;
   created_at?: string;
   updated_at?: string;
+  // New fields for match history
+  match_notes?: string;
+  match_highlights?: string;
+  match_duration?: number;
+  match_venue?: string;
+  match_officials?: string[];
+  match_referee?: string;
   // Joined data from Supabase queries
   team1?: Team;
   team2?: Team;
@@ -60,6 +67,10 @@ export interface Match {
   pool?: Pool;
   games?: Game[];
   completed?: boolean;
+  // Media and history
+  media?: MatchMedia[];
+  history?: MatchHistory[];
+  highlights?: MatchHighlight[];
 }
 
 export interface Pool {
@@ -192,4 +203,45 @@ export interface PoolPair {
   created_at?: string;
   player1?: Player;
   player2?: Player;
+}
+
+export interface MatchHistory {
+  id: string;
+  match_id: string;
+  game_number: number;
+  team1_score?: number;
+  team2_score?: number;
+  winner?: 'team1' | 'team2' | 'draw';
+  game_duration?: number; // in minutes
+  game_notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MatchMedia {
+  id: string;
+  match_id: string;
+  media_type: 'photo' | 'video';
+  file_name: string;
+  file_url: string;
+  file_size?: number;
+  mime_type?: string;
+  description?: string;
+  uploaded_by_user_id: string;
+  is_public: boolean;
+  is_featured: boolean;
+  created_at: string;
+  updated_at: string;
+  user?: { email?: string };
+}
+
+export interface MatchHighlight {
+  id: string;
+  match_id: string;
+  highlight_type: string;
+  description?: string;
+  timestamp?: number; // seconds from match start
+  media_id?: string;
+  created_at: string;
+  media?: MatchMedia;
 } 

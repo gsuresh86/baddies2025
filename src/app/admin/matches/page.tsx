@@ -8,6 +8,7 @@ import { useData } from '@/contexts/DataContext';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import UpdateScoreModal from './components/UpdateScoreModal';
+import Link from 'next/link';
 
 export default function AdminMatchesPage() {
   const { showSuccess, showError } = useToast();
@@ -133,6 +134,19 @@ export default function AdminMatchesPage() {
         .update(updated)
         .eq('id', match.id);
       if (error) throw error;
+      // Log activity
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('activity_logs').insert([
+          {
+            match_id: match.id,
+            activity_type: 'MATCH_RESCHEDULED',
+            description: `Match rescheduled to ${scheduledDate || 'unspecified date'}${editCourt ? ` on Court ${editCourt}` : ''}`,
+            performed_by_user_id: user.id,
+            metadata: { scheduled_date: scheduledDate, court: editCourt }
+          }
+        ]);
+      }
       showSuccess('Match updated');
       setEditingMatchId(null);
       fetchData();
@@ -995,6 +1009,22 @@ export default function AdminMatchesPage() {
                           </button>
                         )}
                       </div>
+                      <div className="flex gap-2 mt-2">
+                        <Link
+                          href={`/admin/matches/${match.id}`}
+                          className="flex-1 px-3 py-2 bg-purple-200 text-purple-800 rounded-lg text-xs font-semibold text-center hover:bg-purple-300 transition"
+                        >
+                          Details
+                        </Link>
+                        {matchType === 'team' && (
+                          <Link
+                            href={`/admin/matches/${match.id}/manage`}
+                            className="flex-1 px-3 py-2 bg-gray-200 text-gray-800 rounded-lg text-xs font-semibold text-center hover:bg-gray-300 transition"
+                          >
+                            Lineup
+                          </Link>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -1158,6 +1188,13 @@ export default function AdminMatchesPage() {
                                       Lineup
                                     </a>
                                   )}
+                                  <a 
+                                    href={`/admin/matches/${match.id}`} 
+                                    className="px-2 py-1 bg-purple-200 text-purple-800 rounded text-xs hover:bg-purple-300 text-center"
+                                    style={{ textDecoration: 'none' }}
+                                  >
+                                    Details
+                                  </a>
                                 </>
                               )}
                             </div>
