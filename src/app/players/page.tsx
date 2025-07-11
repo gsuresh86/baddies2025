@@ -196,6 +196,9 @@ export default function PlayersPage() {
               &times;
             </button>
             <h2 className="text-white text-xl font-bold mb-4 text-center">Matches for {selectedPlayer.name}</h2>
+            <div className="text-center text-sm text-gray-300 mb-2 font-semibold">
+              Total Matches: {getPlayerMatches(selectedPlayer.ids, matches, players, selectedPlayer.name).length}
+            </div>
             <div className="max-h-96 overflow-y-auto">
               {getPlayerMatches(selectedPlayer.ids, matches, players, selectedPlayer.name).length === 0 ? (
                 <div className="text-gray-400 text-center py-8">No matches found for this player.</div>
@@ -214,28 +217,40 @@ export default function PlayersPage() {
                     if (matchType === 'pair') {
                       if (isPlayer1) {
                         player = players.find(p => p.id === match.player1_id);
-                        partner = player && player.partner_name ? players.find(p => p.name === player.partner_name) : undefined;
+                        partner = player?.partner_name
+                          ? players.find(p => p.name && p.name.trim().toLowerCase() === player?.partner_name?.trim().toLowerCase())
+                          : undefined;
                         opponentPlayer = players.find(p => p.id === match.player2_id);
-                        opponentPartner = opponentPlayer && opponentPlayer.partner_name ? players.find(p => p.name === opponentPlayer.partner_name) : undefined;
+                        opponentPartner = opponentPlayer?.partner_name
+                          ? players.find(p => p.name && p.name.trim().toLowerCase() === opponentPlayer?.partner_name?.trim().toLowerCase())
+                          : undefined;
                       } else if (isPlayer2) {
                         player = players.find(p => p.id === match.player2_id);
-                        partner = player && player.partner_name ? players.find(p => p.name === player.partner_name) : undefined;
+                        partner = player?.partner_name
+                          ? players.find(p => p.name && p.name.trim().toLowerCase() === player?.partner_name?.trim().toLowerCase())
+                          : undefined;
                         opponentPlayer = players.find(p => p.id === match.player1_id);
-                        opponentPartner = opponentPlayer && opponentPlayer.partner_name ? players.find(p => p.name === opponentPlayer.partner_name) : undefined;
+                        opponentPartner = opponentPlayer?.partner_name
+                          ? players.find(p => p.name && p.name.trim().toLowerCase() === opponentPlayer?.partner_name?.trim().toLowerCase())
+                          : undefined;
                       } else {
                         // If player is a partner, find which side
                         const player1 = players.find(p => p.id === match.player1_id);
                         const player2 = players.find(p => p.id === match.player2_id);
-                        if (player1 && player1.partner_name && player1.partner_name.trim().toLowerCase() === selectedPlayer.name.trim().toLowerCase()) {
+                        if (player1?.partner_name && (player1?.partner_name ?? '').trim().toLowerCase() === selectedPlayer.name.trim().toLowerCase()) {
                           player = player1;
-                          partner = players.find(p => p.name.trim().toLowerCase() === (player1.partner_name?.trim().toLowerCase() ?? ''));
+                          partner = players.find(p => p.name.trim().toLowerCase() === (player1?.partner_name ?? '').trim().toLowerCase());
                           opponentPlayer = player2;
-                          opponentPartner = player2 && player2.partner_name ? players.find(p => p.name === player2.partner_name) : undefined;
-                        } else if (player2 && player2.partner_name && player2.partner_name.trim().toLowerCase() === selectedPlayer.name.trim().toLowerCase()) {
+                          opponentPartner = player2?.partner_name
+                            ? players.find(p => p.name.trim().toLowerCase() === (player2?.partner_name ?? '').trim().toLowerCase())
+                            : undefined;
+                        } else if (player2?.partner_name && (player2?.partner_name ?? '').trim().toLowerCase() === selectedPlayer.name.trim().toLowerCase()) {
                           player = player2;
-                          partner = players.find(p => p.name.trim().toLowerCase() === (player2.partner_name?.trim().toLowerCase() ?? ''));
+                          partner = players.find(p => p.name.trim().toLowerCase() === (player2?.partner_name ?? '').trim().toLowerCase());
                           opponentPlayer = player1;
-                          opponentPartner = player1 && player1.partner_name ? players.find(p => p.name === player1.partner_name) : undefined;
+                          opponentPartner = player1?.partner_name
+                            ? players.find(p => p.name.trim().toLowerCase() === (player1?.partner_name ?? '').trim().toLowerCase())
+                            : undefined;
                         }
                       }
                     } else {
@@ -251,13 +266,13 @@ export default function PlayersPage() {
                     if (partner?.name) {
                       yourPair += ' / ' + partner.name;
                     } else if (player?.partner_name) {
-                      yourPair += ' / ' + player.partner_name;
+                      yourPair += ' / ' + (player?.partner_name ?? '');
                     }
                     let opponentPair = opponentPlayer?.name ?? '';
                     if (opponentPartner?.name) {
                       opponentPair += ' / ' + opponentPartner.name;
                     } else if (opponentPlayer?.partner_name) {
-                      opponentPair += ' / ' + opponentPlayer.partner_name;
+                      opponentPair += ' / ' + (opponentPlayer?.partner_name ?? '');
                     }
                     return (
                       <li key={match.id} className="bg-black/60 rounded-lg p-4 border border-white/10 shadow">
