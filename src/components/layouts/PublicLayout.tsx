@@ -78,6 +78,12 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
             <span className="relative">👥 Teams</span>
           </Link>
           <Link
+            href="/players"
+            className="px-3 sm:px-5 py-2 bg-black text-white rounded-xl text-sm sm:text-lg font-bold shadow hover:bg-gray-900 transition border-2 border-gray-700 hover-lift relative overflow-hidden"
+          >
+            <span className="relative">🧑‍🎾 Players</span>
+          </Link>
+          <Link
             href="/formats"
             className="px-3 sm:px-5 py-2 bg-black text-white rounded-xl text-sm sm:text-lg font-bold shadow hover:bg-gray-900 transition border-2 border-gray-700 hover-lift relative overflow-hidden"
           >
@@ -119,6 +125,11 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                 className="px-4 py-3 rounded-lg text-lg font-bold text-white bg-gray-900 hover:bg-gray-800 border border-gray-700"
                 onClick={() => setMobileMenuOpen(false)}
               >👥 Teams</Link>
+              <Link
+                href="/players"
+                className="px-4 py-3 rounded-lg text-lg font-bold text-white bg-gray-900 hover:bg-gray-800 border border-gray-700"
+                onClick={() => setMobileMenuOpen(false)}
+              >🧑‍🎾 Players</Link>
               <Link
                 href="/formats"
                 className="px-4 py-3 rounded-lg text-lg font-bold text-white bg-gray-900 hover:bg-gray-800 border border-gray-700"

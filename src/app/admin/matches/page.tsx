@@ -7,7 +7,6 @@ import { useToast } from '@/contexts/ToastContext';
 import { useData } from '@/contexts/DataContext';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
-import UpdateScoreModal from './components/UpdateScoreModal';
 import Link from 'next/link';
 
 export default function AdminMatchesPage() {
@@ -28,7 +27,6 @@ export default function AdminMatchesPage() {
   
   // Modal states
   const [showCreateMatch, setShowCreateMatch] = useState(false);
-  const [showUpdateScore, setShowUpdateScore] = useState(false);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [generateCategory, setGenerateCategory] = useState('');
   const [generatePools, setGeneratePools] = useState<string[]>([]);
@@ -38,10 +36,6 @@ export default function AdminMatchesPage() {
   const [generatePreview, setGeneratePreview] = useState<any[]>([]);
   const [generateLoading, setGenerateLoading] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
-  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
-  const [team1Score, setTeam1Score] = useState('');
-  const [team2Score, setTeam2Score] = useState('');
-  const [matchStatus, setMatchStatus] = useState('scheduled');
 
   // Helper to get pools for a category
   const getPoolsForCategory = (categoryId: string) => pools.filter(pool => pool.category_id === categoryId);
@@ -273,41 +267,6 @@ export default function AdminMatchesPage() {
       console.error('Error creating match:', error);
       showError('Error creating match');
     }
-  };
-
-  const handleUpdateScore = async () => {
-    if (!selectedMatch || !team1Score || !team2Score) return;
-    
-    try {
-      const scoreData = {
-        team1_score: parseInt(team1Score),
-        team2_score: parseInt(team2Score),
-        status: matchStatus
-      };
-      
-      await tournamentStore.updateMatchScore(selectedMatch.id, scoreData);
-      
-      // Reset form
-      setTeam1Score('');
-      setTeam2Score('');
-      setMatchStatus('scheduled');
-      setShowUpdateScore(false);
-      setSelectedMatch(null);
-      
-      showSuccess('Score updated successfully');
-      fetchData();
-    } catch (error) {
-      console.error('Error updating score:', error);
-      showError('Error updating score');
-    }
-  };
-
-  const openUpdateScoreModal = (match: Match) => {
-    setSelectedMatch(match);
-    setTeam1Score(match.team1_score?.toString() || '');
-    setTeam2Score(match.team2_score?.toString() || '');
-    setMatchStatus(match.status || 'scheduled');
-    setShowUpdateScore(true);
   };
 
   const getTeamName = useCallback((teamId: string) => {
@@ -979,12 +938,6 @@ export default function AdminMatchesPage() {
                         ) : time}</span>
                       </div>
                       <div className="flex gap-2 mt-2">
-                        <button
-                          onClick={() => openUpdateScoreModal(match)}
-                          className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold text-center hover:bg-blue-700 transition"
-                        >
-                          Set Score
-                        </button>
                         {isEditing ? (
                           <>
                             <button
@@ -1173,12 +1126,6 @@ export default function AdminMatchesPage() {
                                   >
                                     Edit
                                   </button>
-                                  <button 
-                                    onClick={() => openUpdateScoreModal(match)} 
-                                    className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
-                                  >
-                                    Score
-                                  </button>
                                   {matchType === 'team' && (
                                     <a 
                                       href={`/admin/matches/${match.id}/manage`} 
@@ -1322,26 +1269,6 @@ export default function AdminMatchesPage() {
           </div>
         </div>
       )}
-
-      {/* Update Score Modal */}
-      <UpdateScoreModal
-        show={showUpdateScore}
-        match={selectedMatch}
-        matchStatus={matchStatus}
-        team1Score={team1Score}
-        team2Score={team2Score}
-        onTeam1ScoreChange={setTeam1Score}
-        onTeam2ScoreChange={setTeam2Score}
-        onStatusChange={setMatchStatus}
-        onUpdateScore={handleUpdateScore}
-        onClose={() => {
-          setShowUpdateScore(false);
-          setSelectedMatch(null);
-        }}
-        getCategoryForMatch={getCategoryForMatch}
-        getTeamName={getTeamName}
-        getPlayerName={getPlayerName}
-      />
 
       {/* Generate Matches Modal */}
       {showGenerateModal && (
