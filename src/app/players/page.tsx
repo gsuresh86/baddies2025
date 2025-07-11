@@ -5,48 +5,68 @@ import { Player, Match } from "@/types";
 import { categoryLabels, PlayerCategory, categoryTypes } from "@/lib/utils";
 
 function getUniquePlayersWithCategories(players: Player[]) {
-  const uniqueMap = new Map<string, { name: string; level: string; tshirt_size?: string; categories: Set<string>; id: string }>();
+  const uniqueMap = new Map<string, { name: string; level: string; tshirt_size?: string; categories: Set<string>; ids: string[] }>();
   players.forEach((player: any) => {
     const nameKey = player.name.replace(/\s+/g, '').toLowerCase();
     if (!uniqueMap.has(nameKey)) {
       uniqueMap.set(nameKey, {
-        id: player.id,
         name: player.name,
         level: player.level || "Common",
         tshirt_size: player.tshirt_size || "-",
         categories: new Set<string>(),
+        ids: [],
       });
     }
     if (player.category) {
       uniqueMap.get(nameKey)?.categories.add(player.category);
+    }
+    if (player.id) {
+      uniqueMap.get(nameKey)?.ids.push(player.id);
     }
     // Partner: add main player's category to partner's entry
     if (player.partner_name) {
       const partnerNameKey = player.partner_name.replace(/\s+/g, '').toLowerCase();
       if (!uniqueMap.has(partnerNameKey)) {
         uniqueMap.set(partnerNameKey, {
-          id: player.id, // fallback, may not be correct for partner
           name: player.partner_name,
           level: "Common",
           tshirt_size: player.partner_tshirt_size || "-",
           categories: new Set<string>(),
+          ids: [],
         });
       }
       if (player.category) {
         uniqueMap.get(partnerNameKey)?.categories.add(player.category);
+      }
+      // If partner has an id, add it
+      if (player.partner_id) {
+        uniqueMap.get(partnerNameKey)?.ids.push(player.partner_id);
       }
     }
   });
   return Array.from(uniqueMap.values()).map((p) => ({
     ...p,
     categories: Array.from(p.categories),
+    ids: Array.from(new Set(p.ids)), // dedupe ids
   }));
 }
 
-function getPlayerMatches(playerId: string, matches: Match[]): Match[] {
-  return matches.filter(
-    (m) => m.player1_id === playerId || m.player2_id === playerId
-  );
+function getPlayerMatches(playerIds: string[], matches: Match[], players: Player[], playerName: string): Match[] {
+  const validIds = playerIds.filter((id): id is string => typeof id === 'string');
+  return matches.filter((m) => {
+    // Direct match by ID
+    if ((m.player1_id && validIds.includes(m.player1_id)) || (m.player2_id && validIds.includes(m.player2_id))) {
+      return true;
+    }
+    // Check if selected player is the partner of player1 or player2
+    const player1 = players.find(p => p.id === m.player1_id);
+    const player2 = players.find(p => p.id === m.player2_id);
+    if ((player1 && player1.partner_name && player1.partner_name.trim().toLowerCase() === playerName.trim().toLowerCase()) ||
+        (player2 && player2.partner_name && player2.partner_name.trim().toLowerCase() === playerName.trim().toLowerCase())) {
+      return true;
+    }
+    return false;
+  });
 }
 
 export default function PlayersPage() {
@@ -177,50 +197,67 @@ export default function PlayersPage() {
             </button>
             <h2 className="text-white text-xl font-bold mb-4 text-center">Matches for {selectedPlayer.name}</h2>
             <div className="max-h-96 overflow-y-auto">
-              {getPlayerMatches(selectedPlayer.id, matches).length === 0 ? (
+              {getPlayerMatches(selectedPlayer.ids, matches, players, selectedPlayer.name).length === 0 ? (
                 <div className="text-gray-400 text-center py-8">No matches found for this player.</div>
               ) : (
                 <ul className="space-y-4">
-                  {getPlayerMatches(selectedPlayer.id, matches).map((match) => {
+                  {getPlayerMatches(selectedPlayer.ids, matches, players, selectedPlayer.name).map((match) => {
                     const matchCategory = getCategoryForMatch(match);
                     const matchType = matchCategory ? categoryTypes[matchCategory.label as PlayerCategory] : undefined;
                     const { date, time } = formatISTDateTime(match.scheduled_date);
-                    // Determine opponent and partner
-                    let opponentName = '-';
-                    let partnerName = '';
+                    // Determine which side the selected player is on
+                    const isPlayer1 = match.player1_id ? selectedPlayer.ids.includes(match.player1_id) : false;
+                    const isPlayer2 = match.player2_id ? selectedPlayer.ids.includes(match.player2_id) : false;
+                    // Find player and partner for this match
+                    let player: Player | undefined, partner: Player | undefined;
+                    let opponentPlayer: Player | undefined, opponentPartner: Player | undefined;
                     if (matchType === 'pair') {
-                      // For pair games, show partner name by always looking up both players
-                      let player: Player | undefined, partner: Player | undefined, opp: Player | undefined;
-                      if (match.player1_id === selectedPlayer.id) {
+                      if (isPlayer1) {
                         player = players.find(p => p.id === match.player1_id);
-                        partner = player && player.partner_name
-                          ? players.find(p => p.name === player?.partner_name)
-                          : undefined;
-                        opp = players.find(p => p.id === match.player2_id);
-                        opponentName = opp ? (opp.partner_name ? `${opp.name} / ${opp.partner_name}` : opp.name) : '-';
-                      } else {
+                        partner = player && player.partner_name ? players.find(p => p.name === player.partner_name) : undefined;
+                        opponentPlayer = players.find(p => p.id === match.player2_id);
+                        opponentPartner = opponentPlayer && opponentPlayer.partner_name ? players.find(p => p.name === opponentPlayer.partner_name) : undefined;
+                      } else if (isPlayer2) {
                         player = players.find(p => p.id === match.player2_id);
-                        partner = player && player.partner_name
-                          ? players.find(p => p.name === player?.partner_name)
-                          : undefined;
-                        opp = players.find(p => p.id === match.player1_id);
-                        opponentName = opp ? (opp.partner_name ? `${opp.name} / ${opp.partner_name}` : opp.name) : '-';
-                      }
-                      // Show partner name if found, else fallback to player.partner_name string
-                      if (partner && partner.name) {
-                        partnerName = partner.name;
-                      } else if (player && player.partner_name) {
-                        partnerName = player.partner_name;
+                        partner = player && player.partner_name ? players.find(p => p.name === player.partner_name) : undefined;
+                        opponentPlayer = players.find(p => p.id === match.player1_id);
+                        opponentPartner = opponentPlayer && opponentPlayer.partner_name ? players.find(p => p.name === opponentPlayer.partner_name) : undefined;
                       } else {
-                        partnerName = '';
+                        // If player is a partner, find which side
+                        const player1 = players.find(p => p.id === match.player1_id);
+                        const player2 = players.find(p => p.id === match.player2_id);
+                        if (player1 && player1.partner_name && player1.partner_name.trim().toLowerCase() === selectedPlayer.name.trim().toLowerCase()) {
+                          player = player1;
+                          partner = players.find(p => p.name.trim().toLowerCase() === (player1.partner_name?.trim().toLowerCase() ?? ''));
+                          opponentPlayer = player2;
+                          opponentPartner = player2 && player2.partner_name ? players.find(p => p.name === player2.partner_name) : undefined;
+                        } else if (player2 && player2.partner_name && player2.partner_name.trim().toLowerCase() === selectedPlayer.name.trim().toLowerCase()) {
+                          player = player2;
+                          partner = players.find(p => p.name.trim().toLowerCase() === (player2.partner_name?.trim().toLowerCase() ?? ''));
+                          opponentPlayer = player1;
+                          opponentPartner = player1 && player1.partner_name ? players.find(p => p.name === player1.partner_name) : undefined;
+                        }
                       }
                     } else {
-                      // Singles: just show opponent
-                      if (match.player1_id === selectedPlayer.id) {
-                        opponentName = players.find(p => p.id === match.player2_id)?.name || '-';
-                      } else {
-                        opponentName = players.find(p => p.id === match.player1_id)?.name || '-';
+                      // Singles
+                      if (isPlayer1) {
+                        opponentPlayer = players.find(p => p.id === match.player2_id);
+                      } else if (isPlayer2) {
+                        opponentPlayer = players.find(p => p.id === match.player1_id);
                       }
+                    }
+                    // Build display names
+                    let yourPair = player?.name ?? '';
+                    if (partner?.name) {
+                      yourPair += ' / ' + partner.name;
+                    } else if (player?.partner_name) {
+                      yourPair += ' / ' + player.partner_name;
+                    }
+                    let opponentPair = opponentPlayer?.name ?? '';
+                    if (opponentPartner?.name) {
+                      opponentPair += ' / ' + opponentPartner.name;
+                    } else if (opponentPlayer?.partner_name) {
+                      opponentPair += ' / ' + opponentPlayer.partner_name;
                     }
                     return (
                       <li key={match.id} className="bg-black/60 rounded-lg p-4 border border-white/10 shadow">
@@ -231,9 +268,13 @@ export default function PlayersPage() {
                             <span className="text-xs font-bold text-pink-200 bg-pink-900/40 px-2 py-1 rounded">{time}</span>
                           </div>
                           <div className="text-gray-300 text-xs">Status: {match.status || '-'}</div>
-                          <div className="text-gray-300 text-xs">Opponent: {opponentName}</div>
-                          {matchType === 'pair' && partnerName && (
-                            <div className="text-xs text-amber-300 font-semibold">Partner: {partnerName}</div>
+                          {matchType === 'pair' ? (
+                            <>
+                              <div className="text-xs text-amber-300 font-semibold">Your Pair: {yourPair || '-'}</div>
+                              <div className="text-xs text-green-300 font-semibold">Opponent Pair: {opponentPair || '-'}</div>
+                            </>
+                          ) : (
+                            <div className="text-gray-300 text-xs">Opponent: {(opponentPlayer?.name ?? '-') || '-'}</div>
                           )}
                         </div>
                       </li>
