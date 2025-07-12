@@ -171,7 +171,7 @@ export default function LiveScorePage() {
         </div>
 
         {/* Main Content */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="mx-auto px-4 sm:px-6 lg:px-8 py-4">
           {/* Sponsor Logos - Animated Marquee */}
           <div className="relative w-full overflow-x-hidden mb-4">
             <div className="flex items-center animate-marquee whitespace-nowrap gap-12 py-2">
