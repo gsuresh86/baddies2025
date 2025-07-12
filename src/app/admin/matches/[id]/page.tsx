@@ -446,6 +446,13 @@ export default function AdminMatchDetailsPage() {
               ) : null;
             })()}
             
+            <Link
+              href={`/admin/matches/${match.id}/livescore`}
+              className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition"
+            >
+              Live Score
+            </Link>
+            
             <button
               onClick={() => setShowUploadForm(!showUploadForm)}
               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"

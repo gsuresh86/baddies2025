@@ -86,6 +86,11 @@ body {
   }
 }
 
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
 /* Custom utility classes */
 .animate-float {
   animation: float 3s ease-in-out infinite;
@@ -115,6 +120,10 @@ body {
 
 .animate-scale-in {
   animation: scaleIn 0.4s ease-out;
+}
+
+.animate-marquee {
+  animation: marquee 30s linear infinite;
 }
 
 /* Glass morphism effect */
