@@ -12,7 +12,7 @@ export interface FixtureMatchCardProps {
   showDetailsLink?: boolean;
 }
 
-export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({ match, category, showDetailsLink = false }) => {
+export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({ match, category }) => {
   let leftName = '', rightName = '';
   const categoryCode = category?.code || 'MT'; // Fallback to MT if category is undefined
   
@@ -53,54 +53,69 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({ match, categ
     }
   };
 
+  // Winner logic
+  let winnerSide: 'left' | 'right' | null = null;
+  if (status === 'completed' && match.winner) {
+    if (categoryCode === 'MT') {
+      if (match.winner === 'team1' || match.winner === match.team1_id) winnerSide = 'left';
+      else if (match.winner === 'team2' || match.winner === match.team2_id) winnerSide = 'right';
+    } else {
+      if (match.winner === 'player1' || match.winner === match.player1_id) winnerSide = 'left';
+      else if (match.winner === 'player2' || match.winner === match.player2_id) winnerSide = 'right';
+    }
+  }
+
   return (
     <div className="w-full max-w-2xl mx-auto rounded-3xl bg-neutral-900/90 border border-white/10 shadow-xl px-3 py-2 flex items-center mb-3 hover:bg-neutral-800/90 transition-colors relative">
       {/* Main Content */}
       <Link href={`/match/${match.id}`} className="flex-1">
-        <div className="flex-1">
-        {showDetailsLink && (
-          <Link
-            href={`/match/${match.id}`}
-            className="absolute top-2 right-2 text-xs text-blue-400 hover:text-blue-300 transition-colors"
-          >
-            View Details →
-          </Link>
-        )}
-        <div className="flex items-center justify-between w-full mb-2">
-          <div className="flex items-center gap-1">
-            <span className={`w-2 h-2 rounded-full ${getStatusColor(status)}`}></span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-yellow-300">{dateStr}</span>
-            {timeStr && (
-              <span className="text-lg font-bold text-cyan-300">{timeStr}</span>
-            )}
-          </div>
-          <span className="font-semibold text-white/90 text-xs">{court}</span>
-        </div>
-        <div className="flex items-center justify-between w-full gap-2 py-1">
-          <div className="flex flex-col items-center flex-1">
-            <div className="w-12 h-12 rounded-full mb-1 border-2 border-white/20 bg-gradient-to-br from-blue-500/20 to-blue-600/20 flex items-center justify-center">
-              <span className="text-lg font-bold text-blue-300">👤</span>
-            </div>
-            <span className="font-bold text-white text-sm truncate max-w-[80px] text-center whitespace-pre-line">{leftName}</span>
-          </div>
-          <div className="flex flex-col items-center min-w-[60px]">
+        <div className="flex-1 relative">
+          <div className="flex items-center justify-between w-full mb-2">
             <div className="flex items-center gap-1">
-              <span className="text-lg font-bold text-blue-400">{match.team1_score ?? '-'}</span>
-              <span className="text-xs text-white/60">vs</span>
-              <span className="text-lg font-bold text-red-400">{match.team2_score ?? '-'}</span>
+              <span className={`w-2 h-2 rounded-full ${getStatusColor(status)}`}></span>
             </div>
-            <span className="text-xs text-purple-300 mt-1 font-bold">{match.match_no || 'TBD'}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-yellow-300">{dateStr}</span>
+              {timeStr && (
+                <span className="text-lg font-bold text-cyan-300">{timeStr}</span>
+              )}
+            </div>
+            <span className="font-semibold text-white/90 text-xs">{court}</span>
           </div>
-          <div className="flex flex-col items-center flex-1">
-            <div className="w-12 h-12 rounded-full mb-1 border-2 border-white/20 bg-gradient-to-br from-red-500/20 to-red-600/20 flex items-center justify-center">
-              <span className="text-lg font-bold text-red-300">👤</span>
+          <div className="flex items-center justify-between w-full gap-2 py-1">
+            <div className="flex flex-col items-center flex-1 relative">
+              <div className={`w-12 h-12 rounded-full mb-1 border-2 border-white/20 bg-gradient-to-br from-blue-500/20 to-blue-600/20 flex items-center justify-center ${winnerSide === 'left' ? 'ring-4 ring-yellow-400' : ''}`}>
+                <span className="text-lg font-bold text-blue-300">👤</span>
+                {winnerSide === 'left' && (
+                  <span className="absolute -top-2 -right-2 text-yellow-300 text-xl" title="Winner">🏆</span>
+                )}
+              </div>
+              <span className="font-bold text-white text-sm truncate max-w-[80px] text-center whitespace-pre-line">{leftName}</span>
             </div>
-            <span className="font-bold text-white text-sm truncate max-w-[80px] text-center whitespace-pre-line">{rightName}</span>
+            <div className="flex flex-col items-center min-w-[60px]">
+              <div className="flex items-center gap-1">
+                <span className="text-lg font-bold text-blue-400">{match.team1_score ?? '-'}</span>
+                <span className="text-xs text-white/60">vs</span>
+                <span className="text-lg font-bold text-red-400">{match.team2_score ?? '-'}</span>
+              </div>
+              <span className="text-xs text-purple-300 mt-1 font-bold">{match.match_no || 'TBD'}</span>
+              <span
+                className="block text-xs text-blue-400 hover:text-blue-300 transition-colors z-20 underline cursor-pointer mt-1"
+              >
+                View Details →
+              </span>
+            </div>
+            <div className="flex flex-col items-center flex-1 relative">
+              <div className={`w-12 h-12 rounded-full mb-1 border-2 border-white/20 bg-gradient-to-br from-red-500/20 to-red-600/20 flex items-center justify-center ${winnerSide === 'right' ? 'ring-4 ring-yellow-400' : ''}`}>
+                <span className="text-lg font-bold text-red-300">👤</span>
+                {winnerSide === 'right' && (
+                  <span className="absolute -top-2 -right-2 text-yellow-300 text-xl" title="Winner">🏆</span>
+                )}
+              </div>
+              <span className="font-bold text-white text-sm truncate max-w-[80px] text-center whitespace-pre-line">{rightName}</span>
+            </div>
           </div>
         </div>
-      </div>
       </Link>
       
       {/* Live Score Link - Only show for in_progress matches */}

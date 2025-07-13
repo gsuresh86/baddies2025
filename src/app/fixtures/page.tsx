@@ -510,7 +510,7 @@ export default function FixturesPage() {
             (() => {
               const dateGroups = groupMatchesBySchedule(fixtures.matches);
               const dateKeys = Object.keys(dateGroups);
-              const visibleDateKeys = dateKeys.slice(0, 2); // Only show first two tabs
+              const visibleDateKeys = dateKeys; // Show all dates
               
               console.log('Schedule view - Total matches:', fixtures.matches.length);
               console.log('Schedule view - Date groups:', dateKeys);
