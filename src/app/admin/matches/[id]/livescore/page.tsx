@@ -24,6 +24,7 @@ export default function LiveScorePage() {
     team2_score: 0
   });
   const [sidesSwitched, setSidesSwitched] = useState(false);
+  const [broadcastChannel, setBroadcastChannel] = useState<any>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -73,6 +74,54 @@ export default function LiveScorePage() {
     fetchData();
   }, [matchId, cachedMatches, showError]);
 
+  // WebSocket broadcast channel setup with detailed debugging
+  useEffect(() => {
+    if (!matchId) return;
+
+    console.log('🚀 Admin: Initializing WebSocket for match:', matchId);
+    
+    // Wait a bit for the page to fully load
+    const timeout = setTimeout(() => {
+      console.log('⏰ Admin: Starting WebSocket connection after delay');
+      
+      const channelName = `live-score-${matchId}`;
+      console.log('📡 Admin: Creating channel:', channelName);
+      
+      const channel = supabase.channel(channelName, {
+        config: {
+          broadcast: { self: true }
+        }
+      });
+
+      console.log('🔧 Admin: Channel created, subscribing...');
+      
+      channel.subscribe((status) => {
+        console.log(`📊 Admin: Channel status changed to: ${status}`);
+        
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Admin: Successfully connected to WebSocket!');
+          setBroadcastChannel(channel);
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Admin: Channel connection error');
+          console.error('🔍 Channel state:', channel);
+        } else if (status === 'TIMED_OUT') {
+          console.warn('⏰ Admin: Channel subscription timed out');
+        } else if (status === 'CLOSED') {
+          console.log('🔒 Admin: Channel closed');
+        }
+      });
+    }, 1000);
+
+    return () => {
+      console.log('🧹 Admin: Cleaning up WebSocket connection');
+      clearTimeout(timeout);
+      if (broadcastChannel) {
+        supabase.removeChannel(broadcastChannel);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchId]);
+
   const getTeamName = (teamId?: string) => {
     if (!teamId) return 'Unknown Team';
     const team = teams.find(t => t.id === teamId);
@@ -86,33 +135,107 @@ export default function LiveScorePage() {
   };
 
   const handleScoreChange = (team: 'team1' | 'team2', action: 'increase' | 'decrease') => {
-    setScores(prev => ({
-      ...prev,
-      [`${team}_score`]: Math.max(0, prev[`${team}_score`] + (action === 'increase' ? 1 : -1))
-    }));
+    // Haptic feedback for mobile
+    if ('vibrate' in navigator) {
+      navigator.vibrate(10);
+    }
+    
+    const newScores = {
+      ...scores,
+      [`${team}_score`]: Math.max(0, scores[`${team}_score`] + (action === 'increase' ? 1 : -1))
+    };
+    
+    // Update local state immediately
+    setScores(newScores);
+    
+    // Broadcast the score update via WebSocket
+    if (broadcastChannel) {
+      console.log('📤 Admin: Broadcasting score update:', newScores);
+      broadcastChannel.send({
+        type: 'broadcast',
+        event: 'score-update',
+        payload: {
+          scores: newScores,
+          sidesSwitched,
+          matchId,
+          timestamp: new Date().toISOString()
+        }
+      });
+      console.log('✅ Admin: Score broadcast sent');
+    } else {
+      console.warn('⚠️ Admin: No broadcast channel available');
+    }
   };
 
   const handleResetScores = () => {
     if (confirm('Are you sure you want to reset the scores to 0?')) {
-      setScores({
+      // Haptic feedback
+      if ('vibrate' in navigator) {
+        navigator.vibrate([20, 10, 20]);
+      }
+      
+      const newScores = {
         team1_score: 0,
         team2_score: 0
-      });
+      };
+      setScores(newScores);
+      
+      // Broadcast the reset
+      if (broadcastChannel) {
+        console.log('📤 Admin: Broadcasting score reset');
+        broadcastChannel.send({
+          type: 'broadcast',
+          event: 'score-update',
+          payload: {
+            scores: newScores,
+            sidesSwitched,
+            matchId,
+            timestamp: new Date().toISOString()
+          }
+        });
+        console.log('✅ Admin: Reset broadcast sent');
+      }
+      
+      showSuccess('Scores reset successfully!');
     }
   };
 
   // Add a handler to swap the scores
   const handleSwitchSides = () => {
+    // Haptic feedback
+    if ('vibrate' in navigator) {
+      navigator.vibrate(15);
+    }
+    
     console.log('Before switch:', scores);
-    setScores(prev => {
-      const newScores = {
-        team1_score: prev.team2_score,
-        team2_score: prev.team1_score
-      };
-      console.log('After switch:', newScores);
-      return newScores;
-    });
-    setSidesSwitched(prev => !prev);
+    const newScores = {
+      team1_score: scores.team2_score,
+      team2_score: scores.team1_score
+    };
+    const newSidesSwitched = !sidesSwitched;
+    
+    console.log('After switch:', newScores);
+    
+    // Update local state
+    setScores(newScores);
+    setSidesSwitched(newSidesSwitched);
+    
+    // Broadcast the switch
+    if (broadcastChannel) {
+      console.log('📤 Admin: Broadcasting side switch');
+      broadcastChannel.send({
+        type: 'broadcast',
+        event: 'score-update',
+        payload: {
+          scores: newScores,
+          sidesSwitched: newSidesSwitched,
+          matchId,
+          timestamp: new Date().toISOString()
+        }
+      });
+      console.log('✅ Admin: Side switch broadcast sent');
+    }
+    
     showSuccess('Scores switched successfully!');
   };
 
@@ -170,128 +293,113 @@ export default function LiveScorePage() {
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className="mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          {/* Sponsor Logos - Animated Marquee */}
-          <div className="relative w-full overflow-x-hidden mb-4">
-            <div className="flex items-center animate-marquee whitespace-nowrap gap-12 py-2">
-              {/* First set of logos */}
-              <Image src="/planet-green-logo.png" alt="Planet Green" width={260} height={130} className="object-contain" />
-              <Image src="/gamepoint-logo.png" alt="Gamepoint" width={260} height={130} className="object-contain" />
-              <Image src="/trice-logo.png" alt="Trice" width={180} height={90} className="object-contain" />
-              <Image src="/creekside-logo.png" alt="Creekside" width={260} height={130} className="object-contain" />
-              {/* Repeat logos for seamless loop */}
-              <Image src="/planet-green-logo.png" alt="Planet Green" width={260} height={130} className="object-contain" />
-              <Image src="/gamepoint-logo.png" alt="Gamepoint" width={260} height={130} className="object-contain" />
-              <Image src="/trice-logo.png" alt="Trice" width={180} height={90} className="object-contain" />
-              <Image src="/creekside-logo.png" alt="Creekside" width={260} height={130} className="object-contain" />
-            </div>
-          </div>
+        {/* Main Content - Optimized for mobile */}
+        <div className="mx-auto px-2 sm:px-4 lg:px-8 py-2 sm:py-4">
 
-          {/* Player Names - REMOVE this section */}
-          {/* Full Screen Score Cards with PCBT logos inside layout */}
-          <div className="flex items-center justify-between h-[60vh] gap-4">
-            {/* PCBT Logo on Left - Inside layout */}
-            <div className="flex-shrink-0 flex items-center h-full">
-              <Image src="/pcbt.png" alt="PCBT" width={200} height={100} className="object-contain" />
+          {/* Mobile-optimized Score Cards */}
+          <div className="flex flex-col h-auto sm:h-[60vh]">
+            {/* PCBT Logo - Hidden on mobile, shown on desktop */}
+            <div className="hidden sm:flex justify-center mb-4">
+              <Image src="/pcbt.png" alt="PCBT" width={150} height={75} className="object-contain" />
             </div>
-            {/* Score Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 flex-1 h-full">
+            
+            {/* Score Cards - Stacked on mobile, side by side on desktop */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8 flex-1">
               {/* Team 1/Player 1 Score */}
-              <div className="text-center flex flex-col justify-center">
-                <div className="bg-blue-500 rounded-3xl p-8 shadow-2xl hover-lift h-full flex flex-col justify-center">
-                  <div className="text-4xl font-bold text-blue-100 mb-4">
+              <div className="text-center">
+                <div className="bg-blue-500 rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-xl">
+                  <div className="text-xl sm:text-3xl lg:text-4xl font-bold text-blue-100 mb-2 sm:mb-4 truncate px-2">
                     {sidesSwitched 
                       ? (match.player2_id ? getPlayerName(match.player2_id) : getTeamName(match.team2_id))
                       : (match.player1_id ? getPlayerName(match.player1_id) : getTeamName(match.team1_id))
                     }
                   </div>
-                  <div className="text-[20rem] font-bold text-white mb-2 animate-scale-in">
+                  <div className="text-7xl sm:text-8xl lg:text-[12rem] font-bold text-white mb-4 sm:mb-6">
                     {scores.team1_score}
                   </div>
-                  <div className="flex justify-center space-x-2">
+                  <div className="flex justify-center gap-4 sm:gap-6">
                     <button
                       onClick={() => handleScoreChange('team1', 'decrease')}
-                      className="bg-red-500 hover:bg-red-600 text-white rounded-full p-2 transition-colors duration-200 hover-lift"
+                      className="bg-red-500 hover:bg-red-600 active:bg-red-700 text-white rounded-full p-4 sm:p-3 transition-all duration-200 transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                       disabled={scores.team1_score <= 0}
                     >
-                      <Minus className="w-4 h-4" />
+                      <Minus className="w-8 h-8 sm:w-6 sm:h-6" />
                     </button>
                     <button
                       onClick={() => handleScoreChange('team1', 'increase')}
-                      className="bg-green-500 hover:bg-green-600 text-white rounded-full p-2 transition-colors duration-200 hover-lift"
+                      className="bg-green-500 hover:bg-green-600 active:bg-green-700 text-white rounded-full p-4 sm:p-3 transition-all duration-200 transform active:scale-95"
                     >
-                      <Plus className="w-4 h-4" />
+                      <Plus className="w-8 h-8 sm:w-6 sm:h-6" />
                     </button>
                   </div>
                 </div>
               </div>
+              
               {/* Team 2/Player 2 Score */}
-              <div className="text-center flex flex-col justify-center">
-                <div className="bg-green-500 rounded-3xl p-8 shadow-2xl hover-lift h-full flex flex-col justify-center">
-                  <div className="text-4xl font-bold text-green-100 mb-4">
+              <div className="text-center">
+                <div className="bg-green-500 rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-xl">
+                  <div className="text-xl sm:text-3xl lg:text-4xl font-bold text-green-100 mb-2 sm:mb-4 truncate px-2">
                     {sidesSwitched 
                       ? (match.player1_id ? getPlayerName(match.player1_id) : getTeamName(match.team1_id))
                       : (match.player2_id ? getPlayerName(match.player2_id) : getTeamName(match.team2_id))
                     }
                   </div>
-                  <div className="text-[20rem] font-bold text-white mb-2 animate-scale-in">
+                  <div className="text-7xl sm:text-8xl lg:text-[12rem] font-bold text-white mb-4 sm:mb-6">
                     {scores.team2_score}
                   </div>
-                  <div className="flex justify-center space-x-2">
+                  <div className="flex justify-center gap-4 sm:gap-6">
                     <button
                       onClick={() => handleScoreChange('team2', 'decrease')}
-                      className="bg-red-500 hover:bg-red-600 text-white rounded-full p-2 transition-colors duration-200 hover-lift"
+                      className="bg-red-500 hover:bg-red-600 active:bg-red-700 text-white rounded-full p-4 sm:p-3 transition-all duration-200 transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                       disabled={scores.team2_score <= 0}
                     >
-                      <Minus className="w-4 h-4" />
+                      <Minus className="w-8 h-8 sm:w-6 sm:h-6" />
                     </button>
                     <button
                       onClick={() => handleScoreChange('team2', 'increase')}
-                      className="bg-green-500 hover:bg-green-600 text-white rounded-full p-2 transition-colors duration-200 hover-lift"
+                      className="bg-green-500 hover:bg-green-600 active:bg-green-700 text-white rounded-full p-4 sm:p-3 transition-all duration-200 transform active:scale-95"
                     >
-                      <Plus className="w-4 h-4" />
+                      <Plus className="w-8 h-8 sm:w-6 sm:h-6" />
                     </button>
                   </div>
                 </div>
               </div>
             </div>
-            {/* PCBT Logo on Right - Inside layout */}
-            <div className="flex-shrink-0 flex items-center h-full">
-              <Image src="/pcbt.png" alt="PCBT" width={200} height={100} className="object-contain" />
-            </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="mt-8 bg-gray-900 rounded-xl shadow-lg p-6 animate-fade-in-scale">
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          {/* Mobile-optimized Action Buttons */}
+          <div className="mt-4 sm:mt-8 bg-gray-900 rounded-xl shadow-lg p-4 sm:p-6 fixed bottom-0 left-0 right-0 sm:relative">
+            <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2 sm:gap-4 sm:justify-center">
               <button
                 onClick={handleResetScores}
-                className="flex items-center justify-center px-8 py-4 bg-gray-700 text-white rounded-lg font-semibold hover:bg-gray-600 transition-colors duration-200 hover-lift"
+                className="flex items-center justify-center px-4 sm:px-8 py-3 sm:py-4 bg-gray-700 text-white rounded-lg font-semibold hover:bg-gray-600 active:bg-gray-800 transition-all duration-200 transform active:scale-95"
               >
-                <RotateCcw className="w-5 h-5 mr-2" />
-                Reset Scores
+                <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                <span className="text-sm sm:text-base">Reset</span>
               </button>
 
               {/* Switch Sides Button */}
               <button
                 onClick={handleSwitchSides}
-                className={`flex items-center justify-center px-8 py-4 text-white rounded-lg font-semibold transition-colors duration-200 hover-lift ${
-                  sidesSwitched ? 'bg-orange-600 hover:bg-orange-700' : 'bg-yellow-600 hover:bg-yellow-700'
+                className={`flex items-center justify-center px-4 sm:px-8 py-3 sm:py-4 text-white rounded-lg font-semibold transition-all duration-200 transform active:scale-95 ${
+                  sidesSwitched ? 'bg-orange-600 hover:bg-orange-700 active:bg-orange-800' : 'bg-yellow-600 hover:bg-yellow-700 active:bg-yellow-800'
                 }`}
               >
-                {sidesSwitched ? 'Sides Switched' : 'Switch Sides'}
+                <span className="text-sm sm:text-base">{sidesSwitched ? 'Switched' : 'Switch'}</span>
               </button>
 
               <Link
                 href={`/admin/matches/${matchId}`}
-                className="flex items-center justify-center px-8 py-4 bg-gray-700 text-gray-200 rounded-lg font-semibold hover:bg-gray-600 transition-colors duration-200 hover-lift"
+                className="col-span-2 sm:col-span-1 flex items-center justify-center px-4 sm:px-8 py-3 sm:py-4 bg-gray-700 text-gray-200 rounded-lg font-semibold hover:bg-gray-600 active:bg-gray-800 transition-all duration-200 transform active:scale-95"
               >
-                <ArrowLeft className="w-5 h-5 mr-2" />
-                Back to Match
+                <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                <span className="text-sm sm:text-base">Back</span>
               </Link>
             </div>
           </div>
+          
+          {/* Add padding at bottom for mobile to account for fixed buttons */}
+          <div className="h-20 sm:h-0"></div>
         </div>
       </div>
     </AuthGuard>

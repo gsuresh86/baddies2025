@@ -1,6 +1,7 @@
 import React from 'react';
 import { Category } from '@/types';
 import Link from 'next/link';
+import { Tv } from 'lucide-react';
 
 // Helper to get first name
 const getFirstName = (name: string) => name?.split(' ')[0] || '';
@@ -53,9 +54,9 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({ match, categ
   };
 
   return (
-    <Link href={`/match/${match.id}`} className="block">
-      <div className="w-full max-w-2xl mx-auto rounded-3xl bg-neutral-900/90 border border-white/10 shadow-xl px-3 py-2 flex items-center mb-3 hover:bg-neutral-800/90 transition-colors cursor-pointer">
-        {/* Main Content */}
+    <div className="w-full max-w-2xl mx-auto rounded-3xl bg-neutral-900/90 border border-white/10 shadow-xl px-3 py-2 flex items-center mb-3 hover:bg-neutral-800/90 transition-colors relative">
+      {/* Main Content */}
+      <Link href={`/match/${match.id}`} className="flex-1">
         <div className="flex-1">
         {showDetailsLink && (
           <Link
@@ -100,8 +101,20 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({ match, categ
           </div>
         </div>
       </div>
+      </Link>
+      
+      {/* Live Score Link - Only show for in_progress matches */}
+      {status === 'in_progress' && (
+        <Link
+          href={`/matches/${match.id}/livescore`}
+          className="absolute right-3 top-1/2 -translate-y-1/2 bg-red-600 hover:bg-red-700 text-white p-2 sm:p-3 rounded-full transition-all duration-200 transform hover:scale-110 active:scale-95 shadow-lg z-10 animate-pulse"
+          title="View Live Score"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Tv className="w-5 h-5 sm:w-6 sm:h-6" />
+        </Link>
+      )}
     </div>
-    </Link>
   );
 };
 

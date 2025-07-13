@@ -4,7 +4,26 @@ import { createClient } from '@supabase/supabase-js';
 // TODO: Replace with your actual Supabase URL and anon key
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-export const supabase = createClient(supabaseUrl, supabaseKey);
+// WebSocket-enabled Supabase client with debugging
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  realtime: {
+    params: {
+      eventsPerSecond: 10
+    }
+  },
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true
+  }
+});
+
+// Debug WebSocket connection
+if (typeof window !== 'undefined') {
+  console.log('🔧 Supabase client initialized with:');
+  console.log('📍 URL:', supabaseUrl);
+  console.log('🔑 Key:', supabaseKey.substring(0, 20) + '...');
+  console.log('🌐 Environment:', process.env.NODE_ENV);
+}
 
 // --- Supabase Auth Helpers ---
 export async function signInWithEmail(email: string, password: string) {
