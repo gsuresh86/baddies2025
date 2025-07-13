@@ -12,7 +12,7 @@ import Image from 'next/image';
 
 export default function AdminMatchDetailsPage() {
   const { showSuccess, showError } = useToast();
-  const { matches: cachedMatches, teams, pools, players, categories, refreshData } = useData();
+  const { matches: cachedMatches, teams, pools, players, refreshData } = useData();
   const params = useParams();
   const matchId = params?.id as string;
 
@@ -23,10 +23,10 @@ export default function AdminMatchDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState<MatchMedia | null>(null);
-  const [showUploadForm, setShowUploadForm] = useState(false);
+  const [, setShowUploadForm] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [descriptions, setDescriptions] = useState<{ [key: string]: string }>({});
-  const [showScoreForm, setShowScoreForm] = useState(false);
+  const [, setShowScoreForm] = useState(false);
   const [scoreForm, setScoreForm] = useState({
     team1_score: 0,
     team2_score: 0,
@@ -107,6 +107,20 @@ export default function AdminMatchDetailsPage() {
 
     fetchData();
   }, [matchId, cachedMatches, showError]);
+
+  useEffect(() => {
+    if (match) {
+      setScoreForm({
+        team1_score: match.team1_score ?? 0,
+        team2_score: match.team2_score ?? 0,
+        match_duration: match.match_duration ?? 0,
+        winner: match.winner ?? '',
+        match_notes: match.match_notes ?? '',
+        match_referee: match.match_referee ?? '',
+        status: match.status ?? 'scheduled',
+      });
+    }
+  }, [match]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -397,13 +411,12 @@ export default function AdminMatchDetailsPage() {
           )}
         </div>
 
-        {/* Admin Actions */}
+        {/* Admin Actions, Score Update, and Upload Media - Merged Single Form */}
         <div className="bg-white rounded-xl p-6 mb-8 shadow-lg border border-gray-200">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">Admin Actions</h2>
-          
           {/* Status Dropdown */}
           <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Match Status
@@ -417,13 +430,10 @@ export default function AdminMatchDetailsPage() {
                         .from('matches')
                         .update({ status: newStatus })
                         .eq('id', match.id);
-                      
                       if (error) {
                         showError('Failed to update match status');
                         return;
                       }
-                      
-                      // Update local state
                       setMatch(prev => prev ? { ...prev, status: newStatus as 'scheduled' | 'in_progress' | 'completed' | 'cancelled' } : null);
                       showSuccess('Match status updated successfully');
                     } catch (error) {
@@ -439,92 +449,25 @@ export default function AdminMatchDetailsPage() {
                   <option value="cancelled">Cancelled</option>
                 </select>
               </div>
-              <div className="text-sm text-gray-500">
+              {match.status === 'in_progress' && (
+                <Link
+                  href={`/admin/matches/${match.id}/livescore`}
+                  className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition mt-6"
+                >
+                  Live Score
+                </Link>
+              )}
+              <div className="text-sm text-gray-500 ml-auto">
                 Current: <span className={`font-medium ${getStatusColor(match.status)}`}>
                   {getStatusIcon(match.status)} {match.status?.replace('_', ' ').toUpperCase() || 'SCHEDULED'}
                 </span>
               </div>
             </div>
           </div>
-          
-          <div className="flex flex-wrap gap-4">
-            {/* Score Management */}
-            <button
-              onClick={() => {
-                // Determine the correct winner value for the form
-                let winnerValue = '';
-                if (match.winner) {
-                  if (match.team1_id && match.team2_id) {
-                    // Team match
-                    if (match.winner === match.team1_id) winnerValue = 'team1';
-                    else if (match.winner === match.team2_id) winnerValue = 'team2';
-                  } else if (match.player1_id && match.player2_id) {
-                    // Player match
-                    if (match.winner === match.player1_id) winnerValue = 'player1';
-                    else if (match.winner === match.player2_id) winnerValue = 'player2';
-                  }
-                }
 
-                setScoreForm({
-                  team1_score: match.team1_score || 0,
-                  team2_score: match.team2_score || 0,
-                  match_duration: match.match_duration || 0,
-                  winner: winnerValue,
-                  match_notes: match.match_notes || '',
-                  match_referee: match.match_referee || '',
-                  status: match.status || 'scheduled'
-                });
-                setShowScoreForm(!showScoreForm);
-              }}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-            >
-              {showScoreForm ? 'Cancel Score' : 'Update Score'}
-            </button>
-
-            {/* Only show Manage Lineup for Men's Team category */}
-            {(() => {
-              const pool = pools.find(p => p.id === match.pool_id);
-              const category = categories?.find(c => c.id === pool?.category_id);
-              const isMensTeam = category?.code === 'MT';
-              
-              return isMensTeam ? (
-                <Link
-                  href={`/admin/matches/${match.id}/manage`}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-                >
-                  Manage Lineup
-                </Link>
-              ) : null;
-            })()}
-            
-            <Link
-              href={`/admin/matches/${match.id}/livescore`}
-              className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition"
-            >
-              Live Score
-            </Link>
-            
-            <button
-              onClick={() => setShowUploadForm(!showUploadForm)}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-            >
-              {showUploadForm ? 'Cancel Upload' : 'Upload Media'}
-            </button>
-            
-            <Link
-              href={`/match/${match.id}`}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
-            >
-              View Public Page
-            </Link>
-          </div>
-        </div>
-
-        {/* Score Update Form */}
-        {showScoreForm && (
-          <div className="bg-white rounded-xl p-6 mb-8 shadow-lg border border-gray-200">
+          {/* Score Update Form - Always Shown */}
+          <div className="mb-8">
             <h2 className="text-xl font-semibold text-gray-800 mb-4">Update Match Score</h2>
-            
             <div className="grid md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -538,7 +481,6 @@ export default function AdminMatchDetailsPage() {
                   placeholder="Enter score"
                 />
               </div>
-              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   {match.team2_id ? getTeamName(match.team2_id) : getPlayerName(match.player2_id)} Score
@@ -552,7 +494,6 @@ export default function AdminMatchDetailsPage() {
                 />
               </div>
             </div>
-            
             <div className="grid md:grid-cols-2 gap-6 mt-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -566,7 +507,6 @@ export default function AdminMatchDetailsPage() {
                   placeholder="Enter duration"
                 />
               </div>
-              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Match Referee
@@ -587,7 +527,6 @@ export default function AdminMatchDetailsPage() {
                 </select>
               </div>
             </div>
-            
             <div className="grid md:grid-cols-2 gap-6 mt-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -615,7 +554,6 @@ export default function AdminMatchDetailsPage() {
                   <option value="draw">Draw</option>
                 </select>
               </div>
-              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Match Status
@@ -632,7 +570,6 @@ export default function AdminMatchDetailsPage() {
                 </select>
               </div>
             </div>
-            
             <div className="mt-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Match Notes
@@ -645,7 +582,6 @@ export default function AdminMatchDetailsPage() {
                 placeholder="Optional notes about the match..."
               />
             </div>
-            
             <div className="flex gap-4 mt-6">
               <button
                 onClick={handleUpdateScore}
@@ -654,21 +590,12 @@ export default function AdminMatchDetailsPage() {
               >
                 {updatingScore ? 'Updating...' : 'Update Score'}
               </button>
-              <button
-                onClick={() => setShowScoreForm(false)}
-                className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
-              >
-                Cancel
-              </button>
             </div>
           </div>
-        )}
 
-        {/* Upload Form */}
-        {showUploadForm && (
+          {/* Upload Media Form - Always Shown */}
           <div className="bg-white rounded-xl p-6 mb-8 shadow-lg border border-gray-200">
             <h2 className="text-xl font-semibold text-gray-800 mb-4">Upload Media</h2>
-            
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
               <div className="text-4xl mb-4">📁</div>
               <p className="text-lg text-gray-600 mb-2">Select files to upload</p>
@@ -690,7 +617,6 @@ export default function AdminMatchDetailsPage() {
                 Supported formats: JPG, PNG, GIF, MP4, MOV (Max 50MB per file)
               </p>
             </div>
-
             {/* Selected Files */}
             {selectedFiles.length > 0 && (
               <div className="mt-6">
@@ -737,7 +663,16 @@ export default function AdminMatchDetailsPage() {
               </div>
             )}
           </div>
-        )}
+          {/* Live Score Button - always show for both team and player matches */}
+          <div className="mt-4 flex gap-4">
+            <Link
+              href={`/admin/matches/${match.id}/livescore`}
+              className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition"
+            >
+              Live Score
+            </Link>
+          </div>
+        </div>
 
         {/* Match History */}
         {history.length > 0 && (

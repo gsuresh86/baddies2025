@@ -733,7 +733,7 @@ export default function AdminMatchesPage() {
       </div>
 
       {/* Matches Stats Cards - Dashboard Style, Mobile Friendly */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 mb-8">
         <div className="bg-white rounded-xl p-4 sm:p-6 shadow-lg border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
@@ -775,6 +775,17 @@ export default function AdminMatchesPage() {
             </div>
             <div className="p-2 sm:p-3 bg-orange-100 rounded-lg">
               <span className="text-lg sm:text-2xl">⏰</span>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl p-4 sm:p-6 shadow-lg border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs sm:text-sm font-medium text-gray-600">Cancelled</p>
+              <p className="text-xl sm:text-3xl font-bold text-red-600">{matches.filter(m => m.status === 'cancelled').length}</p>
+            </div>
+            <div className="p-2 sm:p-3 bg-red-100 rounded-lg">
+              <span className="text-lg sm:text-2xl">❌</span>
             </div>
           </div>
         </div>
