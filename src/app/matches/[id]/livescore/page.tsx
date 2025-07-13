@@ -73,7 +73,6 @@ export default function PublicLiveScorePage() {
     if (!matchId) return;
 
     console.log('🚀 Public: Initializing WebSocket listener for match:', matchId);
-    console.log('🌐 Supabase URL:', supabase.supabaseUrl);
     
     // Wait a bit for the page to fully load
     const timeout = setTimeout(() => {
