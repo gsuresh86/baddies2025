@@ -41,6 +41,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
               src="/pcbt.png"
               alt="PBEL City Badminton Tournament Logo"
               fill
+              sizes="(max-width: 767px) 56px, 80px"
               style={{ objectFit: 'contain' }}
               draggable={false}
               priority

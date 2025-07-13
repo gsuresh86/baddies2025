@@ -6,6 +6,7 @@ import { Pool, Team, Match, TournamentStandings, Player } from '@/types';
 import StandingsTab from './pool/StandingsTab';
 import { categoryLabels } from '@/lib/utils';
 import { useData } from '@/contexts/DataContext';
+import { useSearchParams } from 'next/navigation';
 
 function calculateStandings(teams: Team[], players: Player[], matches: Match[], categoryCode?: string): TournamentStandings[] {
   const standings: { [id: string]: TournamentStandings } = {};
@@ -123,7 +124,9 @@ function calculateStandings(teams: Team[], players: Player[], matches: Match[], 
 
 export default function StandingsPage() {
   const { teams, pools, matches: cachedMatches } = useData();
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const searchParams = useSearchParams();
+  const initialCategory = searchParams.get('category') || 'all';
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [teamsByPool, setTeamsByPool] = useState<{ [poolId: string]: Team[] }>({});
   const [playersByPool, setPlayersByPool] = useState<{ [poolId: string]: Player[] }>({});
   const [matchesByPool, setMatchesByPool] = useState<{ [poolId: string]: Match[] }>({});
@@ -196,6 +199,16 @@ export default function StandingsPage() {
     }
     fetchAll();
   }, [pools, teams, cachedMatches]);
+
+  // When category changes, update the query parameter
+  useEffect(() => {
+    if (selectedCategory) {
+      const params = new URLSearchParams(window.location.search);
+      params.set('category', selectedCategory);
+      const newUrl = `${window.location.pathname}?${params.toString()}`;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [selectedCategory]);
 
   // Filter pools by selected category
   const filteredPools = pools.filter(pool => {
