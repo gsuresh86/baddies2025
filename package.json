@@ -11,7 +11,6 @@
   "dependencies": {
     "@fontsource/inter": "^5.2.6",
     "@fontsource/montserrat": "^5.2.6",
-    "@next/font": "^14.2.15",
     "@supabase/supabase-js": "^2.50.0",
     "@vercel/analytics": "^1.5.0",
     "@vercel/speed-insights": "^1.2.0",

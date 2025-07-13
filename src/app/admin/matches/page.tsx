@@ -11,11 +11,14 @@ import Link from 'next/link';
 
 export default function AdminMatchesPage() {
   const { showSuccess, showError } = useToast();
-  const { players, teams, pools, categories, poolPlayers, matches: cachedMatches } = useData();
+  const { players, teams, pools, categories, poolPlayers, matches: cachedMatches, refreshData } = useData();
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPool, setSelectedPool] = useState<string>('all');
   const [activeCategoryId, setActiveCategoryId] = useState<string>('all');
+  // Add state for status and date filter
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [dateFilter, setDateFilter] = useState<string>('');
   
   // Form states
   const [newMatchTeam1, setNewMatchTeam1] = useState('');
@@ -143,7 +146,7 @@ export default function AdminMatchesPage() {
       }
       showSuccess('Match updated');
       setEditingMatchId(null);
-      fetchData();
+      await refreshData();
     } catch (err) {
       showError('Error updating match', err as string);
     }
@@ -403,7 +406,18 @@ export default function AdminMatchesPage() {
     if (activeCategoryId !== 'all') {
       ms = ms.filter(match => getCategoryForMatch(match)?.id === activeCategoryId);
     }
-    
+    if (statusFilter !== 'all') {
+      ms = ms.filter(match => (match.status || 'scheduled') === statusFilter);
+    }
+    if (dateFilter) {
+      ms = ms.filter(match => {
+        if (!match.scheduled_date) return false;
+        const matchDate = new Date(match.scheduled_date);
+        // Format as yyyy-mm-dd
+        const matchDateStr = matchDate.toISOString().split('T')[0];
+        return matchDateStr === dateFilter;
+      });
+    }
     // Sort by scheduled date and time when "All Categories" is selected
     if (activeCategoryId === 'all') {
       ms = ms.sort((a, b) => {
@@ -420,7 +434,7 @@ export default function AdminMatchesPage() {
     }
     
     return ms;
-  }, [matches, selectedPool, activeCategoryId, getCategoryForMatch]);
+  }, [matches, selectedPool, activeCategoryId, statusFilter, dateFilter, getCategoryForMatch]);
 
   // Get the next match number for a given category and pool
   const getNextMatchNumber = useCallback((categoryId: string, poolId: string) => {
@@ -768,7 +782,7 @@ export default function AdminMatchesPage() {
 
       {/* Filters and Actions */}
       <div className="mb-6 flex flex-col gap-2 w-full max-w-2xl">
-        <div className="flex flex-row gap-2 w-full">
+        <div className="flex flex-row gap-2 w-full flex-wrap">
           <div className="w-[200px] min-w-[200px]">
             <label htmlFor="category-select" className="text-sm font-medium text-gray-700">Category:</label>
             <select
@@ -798,6 +812,33 @@ export default function AdminMatchesPage() {
                   <option key={pool.id} value={pool.id}>{pool.name}</option>
                 ))}
             </select>
+          </div>
+          {/* Status Filter */}
+          <div className="w-[180px] min-w-[180px]">
+            <label htmlFor="status-filter" className="text-sm font-medium text-gray-700">Status:</label>
+            <select
+              id="status-filter"
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value)}
+              className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white text-sm"
+            >
+              <option value="all">All</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+          {/* Date Filter */}
+          <div className="w-[180px] min-w-[180px]">
+            <label htmlFor="date-filter" className="text-sm font-medium text-gray-700">Date:</label>
+            <input
+              id="date-filter"
+              type="date"
+              value={dateFilter}
+              onChange={e => setDateFilter(e.target.value)}
+              className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white text-sm"
+            />
           </div>
         </div>
         <div className="flex gap-2 flex-wrap mt-1">

@@ -12,7 +12,7 @@ import Image from 'next/image';
 
 export default function AdminMatchDetailsPage() {
   const { showSuccess, showError } = useToast();
-  const { matches: cachedMatches, teams, pools, players, categories } = useData();
+  const { matches: cachedMatches, teams, pools, players, categories, refreshData } = useData();
   const params = useParams();
   const matchId = params?.id as string;
 
@@ -243,6 +243,10 @@ export default function AdminMatchDetailsPage() {
       
       showSuccess('Score updated successfully!');
       setShowScoreForm(false);
+      // Refresh global data after updating score, but do not navigate away
+      await refreshData();
+      // router.push('/admin/matches'); // Remove navigation
+      return;
       
       // Refresh match data
       const { data: updatedMatch } = await supabase
@@ -427,7 +431,7 @@ export default function AdminMatchDetailsPage() {
                       showError('Failed to update match status');
                     }
                   }}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
                 >
                   <option value="scheduled">Scheduled</option>
                   <option value="in_progress">In Progress</option>
@@ -530,7 +534,7 @@ export default function AdminMatchDetailsPage() {
                   type="text"
                   value={scoreForm.team1_score}
                   onChange={(e) => setScoreForm(prev => ({ ...prev, team1_score: parseInt(e.target.value) || 0 }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                   placeholder="Enter score"
                 />
               </div>
@@ -543,7 +547,7 @@ export default function AdminMatchDetailsPage() {
                   type="text"
                   value={scoreForm.team2_score}
                   onChange={(e) => setScoreForm(prev => ({ ...prev, team2_score: parseInt(e.target.value) || 0 }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                   placeholder="Enter score"
                 />
               </div>
@@ -558,7 +562,7 @@ export default function AdminMatchDetailsPage() {
                   type="text"
                   value={scoreForm.match_duration}
                   onChange={(e) => setScoreForm(prev => ({ ...prev, match_duration: parseInt(e.target.value) || 0 }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                   placeholder="Enter duration"
                 />
               </div>
@@ -570,13 +574,16 @@ export default function AdminMatchDetailsPage() {
                 <select
                   value={scoreForm.match_referee}
                   onChange={(e) => setScoreForm(prev => ({ ...prev, match_referee: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                 >
                   <option value="">Select referee</option>
                   <option value="Surya">Surya</option>
                   <option value="Kshitij">Kshitij</option>
                   <option value="Sraveen">Sraveen</option>
                   <option value="Kambe Gowda">Kambe Gowda</option>
+                  <option value="Shreya">Shreya</option>
+                  <option value="Vamsi">Vamsi</option>
+                  <option value="Rahul">Rahul</option>
                 </select>
               </div>
             </div>
@@ -589,7 +596,7 @@ export default function AdminMatchDetailsPage() {
                 <select
                   value={scoreForm.winner}
                   onChange={(e) => setScoreForm(prev => ({ ...prev, winner: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                 >
                   <option value="">Auto-determine from score</option>
                   {match.team1_id && match.team2_id ? (
@@ -616,7 +623,7 @@ export default function AdminMatchDetailsPage() {
                 <select
                   value={scoreForm.status}
                   onChange={(e) => setScoreForm(prev => ({ ...prev, status: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                 >
                   <option value="scheduled">Scheduled</option>
                   <option value="in_progress">In Progress</option>

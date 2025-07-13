@@ -78,7 +78,7 @@ export default function PublicLiveScorePage() {
     }
 
     fetchData();
-  }, [matchId, cachedMatches]);
+  });
 
   // WebSocket listener for live score updates
   useEffect(() => {
