@@ -10,7 +10,7 @@ import { ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 
 export default function PublicLiveScorePage() {
-  const { matches: cachedMatches, teams, players } = useData();
+  const { matches: cachedMatches, teams, players, pools, categories } = useData();
   const params = useParams();
   const matchId = params?.id as string;
 
@@ -36,7 +36,7 @@ export default function PublicLiveScorePage() {
           try {
             const { data: dbMatch, error } = await supabase
               .from('matches')
-              .select('*')
+              .select('*, pool:pools(*, category:categories(*))')
               .eq('id', matchId)
               .single();
             
@@ -48,6 +48,18 @@ export default function PublicLiveScorePage() {
           } catch (error) {
             console.error('Error fetching match from database:', error);
             return;
+          }
+        }
+        
+        // Enrich match data with pool and category information
+        if (matchData) {
+          const pool = pools.find(p => p.id === matchData.pool_id);
+          if (pool) {
+            matchData.pool = pool;
+            const category = categories.find(c => c.id === pool.category_id);
+            if (category) {
+              matchData.pool.category = category;
+            }
           }
         }
         
@@ -132,7 +144,14 @@ export default function PublicLiveScorePage() {
   const getPlayerName = (playerId?: string) => {
     if (!playerId) return 'Unknown Player';
     const player = players.find(p => p.id === playerId);
-    return player?.name || 'Unknown Player';
+    if (!player) return 'Unknown Player';
+    
+    // For pair categories, include partner name
+    if (player.partner_name) {
+      return `${player.name} / ${player.partner_name}`;
+    }
+    
+    return player.name || 'Unknown Player';
   };
 
   if (loading) {

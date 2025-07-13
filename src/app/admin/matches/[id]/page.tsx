@@ -396,6 +396,53 @@ export default function AdminMatchDetailsPage() {
         {/* Admin Actions */}
         <div className="bg-white rounded-xl p-6 mb-8 shadow-lg border border-gray-200">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">Admin Actions</h2>
+          
+          {/* Status Dropdown */}
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Match Status
+                </label>
+                <select
+                  value={match.status || 'scheduled'}
+                  onChange={async (e) => {
+                    const newStatus = e.target.value;
+                    try {
+                      const { error } = await supabase
+                        .from('matches')
+                        .update({ status: newStatus })
+                        .eq('id', match.id);
+                      
+                      if (error) {
+                        showError('Failed to update match status');
+                        return;
+                      }
+                      
+                      // Update local state
+                      setMatch(prev => prev ? { ...prev, status: newStatus as 'scheduled' | 'in_progress' | 'completed' | 'cancelled' } : null);
+                      showSuccess('Match status updated successfully');
+                    } catch (error) {
+                      console.error('Error updating match status:', error);
+                      showError('Failed to update match status');
+                    }
+                  }}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                >
+                  <option value="scheduled">Scheduled</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+              <div className="text-sm text-gray-500">
+                Current: <span className={`font-medium ${getStatusColor(match.status)}`}>
+                  {getStatusIcon(match.status)} {match.status?.replace('_', ' ').toUpperCase() || 'SCHEDULED'}
+                </span>
+              </div>
+            </div>
+          </div>
+          
           <div className="flex flex-wrap gap-4">
             {/* Score Management */}
             <button
