@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/store';
 import { Match } from '@/types';
@@ -22,6 +22,35 @@ export default function PublicLiveScorePage() {
   });
   const [sidesSwitched, setSidesSwitched] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<string>('connecting');
+  // Celebration audio logic hooks (must be before any return)
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [hasPlayed, setHasPlayed] = useState(false);
+
+  // Move helper functions above showCongrats logic
+  const getTeamName = (teamId?: string) => {
+    if (!teamId) return 'Unknown Team';
+    const team = teams.find(t => t.id === teamId);
+    return team?.name || 'Unknown Team';
+  };
+
+  const getPlayerName = (playerId?: string) => {
+    if (!playerId) return 'Unknown Player';
+    const player = players.find(p => p.id === playerId);
+    if (!player) return 'Unknown Player';
+    
+    // For pair categories, include partner name
+    if (player.partner_name) {
+      return `${player.name} / ${player.partner_name}`;
+    }
+    
+    return player.name || 'Unknown Player';
+  };
+
+  // These must be above the useEffect that uses them
+  const showCongrats1 = scores.team1_score === 30;
+  const showCongrats2 = scores.team2_score === 30;
+  const showCongrats = showCongrats1 || showCongrats2;
+  
 
   useEffect(() => {
     async function fetchData() {
@@ -135,24 +164,14 @@ export default function PublicLiveScorePage() {
     };
   }, [matchId]);
 
-  const getTeamName = (teamId?: string) => {
-    if (!teamId) return 'Unknown Team';
-    const team = teams.find(t => t.id === teamId);
-    return team?.name || 'Unknown Team';
-  };
-
-  const getPlayerName = (playerId?: string) => {
-    if (!playerId) return 'Unknown Player';
-    const player = players.find(p => p.id === playerId);
-    if (!player) return 'Unknown Player';
-    
-    // For pair categories, include partner name
-    if (player.partner_name) {
-      return `${player.name} / ${player.partner_name}`;
+  useEffect(() => {
+    if (showCongrats && !hasPlayed) {
+      audioRef.current?.play();
+      setHasPlayed(true);
+    } else if (!showCongrats && hasPlayed) {
+      setHasPlayed(false);
     }
-    
-    return player.name || 'Unknown Player';
-  };
+  }, [showCongrats, hasPlayed]);
 
   if (loading) {
     return (
@@ -182,29 +201,10 @@ export default function PublicLiveScorePage() {
     );
   }
 
-  const showCongrats1 = scores.team1_score === 30;
-  const showCongrats2 = scores.team2_score === 30;
-  const congratsName1 = sidesSwitched
-    ? (match.player2_id ? getPlayerName(match.player2_id) : getTeamName(match.team2_id))
-    : (match.player1_id ? getPlayerName(match.player1_id) : getTeamName(match.team1_id));
-  const congratsName2 = sidesSwitched
-    ? (match.player1_id ? getPlayerName(match.player1_id) : getTeamName(match.team1_id))
-    : (match.player2_id ? getPlayerName(match.player2_id) : getTeamName(match.team2_id));
-  const showCongrats = showCongrats1 || showCongrats2;
-  const congratsName = showCongrats1 ? congratsName1 : congratsName2;
-
   return (
     <div className="min-h-screen bg-black relative">
-      {/* Centered Congratulations Overlay */}
-      {showCongrats && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80">
-          <div className="bg-white rounded-2xl shadow-2xl px-8 py-10 flex flex-col items-center animate-bounce">
-            <span className="text-5xl mb-4">🎉</span>
-            <span className="text-3xl font-bold text-yellow-500 mb-2 drop-shadow-lg text-center">Congratulations {congratsName}!</span>
-            <span className="text-lg text-gray-700">Reached 30 points!</span>
-          </div>
-        </div>
-      )}
+      {/* Celebration audio */}
+      <audio ref={audioRef} src="/clap.wav" preload="auto" />
       {/* Header */}
       <div className="bg-black shadow-sm border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -266,13 +266,27 @@ export default function PublicLiveScorePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 flex-1 h-full">
             {/* Team 1/Player 1 Score */}
             <div className="text-center flex flex-col justify-center">
-              <div className="bg-blue-500 rounded-3xl p-8 shadow-2xl hover-lift h-full flex flex-col justify-center">
+              <div className="bg-blue-500 rounded-3xl p-8 shadow-2xl hover-lift h-full flex flex-col justify-center relative">
+                {showCongrats1 && (
+                  <div className="mb-2 flex flex-col items-center">
+                    <span className="block text-4xl font-bold text-yellow-300 drop-shadow-lg animate-bounce">Congratulations!</span>
+                  </div>
+                )}
+                {/* Show Good effort for loser if team2 won */}
+                {showCongrats2 && (
+                  <div className="mb-2 flex flex-col items-center">
+                    <span className="block text-4xl font-semibold text-white/80 animate-fade-in">Good effort!</span>
+                  </div>
+                )}
                 <div className="text-4xl font-bold text-blue-100 mb-4">
                   {sidesSwitched 
                     ? (match.player2_id ? getPlayerName(match.player2_id) : getTeamName(match.team2_id))
                     : (match.player1_id ? getPlayerName(match.player1_id) : getTeamName(match.team1_id))
                   }
                 </div>
+                {showCongrats1 && (
+                  <span className="absolute left-1/2 top-40 -translate-x-1/2 z-10 text-8xl animate-bounce pointer-events-none select-none">🏆</span>
+                )}
                 <div className="text-[20rem] font-bold text-white mb-2 animate-scale-in">
                   {scores.team1_score}
                 </div>
@@ -280,13 +294,27 @@ export default function PublicLiveScorePage() {
             </div>
             {/* Team 2/Player 2 Score */}
             <div className="text-center flex flex-col justify-center">
-              <div className="bg-green-500 rounded-3xl p-8 shadow-2xl hover-lift h-full flex flex-col justify-center">
+              <div className="bg-green-500 rounded-3xl p-8 shadow-2xl hover-lift h-full flex flex-col justify-center relative">
+                {showCongrats2 && (
+                  <div className="mb-2 flex flex-col items-center">
+                    <span className="block text-4xl font-bold text-yellow-300 drop-shadow-lg animate-bounce">Congratulations!</span>
+                  </div>
+                )}
+                {/* Show Good effort for loser if team1 won */}
+                {showCongrats1 && (
+                  <div className="mb-2 flex flex-col items-center">
+                    <span className="block text-4xl font-semibold text-white/80 animate-fade-in">Good effort!</span>
+                  </div>
+                )}
                 <div className="text-4xl font-bold text-green-100 mb-4">
                   {sidesSwitched 
                     ? (match.player1_id ? getPlayerName(match.player1_id) : getTeamName(match.team1_id))
                     : (match.player2_id ? getPlayerName(match.player2_id) : getTeamName(match.team2_id))
                   }
                 </div>
+                {showCongrats2 && (
+                  <span className="absolute left-1/2 top-40 -translate-x-1/2 z-10 text-8xl animate-bounce pointer-events-none select-none">🏆</span>
+                )}
                 <div className="text-[20rem] font-bold text-white mb-2 animate-scale-in">
                   {scores.team2_score}
                 </div>
