@@ -182,8 +182,29 @@ export default function PublicLiveScorePage() {
     );
   }
 
+  const showCongrats1 = scores.team1_score === 30;
+  const showCongrats2 = scores.team2_score === 30;
+  const congratsName1 = sidesSwitched
+    ? (match.player2_id ? getPlayerName(match.player2_id) : getTeamName(match.team2_id))
+    : (match.player1_id ? getPlayerName(match.player1_id) : getTeamName(match.team1_id));
+  const congratsName2 = sidesSwitched
+    ? (match.player1_id ? getPlayerName(match.player1_id) : getTeamName(match.team1_id))
+    : (match.player2_id ? getPlayerName(match.player2_id) : getTeamName(match.team2_id));
+  const showCongrats = showCongrats1 || showCongrats2;
+  const congratsName = showCongrats1 ? congratsName1 : congratsName2;
+
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-black relative">
+      {/* Centered Congratulations Overlay */}
+      {showCongrats && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80">
+          <div className="bg-white rounded-2xl shadow-2xl px-8 py-10 flex flex-col items-center animate-bounce">
+            <span className="text-5xl mb-4">🎉</span>
+            <span className="text-3xl font-bold text-yellow-500 mb-2 drop-shadow-lg text-center">Congratulations {congratsName}!</span>
+            <span className="text-lg text-gray-700">Reached 30 points!</span>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="bg-black shadow-sm border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
