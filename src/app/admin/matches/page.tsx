@@ -94,6 +94,7 @@ export default function AdminMatchesPage() {
   const [editDate, setEditDate] = useState('');
   const [editTime, setEditTime] = useState('');
   const [editCourt, setEditCourt] = useState('');
+  const [editMatchNo, setEditMatchNo] = useState('');
 
   // Handler to start editing
   const startEditMatch = (match: Match) => {
@@ -103,6 +104,7 @@ export default function AdminMatchesPage() {
     setEditDate(date);
     setEditTime(time);
     setEditCourt(match.court || '');
+    setEditMatchNo(match.match_no || '');
   };
 
   // Handler to cancel editing
@@ -111,6 +113,7 @@ export default function AdminMatchesPage() {
     setEditDate('');
     setEditTime('');
     setEditCourt('');
+    setEditMatchNo('');
   };
 
   // Handler to save changes
@@ -125,6 +128,7 @@ export default function AdminMatchesPage() {
       const updated = {
         scheduled_date: scheduledDate,
         court: editCourt || null,
+        match_no: editMatchNo || null,
       };
       const { error } = await supabase
         .from('matches')
@@ -138,9 +142,9 @@ export default function AdminMatchesPage() {
           {
             match_id: match.id,
             activity_type: 'MATCH_RESCHEDULED',
-            description: `Match rescheduled to ${scheduledDate || 'unspecified date'}${editCourt ? ` on Court ${editCourt}` : ''}`,
+            description: `Match rescheduled to ${scheduledDate || 'unspecified date'}${editCourt ? ` on Court ${editCourt}` : ''}${editMatchNo ? `, Match No: ${editMatchNo}` : ''}`,
             performed_by_user_id: user.id,
-            metadata: { scheduled_date: scheduledDate, court: editCourt }
+            metadata: { scheduled_date: scheduledDate, court: editCourt, match_no: editMatchNo }
           }
         ]);
       }
@@ -978,7 +982,17 @@ export default function AdminMatchesPage() {
                           </select>
                         ) : (match.court || '-')}</span>
                         <span className="text-gray-400">|</span>
-                        <span className="text-xs text-gray-500">Match No: {match.match_no || '-'}</span>
+                        <span className="text-xs text-gray-500">Match No: {isEditing ? (
+                          <input
+                            type="text"
+                            value={editMatchNo}
+                            onChange={e => setEditMatchNo(e.target.value)}
+                            className="px-1 py-0.5 border rounded text-xs w-20"
+                            placeholder="Match No"
+                          />
+                        ) : (
+                          match.match_no || '-'
+                        )}</span>
                       </div>
                       <div className="flex items-center gap-3 text-xs mt-1">
                         <span className="text-gray-500">Date: {isEditing ? (
@@ -1103,7 +1117,19 @@ export default function AdminMatchesPage() {
                             </div>
                           </td>
                           <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 align-middle">{poolName}</td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 align-middle">{match.match_no || '-'}</td>
+                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 align-middle">
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                value={editMatchNo}
+                                onChange={e => setEditMatchNo(e.target.value)}
+                                className="px-2 py-1 border rounded text-sm w-full"
+                                placeholder="Match No"
+                              />
+                            ) : (
+                              match.match_no || '-'
+                            )}
+                          </td>
                           <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 align-middle">
                             {isEditing ? (
                               <input 
