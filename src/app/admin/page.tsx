@@ -5,10 +5,12 @@ import { supabase } from '@/lib/store';
 import Link from 'next/link';
 import AuthGuard from '@/components/AuthGuard';
 import ActivityLogSection from './ActivityLogSection';
+import { useData } from '@/contexts/DataContext';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ pools: 0, teams: 0, players: 0, categories: 0 });
   const [loading, setLoading] = useState(true);
+  const { matches } = useData();
   
   useEffect(() => {
     async function fetchStats() {
@@ -29,6 +31,17 @@ export default function AdminDashboard() {
     }
     fetchStats();
   }, []);
+
+  // Referee stats
+  const refereeStats = matches
+    .filter(m => m.match_referee && m.match_referee.trim() !== '')
+    .reduce((acc, m) => {
+      const name = m.match_referee!;
+      acc[name] = (acc[name] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+  const allReferees = Object.entries(refereeStats)
+    .sort((a, b) => b[1] - a[1]);
 
   return (
     <AuthGuard>
@@ -100,6 +113,25 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
+        {/* Referee Stats Cards */}
+        {allReferees.length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+            {allReferees.map(([name, count]) => (
+              <div key={name} className="bg-white rounded-xl p-4 sm:p-6 shadow-lg border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs sm:text-sm font-medium text-gray-600">Matches by Referee</p>
+                    <p className="text-xl sm:text-2xl font-bold text-cyan-700 truncate">{name}</p>
+                  </div>
+                  <div className="p-2 sm:p-3 bg-cyan-100 rounded-lg">
+                    <span className="text-lg sm:text-2xl">🧑‍⚖️</span>
+                  </div>
+                </div>
+                <div className="mt-2 text-2xl font-bold text-cyan-600">{count}</div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
