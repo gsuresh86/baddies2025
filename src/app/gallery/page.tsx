@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useData } from '@/contexts/DataContext';
 import { supabase } from '@/lib/store';
 import { MatchMedia } from '@/types';
 import Image from 'next/image';
@@ -9,6 +10,8 @@ export default function PublicGalleryPage() {
   const [media, setMedia] = useState<MatchMedia[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMedia, setSelectedMedia] = useState<MatchMedia | null>(null);
+  const [search, setSearch] = useState('');
+  const { matches, teams, players } = useData();
 
   useEffect(() => {
     async function fetchMedia() {
@@ -40,6 +43,16 @@ export default function PublicGalleryPage() {
         </div>
         <p className="text-white/80 text-lg max-w-2xl mx-auto">Browse all public photos and videos from the tournament. Click any item to view it larger.</p>
       </div>
+      {/* Player Search Box */}
+      <div className="flex justify-center mb-8">
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search by player name..."
+          className="w-full max-w-md px-4 py-2 rounded-lg border border-white/20 bg-white/10 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+        />
+      </div>
       {loading ? (
         <div className="text-center py-12">
           <div className="animate-pulse">
@@ -56,42 +69,90 @@ export default function PublicGalleryPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {media.map((item) => (
-            <div
-              key={item.id}
-              className="bg-white/5 rounded-lg overflow-hidden cursor-pointer hover:bg-white/10 transition relative group"
-              onClick={() => setSelectedMedia(item)}
-            >
-              {item.media_type === 'photo' ? (
-                <Image
-                  src={item.file_url}
-                  alt={item.description || item.file_name}
-                  width={600}
-                  height={300}
-                  className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-200"
-                />
-              ) : (
-                <video
-                  src={item.file_url}
-                  className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-200"
-                  controls={false}
-                  muted
-                  preload="metadata"
-                />
-              )}
-              <div className="p-3">
-                {item.description && (
-                  <p className="text-white font-medium text-sm truncate">{item.description}</p>
+          {media
+            .filter(item => {
+              if (!search.trim()) return true;
+              let match = undefined;
+              if (item.match_id) {
+                match = matches.find(m => m.id === item.match_id);
+              }
+              if (!match) return false;
+              const player1Name = match?.player1_id ? (players.find(p => p.id === match.player1_id)?.name || '') : '';
+              const player2Name = match?.player2_id ? (players.find(p => p.id === match.player2_id)?.name || '') : '';
+              const searchLower = search.toLowerCase();
+              return (
+                player1Name.toLowerCase().includes(searchLower) ||
+                player2Name.toLowerCase().includes(searchLower)
+              );
+            })
+            .map((item) => {
+            // Find match details if match_id is present
+            let match = undefined;
+            if (item.match_id) {
+              match = matches.find(m => m.id === item.match_id);
+            }
+            const team1Name = match?.team1_id ? (teams.find(t => t.id === match.team1_id)?.name || 'Team 1') : '';
+            const team2Name = match?.team2_id ? (teams.find(t => t.id === match.team2_id)?.name || 'Team 2') : '';
+            const player1Name = match?.player1_id ? (players.find(p => p.id === match.player1_id)?.name || 'Player 1') : '';
+            const player2Name = match?.player2_id ? (players.find(p => p.id === match.player2_id)?.name || 'Player 2') : '';
+            let winnerLabel = '';
+            if (match?.winner) {
+              if (match.winner === 'team1') winnerLabel = team1Name;
+              else if (match.winner === 'team2') winnerLabel = team2Name;
+              else if (match.winner === 'player1') winnerLabel = player1Name;
+              else if (match.winner === 'player2') winnerLabel = player2Name;
+            }
+            const matchStatus = match?.status ? match.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) : '';
+            return (
+              <div
+                key={item.id}
+                className="bg-white/5 rounded-lg overflow-hidden cursor-pointer hover:bg-white/10 transition relative group"
+                onClick={() => setSelectedMedia(item)}
+              >
+                {item.media_type === 'photo' ? (
+                  <Image
+                    src={item.file_url}
+                    alt={item.description || item.file_name}
+                    width={600}
+                    height={300}
+                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-200"
+                  />
+                ) : (
+                  <video
+                    src={item.file_url}
+                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-200"
+                    controls={false}
+                    muted
+                    preload="metadata"
+                  />
                 )}
-                <p className="text-white/60 text-xs mt-1">
-                  {new Date(item.created_at).toLocaleDateString()}
-                </p>
+                <div className="p-3">
+                  {item.description && (
+                    <p className="text-white font-medium text-sm truncate">{item.description}</p>
+                  )}
+                  <p className="text-white/60 text-xs mt-1">
+                    {new Date(item.created_at).toLocaleDateString()}
+                  </p>
+                  {/* Match Details */}
+                  {match && (
+                    <div className="mt-2 bg-black/60 rounded-lg p-2 text-xs text-white/90">
+                      <div className="mb-1 font-semibold">
+                        Match: {team1Name || player1Name} <span className="text-white/60">vs</span> {team2Name || player2Name}
+                      </div>
+                      <div>Status: <span className={`font-bold ${match.status === 'completed' ? 'text-green-400' : match.status === 'in_progress' ? 'text-yellow-300' : 'text-white/80'}`}>{matchStatus}</span></div>
+                      {winnerLabel && <div>Winner: <span className="font-bold text-cyan-300">{winnerLabel}</span></div>}
+                      {typeof match.team1_score === 'number' && typeof match.team2_score === 'number' && (
+                        <div>Score: <span className="font-bold text-blue-200">{match.team1_score}</span> - <span className="font-bold text-green-200">{match.team2_score}</span></div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full">
+                  {item.media_type === 'photo' ? 'Photo' : 'Video'}
+                </div>
               </div>
-              <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full">
-                {item.media_type === 'photo' ? 'Photo' : 'Video'}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
       {/* Media Modal */}
