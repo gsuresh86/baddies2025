@@ -8,6 +8,7 @@ import { useData } from '@/contexts/DataContext';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
+import { RealtimeChannel } from '@supabase/supabase-js';
 
 export default function PublicLiveScorePage() {
   const { matches: cachedMatches, teams, players, pools, categories } = useData();
@@ -113,19 +114,12 @@ export default function PublicLiveScorePage() {
   useEffect(() => {
     if (!matchId) return;
 
-    console.log('🚀 Public: Initializing WebSocket listener for match:', matchId);
-    
-    // Wait a bit for the page to fully load
+    const channelRef = { current: null as RealtimeChannel | null };
     const timeout = setTimeout(() => {
-      console.log('⏰ Public: Starting WebSocket connection after delay');
-      
       const channelName = `live-score-${matchId}`;
-      console.log('📡 Public: Creating channel:', channelName);
-      
       const channel = supabase.channel(channelName);
+      channelRef.current = channel;
 
-      console.log('🔧 Public: Channel created, setting up listener...');
-      
       channel
         .on(
           'broadcast',
@@ -145,7 +139,6 @@ export default function PublicLiveScorePage() {
         .subscribe((status) => {
           console.log(`📊 Public: Channel status changed to: ${status}`);
           setConnectionStatus(status);
-          
           if (status === 'SUBSCRIBED') {
             console.log('✅ Public: Successfully connected to WebSocket!');
           } else if (status === 'CHANNEL_ERROR') {
@@ -156,11 +149,16 @@ export default function PublicLiveScorePage() {
             console.log('🔒 Public: Channel closed');
           }
         });
-    }, 1500); // Slightly longer delay for public page
+    }, 1500);
 
     return () => {
       console.log('🧹 Public: Cleaning up WebSocket connection');
       clearTimeout(timeout);
+      if (channelRef.current) {
+        channelRef.current.unsubscribe();
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
   }, [matchId]);
 
@@ -242,88 +240,88 @@ export default function PublicLiveScorePage() {
         <div className="relative w-full overflow-x-hidden mb-4">
           <div className="flex items-center animate-marquee whitespace-nowrap gap-12 py-2">
             {/* First set of logos */}
-            <Image src="/baddies.png" alt="Baddies" width={200} height={100} className="object-contain" />
-            <Image src="/planet-green-logo.png" alt="Planet Green" width={260} height={130} className="object-contain" />
-            <Image src="/gamepoint-logo.png" alt="Gamepoint" width={260} height={130} className="object-contain" />
-            <Image src="/trice-logo.png" alt="Trice" width={180} height={90} className="object-contain" />
-            <Image src="/creekside-logo.png" alt="Creekside" width={260} height={130} className="object-contain" />
+            <Image src="/baddies.png" alt="Baddies" width={120} height={60} className="object-contain w-[70px] h-[35px] md:w-[200px] md:h-[100px]" />
+            <Image src="/planet-green-logo.png" alt="Planet Green" width={156} height={78} className="object-contain w-[90px] h-[45px] md:w-[260px] md:h-[130px]" />
+            <Image src="/gamepoint-logo.png" alt="Gamepoint" width={156} height={78} className="object-contain w-[90px] h-[45px] md:w-[260px] md:h-[130px]" />
+            <Image src="/trice-logo.png" alt="Trice" width={108} height={54} className="object-contain w-[60px] h-[30px] md:w-[180px] md:h-[90px]" />
+            <Image src="/creekside-logo.png" alt="Creekside" width={156} height={78} className="object-contain w-[90px] h-[45px] md:w-[260px] md:h-[130px]" />
             {/* Repeat logos for seamless loop */}
-            <Image src="/baddies.png" alt="Baddies" width={200} height={100} className="object-contain" />
-            <Image src="/planet-green-logo.png" alt="Planet Green" width={260} height={130} className="object-contain" />
-            <Image src="/gamepoint-logo.png" alt="Gamepoint" width={260} height={130} className="object-contain" />
-            <Image src="/trice-logo.png" alt="Trice" width={180} height={90} className="object-contain" />
-            <Image src="/creekside-logo.png" alt="Creekside" width={260} height={130} className="object-contain" />
+            <Image src="/baddies.png" alt="Baddies" width={120} height={60} className="object-contain w-[70px] h-[35px] md:w-[200px] md:h-[100px]" />
+            <Image src="/planet-green-logo.png" alt="Planet Green" width={156} height={78} className="object-contain w-[90px] h-[45px] md:w-[260px] md:h-[130px]" />
+            <Image src="/gamepoint-logo.png" alt="Gamepoint" width={156} height={78} className="object-contain w-[90px] h-[45px] md:w-[260px] md:h-[130px]" />
+            <Image src="/trice-logo.png" alt="Trice" width={108} height={54} className="object-contain w-[60px] h-[30px] md:w-[180px] md:h-[90px]" />
+            <Image src="/creekside-logo.png" alt="Creekside" width={156} height={78} className="object-contain w-[90px] h-[45px] md:w-[260px] md:h-[130px]" />
           </div>
         </div>
 
         {/* Full Screen Score Cards with PCBT logos inside layout */}
-        <div className="flex items-center justify-between h-[60vh] gap-4">
-          {/* PCBT Logo on Left - Inside layout */}
-          <div className="flex-shrink-0 flex items-center h-full">
-            <Image src="/pcbt.png" alt="PCBT" width={200} height={100} className="object-contain" />
+        <div className="flex flex-col md:flex-row items-center justify-between h-auto md:h-[60vh] gap-4">
+          {/* PCBT Logo on Left - Inside layout (hide on mobile) */}
+          <div className="hidden md:flex flex-shrink-0 items-center h-full">
+            <Image src="/pcbt.png" alt="PCBT" width={200} height={100} className="object-contain w-[120px] h-[60px] md:w-[200px] md:h-[100px]" />
           </div>
           {/* Score Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 flex-1 h-full">
+          <div className="flex flex-col md:grid md:grid-cols-2 gap-4 md:gap-8 flex-1 w-full">
             {/* Team 1/Player 1 Score */}
             <div className="text-center flex flex-col justify-center">
-              <div className="bg-blue-500 rounded-3xl p-8 shadow-2xl hover-lift h-full flex flex-col justify-center relative">
+              <div className="bg-blue-500 rounded-3xl p-4 md:p-8 shadow-2xl hover-lift h-full flex flex-col justify-center relative">
                 {showCongrats1 && (
                   <div className="mb-2 flex flex-col items-center">
-                    <span className="block text-4xl font-bold text-yellow-300 drop-shadow-lg animate-bounce">Congratulations!</span>
+                    <span className="block text-2xl md:text-4xl font-bold text-yellow-300 drop-shadow-lg animate-bounce">Congratulations!</span>
                   </div>
                 )}
                 {/* Show Good effort for loser if team2 won */}
                 {showCongrats2 && (
                   <div className="mb-2 flex flex-col items-center">
-                    <span className="block text-4xl font-semibold text-white/80 animate-fade-in">Good effort!</span>
+                    <span className="block text-2xl md:text-4xl font-semibold text-white/80 animate-fade-in">Good effort!</span>
                   </div>
                 )}
-                <div className="text-4xl font-bold text-blue-100 mb-4">
+                <div className="text-2xl md:text-4xl font-bold text-blue-100 mb-2 md:mb-4">
                   {sidesSwitched 
                     ? (match.player2_id ? getPlayerName(match.player2_id) : getTeamName(match.team2_id))
                     : (match.player1_id ? getPlayerName(match.player1_id) : getTeamName(match.team1_id))
                   }
                 </div>
                 {showCongrats1 && (
-                  <span className="absolute left-1/2 top-40 -translate-x-1/2 z-10 text-8xl animate-bounce pointer-events-none select-none">🏆</span>
+                  <span className="absolute left-1/2 top-24 md:top-40 -translate-x-1/2 z-10 text-5xl md:text-8xl animate-bounce pointer-events-none select-none">🏆</span>
                 )}
-                <div className="text-[20rem] font-bold text-white mb-2 animate-scale-in">
+                <div className="text-[7rem] md:text-[20rem] font-bold text-white mb-2 animate-scale-in">
                   {scores.team1_score}
                 </div>
               </div>
             </div>
             {/* Team 2/Player 2 Score */}
             <div className="text-center flex flex-col justify-center">
-              <div className="bg-green-500 rounded-3xl p-8 shadow-2xl hover-lift h-full flex flex-col justify-center relative">
+              <div className="bg-green-500 rounded-3xl p-4 md:p-8 shadow-2xl hover-lift h-full flex flex-col justify-center relative">
                 {showCongrats2 && (
                   <div className="mb-2 flex flex-col items-center">
-                    <span className="block text-4xl font-bold text-yellow-300 drop-shadow-lg animate-bounce">Congratulations!</span>
+                    <span className="block text-2xl md:text-4xl font-bold text-yellow-300 drop-shadow-lg animate-bounce">Congratulations!</span>
                   </div>
                 )}
                 {/* Show Good effort for loser if team1 won */}
                 {showCongrats1 && (
                   <div className="mb-2 flex flex-col items-center">
-                    <span className="block text-4xl font-semibold text-white/80 animate-fade-in">Good effort!</span>
+                    <span className="block text-2xl md:text-4xl font-semibold text-white/80 animate-fade-in">Good effort!</span>
                   </div>
                 )}
-                <div className="text-4xl font-bold text-green-100 mb-4">
+                <div className="text-2xl md:text-4xl font-bold text-green-100 mb-2 md:mb-4">
                   {sidesSwitched 
                     ? (match.player1_id ? getPlayerName(match.player1_id) : getTeamName(match.team1_id))
                     : (match.player2_id ? getPlayerName(match.player2_id) : getTeamName(match.team2_id))
                   }
                 </div>
                 {showCongrats2 && (
-                  <span className="absolute left-1/2 top-40 -translate-x-1/2 z-10 text-8xl animate-bounce pointer-events-none select-none">🏆</span>
+                  <span className="absolute left-1/2 top-24 md:top-40 -translate-x-1/2 z-10 text-5xl md:text-8xl animate-bounce pointer-events-none select-none">🏆</span>
                 )}
-                <div className="text-[20rem] font-bold text-white mb-2 animate-scale-in">
+                <div className="text-[7rem] md:text-[20rem] font-bold text-white mb-2 animate-scale-in">
                   {scores.team2_score}
                 </div>
               </div>
             </div>
           </div>
-          {/* PCBT Logo on Right - Inside layout */}
-          <div className="flex-shrink-0 flex items-center h-full">
-            <Image src="/pcbt.png" alt="PCBT" width={200} height={100} className="object-contain" />
+          {/* PCBT Logo on Right - Inside layout (hide on mobile) */}
+          <div className="hidden md:flex flex-shrink-0 items-center h-full">
+            <Image src="/pcbt.png" alt="PCBT" width={200} height={100} className="object-contain w-[120px] h-[60px] md:w-[200px] md:h-[100px]" />
           </div>
         </div>
       </div>

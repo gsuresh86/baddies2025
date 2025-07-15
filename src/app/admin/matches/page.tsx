@@ -847,13 +847,25 @@ export default function AdminMatchesPage() {
           {/* Date Filter */}
           <div className="w-[180px] min-w-[180px]">
             <label htmlFor="date-filter" className="text-sm font-medium text-gray-700">Date:</label>
-            <input
-              id="date-filter"
-              type="date"
-              value={dateFilter}
-              onChange={e => setDateFilter(e.target.value)}
-              className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white text-sm"
-            />
+            <div className="flex items-center gap-1">
+              <input
+                id="date-filter"
+                type="date"
+                value={dateFilter}
+                onChange={e => setDateFilter(e.target.value)}
+                className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white text-sm"
+              />
+              {dateFilter && (
+                <button
+                  type="button"
+                  onClick={() => setDateFilter('')}
+                  className="ml-1 px-2 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-semibold border border-gray-300"
+                  title="Clear date filter"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex gap-2 flex-wrap mt-1">

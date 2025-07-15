@@ -61,18 +61,67 @@ function CountdownToTournament() {
 }
 
 export default function LandingPage() {
+  // Tab configuration
+  const tabs = [
+    { label: 'Info', id: 'tournament-info' },
+    { label: 'Countdown', id: 'countdown' },
+    { label: 'Format', id: 'format' },
+    { label: 'Highlights', id: 'enhanced-info' },
+    { label: 'Sponsors', id: 'sponsors' },
+    { label: 'Stats', id: 'quick-stats' },
+  ];
+  const [activeTab, setActiveTab] = useState(tabs[0].id);
+  
+  // Scroll to section and set active tab
+  const handleTabClick = (id: string) => {
+    setActiveTab(id);
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  // Update active tab on scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      let found = false;
+      for (let i = tabs.length - 1; i >= 0; i--) {
+        const section = document.getElementById(tabs[i].id);
+        if (section) {
+          const rect = section.getBoundingClientRect();
+          if (rect.top <= 120) {
+            setActiveTab(tabs[i].id);
+            found = true;
+            break;
+          }
+        }
+      }
+      if (!found) setActiveTab(tabs[0].id);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  });
+
   return (
     <>
       <div className="w-full max-w-6xl mt-8 px-2 sm:px-4 mx-auto font-body">
-        {/* Top Navigation for Hash Links */}
+        {/* Sleek Tab Navigation */}
         <nav className="flex flex-wrap justify-center gap-2 sm:gap-4 mb-8 sticky top-0 z-30 bg-black/70 rounded-xl py-2 px-4 border border-white/10 shadow-lg backdrop-blur-md">
-          <a href="#tournament-info" className="text-white font-bold hover:text-green-300 transition text-sm sm:text-base">Info</a>
-          <a href="#countdown" className="text-white font-bold hover:text-green-300 transition text-sm sm:text-base">Countdown</a>
-          <a href="#format" className="text-white font-bold hover:text-green-300 transition text-sm sm:text-base">Format</a>
-          <a href="#enhanced-info" className="text-white font-bold hover:text-green-300 transition text-sm sm:text-base">Highlights</a>
-          <a href="#sponsors" className="text-white font-bold hover:text-green-300 transition text-sm sm:text-base">Sponsors</a>
-          <a href="#quick-stats" className="text-white font-bold hover:text-green-300 transition text-sm sm:text-base">Stats</a>
-          
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => handleTabClick(tab.id)}
+              className={`px-4 py-2 rounded-full font-bold transition-all text-sm sm:text-base focus:outline-none
+                ${activeTab === tab.id
+                  ? 'bg-gradient-to-r from-green-500 to-blue-500 text-white shadow-lg scale-105'
+                  : 'text-white/80 hover:bg-white/10 hover:text-green-300'}
+              `}
+              style={{ minWidth: 90 }}
+              type="button"
+            >
+              {tab.label}
+            </button>
+          ))}
         </nav>
         {/* Tournament Info Section */}
         <div id="tournament-info" className="bg-gradient-to-r from-blue-900/40 to-green-900/40 rounded-3xl p-8 mb-10 border border-white/20 shadow-2xl animate-fade-in-scale scroll-mt-24">

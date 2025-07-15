@@ -1,15 +1,6 @@
 import { TournamentStandings, Team } from '@/types';
 import React from 'react';
 
-const statLabels = [
-  { key: 'matchesPlayed', label: 'MP' },
-  { key: 'matchesWon', label: 'W' },
-  { key: 'matchesLost', label: 'L' },
-  { key: 'gamesWon', label: 'GW' },
-  { key: 'gamesLost', label: 'GL' },
-  { key: 'points', label: 'PTS' },
-];
-
 const statColor = {
   matchesPlayed: 'text-white',
   matchesWon: 'text-green-400 font-bold',
@@ -34,21 +25,31 @@ export default function StandingsTab({
   expandedTeams = new Set(), 
   onToggleTeamExpansion 
 }: StandingsTabProps) {
+  // Dynamically set stat labels based on category
+  const dynamicStatLabels = [
+    { key: 'matchesPlayed', label: 'MP' },
+    { key: 'matchesWon', label: 'W' },
+    { key: 'matchesLost', label: 'L' },
+    { key: isMensTeam ? 'gamesWon' : 'gamesWon', label: isMensTeam ? 'GW' : 'PW' },
+    { key: isMensTeam ? 'gamesLost' : 'gamesLost', label: isMensTeam ? 'GL' : 'PL' },
+    { key: 'points', label: 'PTS' },
+  ];
   return (
     <div>
       <table className="w-full text-xs sm:text-sm">
         <thead>
           <tr className="bg-gradient-to-r from-white/20 to-white/10 border-b border-white/20">
             <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-bold text-white uppercase tracking-wider">Team</th>
-            {statLabels.map(stat => (
+            {dynamicStatLabels.map(stat => (
               <th key={stat.key} className="px-2 sm:px-4 py-2 sm:py-3 text-center font-bold text-white uppercase tracking-wider">{stat.label}</th>
             ))}
+            <th className="px-2 sm:px-4 py-2 sm:py-3 text-center font-bold text-white uppercase tracking-wider">NRR</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-white/10">
           {standings.length === 0 ? (
             <tr>
-              <td colSpan={7} className="text-center py-8 text-white/80 text-base">
+              <td colSpan={dynamicStatLabels.length + 2} className="text-center py-8 text-white/80 text-base">
                 <div className="text-3xl mb-2">📊</div>
                 No standings available yet. Matches need to be completed to show rankings.
               </td>
@@ -88,7 +89,7 @@ export default function StandingsTab({
                         )}
                       </div>
                     </td>
-                    {statLabels.map(stat => (
+                    {dynamicStatLabels.map(stat => (
                       <td
                         key={stat.key}
                         className={`px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-center ${statColor[stat.key as keyof typeof statColor] || 'text-white'}`}
@@ -96,11 +97,15 @@ export default function StandingsTab({
                         {standing[stat.key as keyof TournamentStandings]}
                       </td>
                     ))}
+                    {/* NRR column: difference between GW/GL or PW/PL */}
+                    <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-center text-cyan-300 font-bold">
+                      {(Number(standing.gamesWon) - Number(standing.gamesLost))}
+                    </td>
                   </tr>
                   {/* Players list row */}
                   {isMensTeam && isExpanded && hasPlayers && (
                     <tr key={`${standing.teamId}-players`} className="bg-white/5">
-                      <td colSpan={7} className="px-2 sm:px-4 py-3">
+                      <td colSpan={dynamicStatLabels.length + 2} className="px-2 sm:px-4 py-3">
                         <div className="ml-4">
                           <div className="flex flex-wrap gap-2">
                             {team.players?.map((player) => (

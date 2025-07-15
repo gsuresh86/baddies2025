@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from 'next/link';
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 
 interface PublicLayoutProps {
   children: React.ReactNode;
@@ -10,6 +11,15 @@ interface PublicLayoutProps {
 
 export default function PublicLayout({ children }: PublicLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
+  const menu = [
+    { href: '/fixtures', label: '🏸 Fixtures' },
+    { href: '/standings', label: '🏆 Standings' },
+    { href: '/teams', label: '👥 Teams' },
+    { href: '/players', label: '🧑‍🎾 Players' },
+    { href: '/formats', label: '📊 Formats' },
+    { href: '/rules', label: '📋 Rules' },
+  ];
   return (
     <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden">
       {/* Enhanced Badminton Background with multiple layers */}
@@ -60,42 +70,23 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
         </button>
         {/* Navigation - Desktop only */}
         <nav className="hidden sm:flex flex-wrap justify-end gap-2 md:gap-4 ml-auto">
-          <Link
-            href="/fixtures"
-            className="px-3 sm:px-5 py-2 bg-green-600 text-white rounded-xl text-sm sm:text-lg font-bold shadow hover:bg-green-700 transition border-2 border-green-500 hover-lift relative overflow-hidden"
-          >
-            <span className="relative">🏸 Fixtures</span>
-          </Link>
-          <Link
-            href="/standings"
-            className="px-3 sm:px-5 py-2 bg-black text-white rounded-xl text-sm sm:text-lg font-bold shadow hover:bg-gray-900 transition border-2 border-gray-700 hover-lift relative overflow-hidden"
-          >
-            <span className="relative">🏆 Standings</span>
-          </Link>
-          <Link
-            href="/teams"
-            className="px-3 sm:px-5 py-2 bg-black text-white rounded-xl text-sm sm:text-lg font-bold shadow hover:bg-gray-900 transition border-2 border-gray-700 hover-lift relative overflow-hidden"
-          >
-            <span className="relative">👥 Teams</span>
-          </Link>
-          <Link
-            href="/players"
-            className="px-3 sm:px-5 py-2 bg-black text-white rounded-xl text-sm sm:text-lg font-bold shadow hover:bg-gray-900 transition border-2 border-gray-700 hover-lift relative overflow-hidden"
-          >
-            <span className="relative">🧑‍🎾 Players</span>
-          </Link>
-          <Link
-            href="/formats"
-            className="px-3 sm:px-5 py-2 bg-black text-white rounded-xl text-sm sm:text-lg font-bold shadow hover:bg-gray-900 transition border-2 border-gray-700 hover-lift relative overflow-hidden"
-          >
-            <span className="relative">📊 Formats</span>
-          </Link>
-          <Link
-            href="/rules"
-            className="px-3 sm:px-5 py-2 bg-black text-white rounded-xl text-sm sm:text-lg font-bold shadow hover:bg-gray-900 transition border-2 border-gray-700 hover-lift relative overflow-hidden"
-          >
-            <span className="relative">📋 Rules</span>
-          </Link>
+          {menu.map(item => {
+            const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`px-4 sm:px-6 py-2 rounded-full font-bold text-sm sm:text-lg transition-all duration-200 focus:outline-none
+                  ${isActive
+                    ? 'bg-gradient-to-r from-green-500 to-blue-500 text-white shadow-lg scale-105 border-2 border-white'
+                    : 'bg-black/60 text-white/80 hover:bg-white/10 hover:text-green-300 border border-transparent'}
+                `}
+                style={{ minWidth: 110 }}
+              >
+                <span className="relative">{item.label}</span>
+              </Link>
+            );
+          })}
         </nav>
         {/* Mobile Side Menu Overlay */}
         {mobileMenuOpen && (
@@ -111,36 +102,23 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
-              <Link
-                href="/fixtures"
-                className="px-4 py-3 rounded-lg text-lg font-bold text-white bg-green-600 hover:bg-green-700 border border-green-500"
-                onClick={() => setMobileMenuOpen(false)}
-              >🏸 Fixtures</Link>
-              <Link
-                href="/standings"
-                className="px-4 py-3 rounded-lg text-lg font-bold text-white bg-gray-900 hover:bg-gray-800 border border-gray-700"
-                onClick={() => setMobileMenuOpen(false)}
-              >🏆 Standings</Link>
-              <Link
-                href="/teams"
-                className="px-4 py-3 rounded-lg text-lg font-bold text-white bg-gray-900 hover:bg-gray-800 border border-gray-700"
-                onClick={() => setMobileMenuOpen(false)}
-              >👥 Teams</Link>
-              <Link
-                href="/players"
-                className="px-4 py-3 rounded-lg text-lg font-bold text-white bg-gray-900 hover:bg-gray-800 border border-gray-700"
-                onClick={() => setMobileMenuOpen(false)}
-              >🧑‍🎾 Players</Link>
-              <Link
-                href="/formats"
-                className="px-4 py-3 rounded-lg text-lg font-bold text-white bg-gray-900 hover:bg-gray-800 border border-gray-700"
-                onClick={() => setMobileMenuOpen(false)}
-              >📊 Formats</Link>
-              <Link
-                href="/rules"
-                className="px-4 py-3 rounded-lg text-lg font-bold text-white bg-gray-900 hover:bg-gray-800 border border-gray-700"
-                onClick={() => setMobileMenuOpen(false)}
-              >📋 Rules</Link>
+              {menu.map(item => {
+                const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`px-4 py-3 rounded-full text-lg font-bold transition-all duration-200 focus:outline-none mb-1
+                      ${isActive
+                        ? 'bg-gradient-to-r from-green-500 to-blue-500 text-white shadow-lg scale-105 border-2 border-white'
+                        : 'bg-black/70 text-white/80 hover:bg-white/10 hover:text-green-300 border border-transparent'}
+                    `}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
             </div>
           </>
         )}

@@ -29,6 +29,7 @@ export default function FixturesPage() {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'pool' | 'schedule'>('schedule');
   const [selectedDate, setSelectedDate] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const fetchCategories = async () => {
     // Categories are now provided by DataContext, no need to fetch separately
@@ -382,6 +383,55 @@ export default function FixturesPage() {
     return sortedGroups;
   };
 
+  // --- Compute filtered date groups and keys at top level ---
+  const filteredDateGroups: { [dateKey: string]: Match[] } = {};
+  let filteredDateKeys: string[] = [];
+  let dateGroups: { [dateKey: string]: Match[] } = {};
+  if (fixtures) {
+    dateGroups = groupMatchesBySchedule(fixtures.matches);
+    const dateKeys = Object.keys(dateGroups);
+    for (const dateKey of dateKeys) {
+      const matches = dateGroups[dateKey];
+      filteredDateGroups[dateKey] = statusFilter === 'all' ? matches : matches.filter(m => m.status === statusFilter);
+    }
+    filteredDateKeys = Object.keys(filteredDateGroups).filter(dateKey => filteredDateGroups[dateKey].length > 0);
+  }
+
+  // --- useEffect to update selectedDate if not in filteredDateKeys ---
+  // Helper: get next upcoming date key (today or future, with at least one match of selected status)
+  const getNextUpcomingDateKey = (dateGroups: { [dateKey: string]: Match[] }, status: string) => {
+    const now = new Date();
+    const dateKeys = Object.keys(dateGroups);
+    for (const dateKey of dateKeys) {
+      const [date] = dateKey.split(' - ');
+      const [day, month, year] = date.split('/');
+      const dateObj = new Date(`${year}-${month}-${day}T00:00:00+05:30`);
+      if (dateObj >= new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+        const matches = dateGroups[dateKey];
+        const filtered = status === 'all' ? matches : matches.filter(m => m.status === status);
+        if (filtered.length > 0) return dateKey;
+      }
+    }
+    // fallback: first date with any matches for status
+    for (const dateKey of dateKeys) {
+      const matches = dateGroups[dateKey];
+      const filtered = status === 'all' ? matches : matches.filter(m => m.status === status);
+      if (filtered.length > 0) return dateKey;
+    }
+    return dateKeys[0] || '';
+  };
+
+  // Fix: useEffect at top level
+  useEffect(() => {
+    if (!fixtures) return;
+    if (filteredDateKeys.length === 0) return;
+    if (!filteredDateKeys.includes(selectedDate)) {
+      const nextKey = getNextUpcomingDateKey(filteredDateGroups, statusFilter);
+      setSelectedDate(nextKey);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, fixtures, selectedCategory, viewMode]);
+
   if (loading || categories.length === 0) {
     return (
       <div className="text-center py-12">
@@ -426,6 +476,27 @@ export default function FixturesPage() {
           </button>
         </div>
       </div>
+
+      {/* Match Status Dropdown (only for schedule view) */}
+      {viewMode === 'schedule' && (
+        <div className="flex justify-center mb-6">
+          <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-xl">
+            <label htmlFor="status-filter" className="text-white/80 font-semibold text-sm">Match Status:</label>
+            <select
+              id="status-filter"
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value)}
+              className="px-3 py-1.5 rounded-lg bg-black/60 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 border border-white/20 text-sm"
+            >
+              <option value="all">All</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+        </div>
+      )}
 
       {/* Category Selector as Tabs */}
       {categories.length > 0 && (
@@ -508,21 +579,14 @@ export default function FixturesPage() {
           ) : (
             // Schedule View with Vertical Date Tabs Inside Card
             (() => {
-              const dateGroups = groupMatchesBySchedule(fixtures.matches);
-              const dateKeys = Object.keys(dateGroups);
-              const visibleDateKeys = dateKeys; // Show all dates
+              const currentSelectedDate = filteredDateKeys.includes(selectedDate) ? selectedDate : (filteredDateKeys.length > 0 ? filteredDateKeys[0] : '');
+              const selectedMatches = currentSelectedDate ? filteredDateGroups[currentSelectedDate] : [];
               
               console.log('Schedule view - Total matches:', fixtures.matches.length);
-              console.log('Schedule view - Date groups:', dateKeys);
+              console.log('Schedule view - Date groups:', filteredDateKeys);
               console.log('Schedule view - Selected date:', selectedDate);
               
               // Use the first date if none is selected or if selected date doesn't exist
-              const currentSelectedDate = dateKeys.includes(selectedDate) ? selectedDate : (dateKeys.length > 0 ? dateKeys[0] : '');
-              const selectedMatches = currentSelectedDate ? dateGroups[currentSelectedDate] : [];
-              
-              console.log('Schedule view - Current selected date:', currentSelectedDate);
-              console.log('Schedule view - Selected matches count:', selectedMatches.length);
-              
               const selectedDateFormatted = currentSelectedDate ? (() => {
                 try {
                   const [dateKey] = currentSelectedDate.split(' - ');
@@ -548,7 +612,7 @@ export default function FixturesPage() {
                   <div className="flex gap-6">
                     {/* Vertical Date Tabs */}
                     <div className="flex flex-col gap-1 min-w-[40px]">
-                      {visibleDateKeys.map((dateKey) => {
+                      {filteredDateKeys.map((dateKey) => {
                         let shortDate = dateKey;
                         try {
                           const [date] = dateKey.split(' - ');
@@ -604,7 +668,7 @@ export default function FixturesPage() {
                             ))
                           ) : (
                             <div className="text-center py-8">
-                              <p className="text-white/60">No matches scheduled for this date</p>
+                              <p className="text-white/60">No matches for this status on this date</p>
                             </div>
                           )}
                         </div>
