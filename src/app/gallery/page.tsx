@@ -136,6 +136,15 @@ export default function PublicGalleryPage() {
                   {/* Match Details */}
                   {match && (
                     <div className="mt-2 bg-black/60 rounded-lg p-2 text-xs text-white/90">
+                      {/* Match Code and Pool Name */}
+                      <div className="mb-1">
+                        {match.match_no && (
+                          <span className="font-semibold text-cyan-300">Match Code: {match.match_no}</span>
+                        )}
+                        {match.pool?.name && (
+                          <span className="ml-2 font-semibold text-green-300">Pool: {match.pool.name}</span>
+                        )}
+                      </div>
                       <div className="mb-1 font-semibold">
                         Match: {team1Name || player1Name} <span className="text-white/60">vs</span> {team2Name || player2Name}
                       </div>

@@ -4,6 +4,7 @@ import { supabase } from "@/lib/store";
 import { useData } from '@/contexts/DataContext';
 import AuthGuard from "@/components/AuthGuard";
 import * as XLSX from 'xlsx';
+import { getUniquePlayersByName } from '@/lib/utils';
 
 interface PlayerRow {
   id: string;
@@ -63,23 +64,14 @@ export default function AdminTShirtsPage() {
     }
   }, [cachedPlayers]);
 
-  // Use a Map to ensure uniqueness by name only (spaces removed, lowercased)
-  const uniqueMap = new Map<string, { name: string; phone?: string; tshirt_size?: string; isPartner?: boolean; flat_no?: string }>();
-  players.forEach((player) => {
-    // Main player
-    const nameKey = player.name.replace(/\s+/g, '').toLowerCase();
-    if (!uniqueMap.has(nameKey)) {
-      uniqueMap.set(nameKey, { name: player.name, phone: player.phone, tshirt_size: player.tshirt_size, isPartner: false, flat_no: player.flat_no });
-    }
-    // Partner
-    if (player.partner_name) {
-      const partnerNameKey = player.partner_name.replace(/\s+/g, '').toLowerCase();
-      if (!uniqueMap.has(partnerNameKey)) {
-        uniqueMap.set(partnerNameKey, { name: player.partner_name, phone: player.partner_phone, tshirt_size: player.partner_tshirt_size, isPartner: true, flat_no: player.partner_flat_no });
-      }
-    }
-  });
-  const allRows = Array.from(uniqueMap.values());
+  // Use generic utility to get unique players by name
+  const allRows = getUniquePlayersByName(players).map(({ name, isPartner, player }) => ({
+    name,
+    phone: isPartner ? player.partner_phone : player.phone,
+    tshirt_size: isPartner ? player.partner_tshirt_size : player.tshirt_size,
+    isPartner,
+    flat_no: isPartner ? player.partner_flat_no : player.flat_no,
+  }));
   // Sort by name (case-insensitive)
   allRows.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 

@@ -72,4 +72,28 @@ export const categoryTypes: Record<PlayerCategory, 'team' | 'player' | 'pair'> =
   [PlayerCategory.GirlsU18]: 'player',
   [PlayerCategory.BoysU18]: 'player',
   [PlayerCategory.MixedDoubles]: 'pair',
-}; 
+};
+
+/**
+ * Returns an array of unique players by name (case-insensitive, spaces removed).
+ * Accepts an array of player objects with at least a 'name' and optional 'partner_name'.
+ * Each unique name appears only once in the result.
+ */
+export function getUniquePlayersByName<T extends { name: string; partner_name?: string }>(players: T[]): Array<{ name: string; isPartner: boolean; player: T; }> {
+  const uniqueMap = new Map<string, { name: string; isPartner: boolean; player: T }>();
+  players.forEach((player) => {
+    // Main player
+    const nameKey = player.name.replace(/\s+/g, '').toLowerCase();
+    if (!uniqueMap.has(nameKey)) {
+      uniqueMap.set(nameKey, { name: player.name, isPartner: false, player });
+    }
+    // Partner
+    if (player.partner_name) {
+      const partnerNameKey = player.partner_name.replace(/\s+/g, '').toLowerCase();
+      if (!uniqueMap.has(partnerNameKey)) {
+        uniqueMap.set(partnerNameKey, { name: player.partner_name, isPartner: true, player });
+      }
+    }
+  });
+  return Array.from(uniqueMap.values());
+} 
