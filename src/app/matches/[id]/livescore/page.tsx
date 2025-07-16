@@ -1,19 +1,107 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/store';
-import { Match } from '@/types';
+import { Match, Game as GameBase } from '@/types';
 import { useData } from '@/contexts/DataContext';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
+// GameCard component for displaying a single game's live score
+function GameCard({ game, getPlayerName, scores, showCongrats1, showCongrats2, sidesSwitched }: any) {
+  if (!game) return null;
+
+  // Helper to get the correct player names based on sidesSwitched
+  const getCardName = (side: 'team1' | 'team2') => {
+    if (game.type === 'singles') {
+      if (side === 'team1') {
+        return getPlayerName(game['player1_id'] || game['player1Id']);
+      } else {
+        return getPlayerName(game['player3_id'] || game['player3Id'] || game['player2_id'] || game['player2Id']);
+      }
+    } else {
+      if (side === 'team1') {
+        return `${getPlayerName(game['player1_id'] || game['player1Id'])} & ${getPlayerName(game['player2_id'] || game['player2Id'])}`;
+      } else {
+        return `${getPlayerName(game['player3_id'] || game['player3Id'])} & ${getPlayerName(game['player4_id'] || game['player4Id'])}`;
+      }
+    }
+  };
+
+  return (
+    <div className="flex flex-col md:flex-row items-center justify-between h-auto md:h-[60vh] gap-4">
+      {/* PCBT Logo on Left - Inside layout (hide on mobile) */}
+      <div className="hidden md:flex flex-shrink-0 items-center h-full">
+        <Image src="/pcbt.png" alt="PCBT" width={200} height={100} className="object-contain w-[120px] h-[60px] md:w-[200px] md:h-[100px]" />
+      </div>
+      {/* Score Cards Grid */}
+      <div className="flex flex-col md:grid md:grid-cols-2 gap-4 md:gap-8 flex-1 w-full">
+        {/* Team 1/Player 1 Score */}
+        <div className="text-center flex flex-col justify-center">
+          <div className="bg-blue-500 rounded-3xl p-4 md:p-8 shadow-2xl hover-lift h-full flex flex-col justify-center relative">
+            {showCongrats1 && (
+              <div className="mb-2 flex flex-col items-center">
+                <span className="block text-2xl md:text-4xl font-bold text-yellow-300 drop-shadow-lg animate-bounce">Congratulations!</span>
+              </div>
+            )}
+            {showCongrats2 && (
+              <div className="mb-2 flex flex-col items-center">
+                <span className="block text-2xl md:text-4xl font-semibold text-white/80 animate-fade-in">Good effort!</span>
+              </div>
+            )}
+            <div className="text-2xl md:text-4xl font-bold text-blue-100 mb-2 md:mb-4">
+              {sidesSwitched ? getCardName('team2') : getCardName('team1')}
+            </div>
+            {showCongrats1 && (
+              <span className="absolute left-1/2 top-24 md:top-40 -translate-x-1/2 z-10 text-5xl md:text-8xl animate-bounce pointer-events-none select-none">🏆</span>
+            )}
+            <div className="text-[7rem] md:text-[20rem] font-bold text-white mb-2 animate-scale-in">
+              {scores.team1_score}
+            </div>
+          </div>
+        </div>
+        {/* Team 2/Player 2 Score */}
+        <div className="text-center flex flex-col justify-center">
+          <div className="bg-green-500 rounded-3xl p-4 md:p-8 shadow-2xl hover-lift h-full flex flex-col justify-center relative">
+            {showCongrats2 && (
+              <div className="mb-2 flex flex-col items-center">
+                <span className="block text-2xl md:text-4xl font-bold text-yellow-300 drop-shadow-lg animate-bounce">Congratulations!</span>
+              </div>
+            )}
+            {showCongrats1 && (
+              <div className="mb-2 flex flex-col items-center">
+                <span className="block text-2xl md:text-4xl font-semibold text-white/80 animate-fade-in">Good effort!</span>
+              </div>
+            )}
+            <div className="text-2xl md:text-4xl font-bold text-green-100 mb-2 md:mb-4">
+              {sidesSwitched ? getCardName('team1') : getCardName('team2')}
+            </div>
+            {showCongrats2 && (
+              <span className="absolute left-1/2 top-24 md:top-40 -translate-x-1/2 z-10 text-5xl md:text-8xl animate-bounce pointer-events-none select-none">🏆</span>
+            )}
+            <div className="text-[7rem] md:text-[20rem] font-bold text-white mb-2 animate-scale-in">
+              {scores.team2_score}
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* PCBT Logo on Right - Inside layout (hide on mobile) */}
+      <div className="hidden md:flex flex-shrink-0 items-center h-full">
+        <Image src="/pcbt.png" alt="PCBT" width={200} height={100} className="object-contain w-[120px] h-[60px] md:w-[200px] md:h-[100px]" />
+      </div>
+    </div>
+  );
+}
+
 export default function PublicLiveScorePage() {
   const { matches: cachedMatches, teams, players, pools, categories } = useData();
   const params = useParams();
   const matchId = params?.id as string;
+  const searchParams = useSearchParams();
+  const gameIdParam = searchParams.get('game');
 
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
@@ -23,6 +111,8 @@ export default function PublicLiveScorePage() {
   });
   const [sidesSwitched, setSidesSwitched] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<string>('connecting');
+  const [games, setGames] = useState<GameBase[]>([]);
+  const [, setGamesLoading] = useState(true);
   // Celebration audio logic hooks (must be before any return)
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [hasPlayed, setHasPlayed] = useState(false);
@@ -52,6 +142,14 @@ export default function PublicLiveScorePage() {
   const showCongrats2 = scores.team2_score === 30;
   const showCongrats = showCongrats1 || showCongrats2;
   
+  // Find the game by ?game=GAME_ID if present, else in_progress, else first
+  let currentGame = undefined;
+  if (gameIdParam) {
+    currentGame = games.find(g => g.id === gameIdParam);
+  }
+  if (!currentGame) {
+    currentGame = games.find(g => (g as any)['status'] === 'in_progress') || games[0];
+  }
 
   useEffect(() => {
     async function fetchData() {
@@ -162,6 +260,23 @@ export default function PublicLiveScorePage() {
     };
   }, [matchId]);
 
+  // Fetch games for the match
+  useEffect(() => {
+    if (!matchId) return;
+    setGamesLoading(true);
+    supabase
+      .from('games')
+      .select('*')
+      .eq('match_id', matchId)
+      .then(({ data, error }) => {
+        if (!error && data) setGames(data);
+        setGamesLoading(false);
+      });
+  }, [matchId]);
+
+  // Subscribe to game live score updates
+  
+
   useEffect(() => {
     if (showCongrats && !hasPlayed) {
       audioRef.current?.play();
@@ -198,6 +313,11 @@ export default function PublicLiveScorePage() {
       </div>
     );
   }
+
+  // Determine if this is a men's team category match
+  const matchPool = pools.find(p => p.id === match?.pool_id);
+  const categoryCode = matchPool ? categories.find(c => c.id === matchPool.category_id)?.code : undefined;
+  const isMensTeamCategory = categoryCode === 'MT';
 
   return (
     <div className="min-h-screen bg-black relative">
@@ -254,76 +374,55 @@ export default function PublicLiveScorePage() {
           </div>
         </div>
 
-        {/* Full Screen Score Cards with PCBT logos inside layout */}
-        <div className="flex flex-col md:flex-row items-center justify-between h-auto md:h-[60vh] gap-4">
-          {/* PCBT Logo on Left - Inside layout (hide on mobile) */}
-          <div className="hidden md:flex flex-shrink-0 items-center h-full">
-            <Image src="/pcbt.png" alt="PCBT" width={200} height={100} className="object-contain w-[120px] h-[60px] md:w-[200px] md:h-[100px]" />
-          </div>
-          {/* Score Cards Grid */}
-          <div className="flex flex-col md:grid md:grid-cols-2 gap-4 md:gap-8 flex-1 w-full">
-            {/* Team 1/Player 1 Score */}
-            <div className="text-center flex flex-col justify-center">
-              <div className="bg-blue-500 rounded-3xl p-4 md:p-8 shadow-2xl hover-lift h-full flex flex-col justify-center relative">
-                {showCongrats1 && (
-                  <div className="mb-2 flex flex-col items-center">
-                    <span className="block text-2xl md:text-4xl font-bold text-yellow-300 drop-shadow-lg animate-bounce">Congratulations!</span>
+        {/* Score Card */}
+        {isMensTeamCategory ? (
+          <GameCard
+            game={currentGame}
+            getPlayerName={getPlayerName}
+            getTeamName={getTeamName}
+            scores={scores}
+            showCongrats1={showCongrats1}
+            showCongrats2={showCongrats2}
+            sidesSwitched={sidesSwitched}
+          />
+        ) : (
+          <div className="flex flex-col md:flex-row items-center justify-between h-auto md:h-[60vh] gap-4">
+            <div className="hidden md:flex flex-shrink-0 items-center h-full">
+              <Image src="/pcbt.png" alt="PCBT" width={200} height={100} className="object-contain w-[120px] h-[60px] md:w-[200px] md:h-[100px]" />
+            </div>
+            <div className="flex flex-col md:grid md:grid-cols-2 gap-4 md:gap-8 flex-1 w-full">
+              {/* Team 1 */}
+              <div className="text-center flex flex-col justify-center">
+                <div className="bg-blue-500 rounded-3xl p-4 md:p-8 shadow-2xl hover-lift h-full flex flex-col justify-center relative">
+                  <div className="text-2xl md:text-4xl font-bold text-blue-100 mb-2 md:mb-4">
+                    {sidesSwitched
+                      ? (match?.player2_id ? getPlayerName(match.player2_id) : getTeamName(match?.team2_id))
+                      : (match?.player1_id ? getPlayerName(match.player1_id) : getTeamName(match?.team1_id))}
                   </div>
-                )}
-                {/* Show Good effort for loser if team2 won */}
-                {showCongrats2 && (
-                  <div className="mb-2 flex flex-col items-center">
-                    <span className="block text-2xl md:text-4xl font-semibold text-white/80 animate-fade-in">Good effort!</span>
+                  <div className="text-[7rem] md:text-[20rem] font-bold text-white mb-2 animate-scale-in">
+                    {scores.team1_score ?? 0}
                   </div>
-                )}
-                <div className="text-2xl md:text-4xl font-bold text-blue-100 mb-2 md:mb-4">
-                  {sidesSwitched 
-                    ? (match.player2_id ? getPlayerName(match.player2_id) : getTeamName(match.team2_id))
-                    : (match.player1_id ? getPlayerName(match.player1_id) : getTeamName(match.team1_id))
-                  }
                 </div>
-                {showCongrats1 && (
-                  <span className="absolute left-1/2 top-24 md:top-40 -translate-x-1/2 z-10 text-5xl md:text-8xl animate-bounce pointer-events-none select-none">🏆</span>
-                )}
-                <div className="text-[7rem] md:text-[20rem] font-bold text-white mb-2 animate-scale-in">
-                  {scores.team1_score}
+              </div>
+              {/* Team 2 */}
+              <div className="text-center flex flex-col justify-center">
+                <div className="bg-green-500 rounded-3xl p-4 md:p-8 shadow-2xl hover-lift h-full flex flex-col justify-center relative">
+                  <div className="text-2xl md:text-4xl font-bold text-green-100 mb-2 md:mb-4">
+                    {sidesSwitched
+                      ? (match?.player1_id ? getPlayerName(match.player1_id) : getTeamName(match?.team1_id))
+                      : (match?.player2_id ? getPlayerName(match.player2_id) : getTeamName(match?.team2_id))}
+                  </div>
+                  <div className="text-[7rem] md:text-[20rem] font-bold text-white mb-2 animate-scale-in">
+                    {scores.team2_score ?? 0}
+                  </div>
                 </div>
               </div>
             </div>
-            {/* Team 2/Player 2 Score */}
-            <div className="text-center flex flex-col justify-center">
-              <div className="bg-green-500 rounded-3xl p-4 md:p-8 shadow-2xl hover-lift h-full flex flex-col justify-center relative">
-                {showCongrats2 && (
-                  <div className="mb-2 flex flex-col items-center">
-                    <span className="block text-2xl md:text-4xl font-bold text-yellow-300 drop-shadow-lg animate-bounce">Congratulations!</span>
-                  </div>
-                )}
-                {/* Show Good effort for loser if team1 won */}
-                {showCongrats1 && (
-                  <div className="mb-2 flex flex-col items-center">
-                    <span className="block text-2xl md:text-4xl font-semibold text-white/80 animate-fade-in">Good effort!</span>
-                  </div>
-                )}
-                <div className="text-2xl md:text-4xl font-bold text-green-100 mb-2 md:mb-4">
-                  {sidesSwitched 
-                    ? (match.player1_id ? getPlayerName(match.player1_id) : getTeamName(match.team1_id))
-                    : (match.player2_id ? getPlayerName(match.player2_id) : getTeamName(match.team2_id))
-                  }
-                </div>
-                {showCongrats2 && (
-                  <span className="absolute left-1/2 top-24 md:top-40 -translate-x-1/2 z-10 text-5xl md:text-8xl animate-bounce pointer-events-none select-none">🏆</span>
-                )}
-                <div className="text-[7rem] md:text-[20rem] font-bold text-white mb-2 animate-scale-in">
-                  {scores.team2_score}
-                </div>
-              </div>
+            <div className="hidden md:flex flex-shrink-0 items-center h-full">
+              <Image src="/pcbt.png" alt="PCBT" width={200} height={100} className="object-contain w-[120px] h-[60px] md:w-[200px] md:h-[100px]" />
             </div>
           </div>
-          {/* PCBT Logo on Right - Inside layout (hide on mobile) */}
-          <div className="hidden md:flex flex-shrink-0 items-center h-full">
-            <Image src="/pcbt.png" alt="PCBT" width={200} height={100} className="object-contain w-[120px] h-[60px] md:w-[200px] md:h-[100px]" />
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

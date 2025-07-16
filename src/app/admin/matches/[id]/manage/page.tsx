@@ -15,6 +15,7 @@ type Game = GameBase & {
   player4_id?: string;
   team1_score?: number | null;
   team2_score?: number | null;
+  status?: 'not_started' | 'in_progress' | 'completed';
 };
 
 interface GameSelection {
@@ -72,6 +73,7 @@ function mergeGamesWithStructure(dbGames: Game[]): Game[] {
         player2_id: '',
         player3_id: '',
         player4_id: '',
+        status: 'not_started',
       });
     }
   });
@@ -101,7 +103,7 @@ export default function AdminManageMatchPage() {
 
   const [matchWinner, setMatchWinner] = useState<string | null>(null);
   const [matchScore, setMatchScore] = useState<{ team1: number; team2: number }>({ team1: 0, team2: 0 });
-
+  
   useEffect(() => {
     async function fetchData() {
       if (!matchId) return;
@@ -160,7 +162,6 @@ export default function AdminManageMatchPage() {
           .from("games")
           .select("*")
           .eq("match_id", matchId)
-          .order("created_at");
         
         if (gamesError) {
           console.error("Error fetching games:", gamesError);
@@ -603,6 +604,49 @@ export default function AdminManageMatchPage() {
                       >
                         Save Game
                       </button>
+                      {/* Status dropdown: only show for saved games */}
+                      {game.id && typeof game.id === 'string' && !game.id.startsWith('new-') ? (
+                        <>
+                          <select
+                            className="px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white text-sm font-semibold shadow focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition"
+                            value={game.status || 'not_started'}
+                            onChange={async (e) => {
+                              const newStatus = e.target.value as 'not_started' | 'in_progress' | 'completed';
+                              game.status = newStatus;
+                              setSaving(true);
+                              try {
+                                // Update the selected game
+                                const { error } = await supabase.from('games').update({ status: newStatus }).eq('id', game.id);
+                                if (error) throw error;
+                                // Refetch games
+                                // const { data: gamesData } = await supabase.from('games').select('*').eq('match_id', match.id);
+                                // const mergedGames = mergeGamesWithStructure(gamesData || []);
+                                // setGames(mergedGames);
+                                showSuccess('Game status updated!');
+                              } catch (err) {
+                                showError('Error updating game status', err instanceof Error ? err.message : String(err));
+                              }
+                              setSaving(false);
+                            }}
+                            disabled={saving}
+                          >
+                            <option value="not_started">Not Started</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                          </select>
+                        </>
+                      ) : null}
+                      {/* Live Score button: only show if game is in progress */}
+                      {game.id && game.status === 'in_progress' && (
+                        <a
+                          href={`/admin/matches/${match.id}/livescore`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-2 bg-green-700 text-white rounded-lg text-sm font-semibold shadow hover:bg-green-800 disabled:opacity-50 transition"
+                        >
+                          Live Score
+                        </a>
+                      )}
                       {(() => {
                         const s1 = Number(resultInputs[idx]?.team1_score);
                         const s2 = Number(resultInputs[idx]?.team2_score);

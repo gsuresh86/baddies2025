@@ -798,7 +798,7 @@ export default function AdminMatchesPage() {
       {/* Filters and Actions */}
       <div className="mb-6 flex flex-col gap-2 w-full max-w-2xl">
         <div className="flex flex-row gap-2 w-full flex-wrap">
-          <div className="w-[200px] min-w-[200px]">
+          <div className="w-[180px] min-w-[180px]">
             <label htmlFor="category-select" className="text-sm font-medium text-gray-700">Category:</label>
             <select
               id="category-select"
@@ -812,7 +812,7 @@ export default function AdminMatchesPage() {
               ))}
             </select>
           </div>
-          <div className="w-[200px] min-w-[200px]">
+          <div className="w-[180px] min-w-[180px]">
             <label htmlFor="pool-select" className="text-sm font-medium text-gray-700">Pool:</label>
             <select
               id="pool-select"

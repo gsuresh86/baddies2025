@@ -104,7 +104,7 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all
+                className={`flex items-center px-4 py-2 text-sm font-bold rounded-lg transition-all
                   ${isActive ? 'bg-blue-600 text-white shadow scale-[1.03]' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'}
                   ${sidebarCollapsed ? 'justify-center px-2' : 'px-4'}
                 `}
@@ -124,7 +124,7 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all
+                className={`flex items-center px-4 py-2 text-sm font-semibold rounded-lg transition-all
                   ${isActive ? 'bg-green-600 text-white shadow scale-[1.03]' : 'text-gray-700 hover:bg-green-50 hover:text-green-700'}
                   ${sidebarCollapsed ? 'justify-center px-2' : 'px-4'}
                 `}
