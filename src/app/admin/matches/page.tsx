@@ -522,12 +522,22 @@ export default function AdminMatchesPage() {
 
   // Helper to filter matches by selected date
   const getMatchesForScoreSheet = () => {
-    if (!scoreSheetDate) return filteredMatches;
-    return filteredMatches.filter(m => {
-      if (!m.scheduled_date) return false;
-      const matchDate = new Date(m.scheduled_date);
-      const matchDateStr = matchDate.toISOString().split('T')[0];
-      return matchDateStr === scoreSheetDate;
+    let matchesToFilter = filteredMatches;
+    
+    // Filter by date if selected
+    if (scoreSheetDate) {
+      matchesToFilter = matchesToFilter.filter(m => {
+        if (!m.scheduled_date) return false;
+        const matchDate = new Date(m.scheduled_date);
+        const matchDateStr = matchDate.toISOString().split('T')[0];
+        return matchDateStr === scoreSheetDate;
+      });
+    }
+    
+    // Filter out Men's team category matches (code: 'MT')
+    return matchesToFilter.filter(m => {
+      const matchCategory = getCategoryForMatch(m);
+      return matchCategory?.code !== 'MT';
     });
   };
 
@@ -619,6 +629,144 @@ export default function AdminMatchesPage() {
     });
     doc.save('PBEL_Badminton_Score_Sheets.pdf');
     setShowScoreSheetModal(false);
+  }
+
+  // Function to generate Men's team score sheet with 5 games (D-S-D-S-D)
+  function generateMensTeamScoreSheet(doc: jsPDF, match: Match, y: number) {
+    const [team1, team2] = getParticipantNamesForSheet(match);
+    
+    // Header for Men's Team match
+    doc.setFontSize(18);
+    doc.setTextColor(41, 128, 185); // blue
+    doc.text('PBEL City Badminton 2025', 105, 18, { align: 'center' });
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(12);
+    doc.text(`Match #${match.match_no || '-'} - Men's Team`, 20, 28);
+    doc.text(`Date: ${formatISTDateTime(match.scheduled_date).date}`, 130, 28);
+    doc.setLineWidth(0.5);
+    doc.line(15, 32, 195, 32);
+    
+    // Teams section
+    doc.setFontSize(12);
+    doc.text(`${team1} vs ${team2}`, 105, 42, { align: 'center' });
+    
+    // Game types: D-S-D-S-D (Doubles-Singles-Doubles-Singles-Doubles)
+    const gameTypes = [
+      { name: '1st Doubles', type: 'D' },
+      { name: '1st Singles', type: 'S' },
+      { name: '2nd Doubles', type: 'D' },
+      { name: '2nd Singles', type: 'S' },
+      { name: '3rd Doubles', type: 'D' }
+    ];
+    
+    let currentY = 50;
+    
+    gameTypes.forEach((game, gameIndex) => {
+      // Game header
+      doc.setFontSize(10);
+      doc.setFillColor(41, 128, 185);
+      doc.setTextColor(255, 255, 255);
+      doc.rect(20, currentY-3, 160, 6, 'F');
+      doc.text(`Game ${gameIndex + 1}: ${game.name} (${game.type})`, 22, currentY, { baseline: 'middle' });
+      doc.setTextColor(0, 0, 0);
+      currentY += 8;
+      
+      // Standard 2-row format like other categories
+      doc.setFontSize(9);
+      doc.text('P1: _________________', 20, currentY);
+      // Draw score boxes for P1
+      for (let i = 0; i < 30; i++) {
+        doc.rect(70 + i*4, currentY, 4, 6);
+        doc.setFontSize(6);
+        doc.text(String(i+1), 72 + i*4 - (i+1 >= 10 ? 1 : 0), currentY+4);
+      }
+      currentY += 8;
+      
+      // Second row for P2
+      doc.setFontSize(9);
+      doc.text('P2: _________________', 20, currentY);
+      // Draw score boxes for P2
+      for (let i = 0; i < 30; i++) {
+        doc.rect(70 + i*4, currentY, 4, 6);
+        doc.setFontSize(6);
+        doc.text(String(i+1), 72 + i*4 - (i+1 >= 10 ? 1 : 0), currentY+4);
+      }
+      currentY += 8;
+      
+      // Game result
+      doc.setFontSize(8);
+      doc.text('Winner: Team 1 [ ]  Team 2 [ ]', 20, currentY);
+      currentY += 6;
+      
+      // Separator line
+      if (gameIndex < gameTypes.length - 1) {
+        doc.setDrawColor(180);
+        doc.line(20, currentY, 190, currentY);
+        currentY += 4;
+      }
+    });
+    
+    // Match result section
+    currentY += 3;
+    doc.setFontSize(10);
+    doc.setFillColor(39, 174, 96);
+    doc.setTextColor(255, 255, 255);
+    doc.rect(20, currentY-3, 160, 6, 'F');
+    doc.text('MATCH RESULT', 22, currentY, { baseline: 'middle' });
+    doc.setTextColor(0, 0, 0);
+    currentY += 8;
+    
+    doc.setFontSize(9);
+    doc.text('Games Won - Team 1: ___  Team 2: ___', 20, currentY);
+    currentY += 6;
+    doc.text('Overall Winner: Team 1 [ ]  Team 2 [ ]', 20, currentY);
+    currentY += 8;
+    
+    // Referee section
+    doc.setFontSize(8);
+    doc.text('Referee Name: ____________________', 20, currentY);
+    doc.text('Signature: ____________________', 120, currentY);
+    
+    return currentY + 10; // Return the Y position for next match
+  }
+
+  // Function to generate only Men's team score sheets
+  function generateMensTeamScoreSheets() {
+    const matchesToPrint = filteredMatches;
+    
+    // Filter only Men's team matches
+    const mensTeamMatches = matchesToPrint.filter(m => {
+      const matchCategory = getCategoryForMatch(m);
+      return matchCategory?.code === 'MT';
+    });
+    
+    if (mensTeamMatches.length === 0) {
+      showError('No Men\'s team matches found');
+      return;
+    }
+    
+    const doc = new jsPDF();
+    let currentY = 40;
+    
+    // Generate Men's team score sheets
+    mensTeamMatches.forEach((match, idx) => {
+      // Add new page only if not the first match and current page is full
+      if (idx > 0 && currentY > 250) {
+        doc.addPage();
+        currentY = 40;
+      }
+      
+      currentY = generateMensTeamScoreSheet(doc, match, currentY);
+      
+      // Add new page only if there are more matches and current page is getting full
+      if (idx < mensTeamMatches.length - 1 && currentY > 200) {
+        doc.addPage();
+        currentY = 40;
+      }
+    });
+    
+    doc.save('PBEL_Mens_Team_Score_Sheets.pdf');
+    showSuccess(`Generated ${mensTeamMatches.length} Men's team score sheet(s)`);
   }
 
   const handleAnalyzeGenerate = async () => {
@@ -892,6 +1040,12 @@ export default function AdminMatchesPage() {
             className="px-3 py-1.5 bg-orange-600 text-white rounded-md font-medium hover:bg-orange-700 transition-colors flex items-center gap-1 text-sm"
           >
             <span>📝</span> <span>Sheets</span>
+          </button>
+          <button
+            onClick={generateMensTeamScoreSheets}
+            className="px-3 py-1.5 bg-indigo-600 text-white rounded-md font-medium hover:bg-indigo-700 transition-colors flex items-center gap-1 text-sm"
+          >
+            <span>🏆</span> <span>Men's Team</span>
           </button>
         </div>
       </div>
