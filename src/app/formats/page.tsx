@@ -5,6 +5,7 @@ import { useData } from '@/contexts/DataContext';
 import { calculateStandings } from '@/lib/standingsUtils';
 import { Pool, Player, PoolPlayer } from '@/types';
 import type { Match as MatchType } from '@/types';
+import { useSearchParams } from 'next/navigation';
 
 interface FormatData {
   category: string;
@@ -33,6 +34,7 @@ function useTopPlayersByPool(
   const [topPlayers, setTopPlayers] = useState<Record<string, string>>({});
 
   useEffect(() => {
+    // Only use data from context, do not fetch API here
     const poolsForCategory = pools.filter((p: Pool) => p.category?.code === categoryCode);
     const result: Record<string, string> = {};
     poolsForCategory.forEach((pool: Pool, idx: number) => {
@@ -52,6 +54,8 @@ export default function FormatsPage() {
   const { pools, players, matches, poolPlayers } = useData();
   const gu13TopPlayers = useTopPlayersByPool('GU13', pools, players, matches as MatchType[], poolPlayers);
   const bu18TopPlayers = useTopPlayersByPool('BU18', pools, players, matches as MatchType[], poolPlayers);
+  const searchParams = useSearchParams();
+  const initialCategory = searchParams.get('category') || undefined;
 
   const tournamentFormats: FormatData[] = [
     {
@@ -438,7 +442,18 @@ export default function FormatsPage() {
     },
   ];
 
-  const [selectedCategory, setSelectedCategory] = useState<string>(tournamentFormats[0].category);
+  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || tournamentFormats[0].category);
+
+  // Update query param when category changes
+  useEffect(() => {
+    if (selectedCategory) {
+      const params = new URLSearchParams(window.location.search);
+      params.set('category', selectedCategory);
+      const newUrl = `${window.location.pathname}?${params.toString()}`;
+      window.history.replaceState({}, '', newUrl);
+    }
+    // No return value
+  }, [selectedCategory]);
 
   const selectedFormat = tournamentFormats.find(format => format.category === selectedCategory);
 

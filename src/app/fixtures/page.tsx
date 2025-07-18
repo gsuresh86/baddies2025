@@ -395,6 +395,7 @@ export default function FixturesPage() {
       filteredDateGroups[dateKey] = statusFilter === 'all' ? matches : matches.filter(m => m.status === statusFilter);
     }
     filteredDateKeys = Object.keys(filteredDateGroups).filter(dateKey => filteredDateGroups[dateKey].length > 0);
+    filteredDateKeys = filteredDateKeys.slice(0, 4);
   }
 
   // --- useEffect to update selectedDate if not in filteredDateKeys ---
