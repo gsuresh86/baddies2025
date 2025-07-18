@@ -16,6 +16,7 @@ interface StandingsTabProps {
   isMensTeam?: boolean;
   expandedTeams?: Set<string>;
   onToggleTeamExpansion?: (teamId: string) => void;
+  categoryCode?: string;
 }
 
 export default function StandingsTab({ 
@@ -23,7 +24,8 @@ export default function StandingsTab({
   teams = [], 
   isMensTeam = false, 
   expandedTeams = new Set(), 
-  onToggleTeamExpansion 
+  onToggleTeamExpansion,
+  categoryCode
 }: StandingsTabProps) {
   // Dynamically set stat labels based on category
   const dynamicStatLabels = [
@@ -43,7 +45,7 @@ export default function StandingsTab({
             {dynamicStatLabels.map(stat => (
               <th key={stat.key} className="px-2 sm:px-4 py-2 sm:py-3 text-center font-bold text-white uppercase tracking-wider">{stat.label}</th>
             ))}
-            <th className="px-2 sm:px-4 py-2 sm:py-3 text-center font-bold text-white uppercase tracking-wider">NRR</th>
+            <th className="px-2 sm:px-4 py-2 sm:py-3 text-center font-bold text-white uppercase tracking-wider">PD</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-white/10">
@@ -55,7 +57,7 @@ export default function StandingsTab({
               </td>
             </tr>
           ) : (
-            standings.map((standing) => {
+            standings.map((standing, idx) => {
               const team = teams.find(t => t.id === standing.teamId);
               const isExpanded = expandedTeams.has(standing.teamId);
               const hasPlayers = team?.players && team.players.length > 0;
@@ -68,6 +70,9 @@ export default function StandingsTab({
                   >
                     <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-white font-semibold">
                       <div className="flex items-center gap-2">
+                        {((categoryCode === 'BU18' || categoryCode === 'GU13') && idx === 0) && (
+                          <span title="Qualified" className="mr-1 font-bold" style={{ color: '#FFD700' }}>Q</span>
+                        )}
                         <span>{standing.teamName}</span>
                         {isMensTeam && hasPlayers && onToggleTeamExpansion && (
                           <button
@@ -97,7 +102,7 @@ export default function StandingsTab({
                         {standing[stat.key as keyof TournamentStandings]}
                       </td>
                     ))}
-                    {/* NRR column: difference between GW/GL or PW/PL */}
+                    {/* PD column: difference between GW/GL or PW/PL */}
                     <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-center text-cyan-300 font-bold">
                       {(Number(standing.gamesWon) - Number(standing.gamesLost))}
                     </td>

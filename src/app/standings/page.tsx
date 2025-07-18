@@ -289,6 +289,7 @@ export default function StandingsPage() {
               isMensTeam={pool.category?.code === 'MT'}
               expandedTeams={expandedTeams}
               onToggleTeamExpansion={toggleTeamExpansion}
+              categoryCode={pool.category?.code}
             />
           </div>
         </div>

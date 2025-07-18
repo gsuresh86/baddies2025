@@ -8,6 +8,7 @@ import { useData } from '@/contexts/DataContext';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import Link from 'next/link';
+import { Dialog } from '@headlessui/react';
 
 export default function AdminMatchesPage() {
   const { showSuccess, showError } = useToast();
@@ -39,6 +40,17 @@ export default function AdminMatchesPage() {
   const [generatePreview, setGeneratePreview] = useState<any[]>([]);
   const [generateLoading, setGenerateLoading] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  // State for cross-pool match creation
+  const [showCrossPoolModal, setShowCrossPoolModal] = useState(false);
+  const [crossCategory, setCrossCategory] = useState('');
+  const [side1Pool, setSide1Pool] = useState('');
+  const [side2Pool, setSide2Pool] = useState('');
+  const [side1Player, setSide1Player] = useState('');
+  const [side2Player, setSide2Player] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState('');
+  const [court, setCourt] = useState('');
+  const [stage, setStage] = useState('');
 
   // Helper to get pools for a category
   const getPoolsForCategory = (categoryId: string) => pools.filter(pool => pool.category_id === categoryId);
@@ -632,7 +644,7 @@ export default function AdminMatchesPage() {
   }
 
   // Function to generate Men's team score sheet with 5 games (D-S-D-S-D)
-  function generateMensTeamScoreSheet(doc: jsPDF, match: Match, y: number) {
+  function generateMensTeamScoreSheet(doc: jsPDF, match: Match) {
     const [team1, team2] = getParticipantNamesForSheet(match);
     
     // Header for Men's Team match
@@ -877,6 +889,60 @@ export default function AdminMatchesPage() {
     });
   }, [mobileSearch, filteredMatches, getCategoryForMatch, getTeamName, players]);
 
+  // Filter pools by selected category
+  const poolsForCategory = pools.filter(p => p.category?.code === crossCategory);
+  // Get teams/players for selected pool
+  const getOptionsForPool = (poolId: string) => {
+    const pool = pools.find(p => p.id === poolId);
+    if (!pool) return [];
+    if (pool.category?.type === 'team') {
+      return teams.filter(t => t.pool_id === poolId).map(t => ({ id: t.id, name: t.name }));
+    } else {
+      const playerIds = poolPlayers.filter(pp => pp.pool_id === poolId).map(pp => pp.player_id);
+      return players.filter(p => playerIds.includes(p.id)).map(p => ({ id: p.id, name: p.name }));
+    }
+  };
+  // Create match handler
+  const handleCreateCrossPoolMatch = async () => {
+    setCreating(true);
+    try {
+      const selectedCategoryObj = categories.find(cat => cat.code === crossCategory);
+      const isTeamCategory = selectedCategoryObj?.type === 'team';
+      const { error } = await supabase.from('matches').insert([
+        {
+          category_id: selectedCategoryObj?.id,
+          ...(isTeamCategory
+            ? { team1_id: side1Player, team2_id: side2Player }
+            : { player1_id: side1Player, player2_id: side2Player }),
+          scheduled_date: scheduleDate || null,
+          court: court || null,
+          stage: stage || null,
+          status: 'scheduled',
+        }
+      ]);
+      if (error) throw error;
+      setShowCrossPoolModal(false);
+      setCrossCategory('');
+      setSide1Pool('');
+      setSide2Pool('');
+      setSide1Player('');
+      setSide2Player('');
+      setScheduleDate('');
+      setCourt('');
+      setStage('');
+      // Optionally refresh data
+      if (typeof refreshData === 'function') refreshData();
+    } catch (err) {
+      if (err && typeof err === 'object' && 'message' in err) {
+        alert('Error creating match: ' + (err as any).message);
+      } else {
+        alert('Error creating match.');
+      }
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return (
     <div className="mx-auto">
       <div className="mb-8">
@@ -1045,7 +1111,14 @@ export default function AdminMatchesPage() {
             onClick={generateMensTeamScoreSheets}
             className="px-3 py-1.5 bg-indigo-600 text-white rounded-md font-medium hover:bg-indigo-700 transition-colors flex items-center gap-1 text-sm"
           >
-            <span>🏆</span> <span>Men's Team</span>
+            <span>🏆</span> <span>Men&apos;s Team</span>
+          </button>
+          <button
+            onClick={() => setShowCrossPoolModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-pink-500 to-pink-700 text-white rounded-xl font-semibold shadow hover:from-pink-600 hover:to-pink-800 focus:ring-2 focus:ring-pink-400 transition-all text-base group"
+          >
+            <span className="text-xl group-hover:scale-110 transition-transform">🔀</span>
+            <span>Create Cross-Pool Match</span>
           </button>
         </div>
       </div>
@@ -1632,6 +1705,145 @@ export default function AdminMatchesPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Cross-Pool Match Modal */}
+      {showCrossPoolModal && (
+        <Dialog as="div" open={showCrossPoolModal} onClose={() => setShowCrossPoolModal(false)} className="relative z-50">
+          <div className="fixed inset-0 bg-black bg-opacity-40" aria-hidden="true" />
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex items-center justify-center min-h-screen px-4">
+              <Dialog.Panel className="relative bg-white rounded-2xl shadow-xl max-w-md w-full mx-auto p-6 z-10">
+                <Dialog.Title className="text-xl font-bold mb-4 text-gray-800 flex items-center gap-2">
+                  <span>🔀</span> Create Cross-Pool Match
+                </Dialog.Title>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Select Category</label>
+                  <select
+                    value={crossCategory}
+                    onChange={e => {
+                      setCrossCategory(e.target.value);
+                      setSide1Pool(''); setSide2Pool(''); setSide1Player(''); setSide2Player('');
+                      setScheduleDate(''); setCourt(''); setStage('');
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 text-gray-900 bg-white"
+                  >
+                    <option value="">-- Select Category --</option>
+                    {categories.map((cat: any) => (
+                      <option key={cat.code} value={cat.code}>{cat.label || cat.code}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="mb-4 flex flex-col gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Side 1: Select Pool</label>
+                    <select
+                      value={side1Pool}
+                      onChange={e => { setSide1Pool(e.target.value); setSide1Player(''); }}
+                      className="w-full px-2 py-1 border rounded"
+                      disabled={!crossCategory}
+                    >
+                      <option value="">-- Select Pool --</option>
+                      {poolsForCategory.map(pool => (
+                        <option key={pool.id} value={pool.id}>{pool.name}</option>
+                      ))}
+                    </select>
+                    <label className="block text-xs font-medium text-gray-600 mt-2 mb-1">Select Team/Player</label>
+                    <select
+                      value={side1Player}
+                      onChange={e => setSide1Player(e.target.value)}
+                      className="w-full px-2 py-1 border rounded"
+                      disabled={!side1Pool}
+                    >
+                      <option value="">-- Select --</option>
+                      {getOptionsForPool(side1Pool).map(opt => (
+                        <option key={opt.id} value={opt.id}>{opt.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Side 2: Select Pool</label>
+                    <select
+                      value={side2Pool}
+                      onChange={e => { setSide2Pool(e.target.value); setSide2Player(''); }}
+                      className="w-full px-2 py-1 border rounded"
+                      disabled={!crossCategory}
+                    >
+                      <option value="">-- Select Pool --</option>
+                      {poolsForCategory.map(pool => (
+                        <option key={pool.id} value={pool.id}>{pool.name}</option>
+                      ))}
+                    </select>
+                    <label className="block text-xs font-medium text-gray-600 mt-2 mb-1">Select Team/Player</label>
+                    <select
+                      value={side2Player}
+                      onChange={e => setSide2Player(e.target.value)}
+                      className="w-full px-2 py-1 border rounded"
+                      disabled={!side2Pool}
+                    >
+                      <option value="">-- Select --</option>
+                      {getOptionsForPool(side2Pool).map(opt => (
+                        <option key={opt.id} value={opt.id}>{opt.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Schedule Date</label>
+                    <input
+                      type="date"
+                      value={scheduleDate}
+                      onChange={e => setScheduleDate(e.target.value)}
+                      className="w-full px-2 py-1 border rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Court</label>
+                    <select
+                      value={court}
+                      onChange={e => setCourt(e.target.value)}
+                      className="w-full px-2 py-1 border rounded"
+                    >
+                      <option value="">-- Select Court --</option>
+                      <option value="C">C</option>
+                      <option value="G">G</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Stage</label>
+                    <select
+                      value={stage}
+                      onChange={e => setStage(e.target.value)}
+                      className="w-full px-2 py-1 border rounded"
+                    >
+                      <option value="">-- Select Stage --</option>
+                      <option value="Round 1">Round 1</option>
+                      <option value="R16">R16</option>
+                      <option value="QF">QF</option>
+                      <option value="SF">SF</option>
+                      <option value="F">F</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 mt-6">
+                  <button
+                    onClick={() => setShowCrossPoolModal(false)}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300"
+                    disabled={creating}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCreateCrossPoolMatch}
+                    disabled={creating || !crossCategory || !side1Pool || !side2Pool || !side1Player || !side2Player || !scheduleDate || !court || !stage}
+                    className={`px-4 py-2 bg-pink-600 text-white rounded-lg font-medium ${creating || !crossCategory || !side1Pool || !side2Pool || !side1Player || !side2Player || !scheduleDate || !court || !stage ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  >
+                    {creating ? 'Creating...' : 'Create Match'}
+                  </button>
+                </div>
+              </Dialog.Panel>
+            </div>
+          </div>
+        </Dialog>
       )}
     </div>
   );
