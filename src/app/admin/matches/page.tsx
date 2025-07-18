@@ -768,7 +768,7 @@ export default function AdminMatchesPage() {
         currentY = 40;
       }
       
-      currentY = generateMensTeamScoreSheet(doc, match, currentY);
+      currentY = generateMensTeamScoreSheet(doc, match);
       
       // Add new page only if there are more matches and current page is getting full
       if (idx < mensTeamMatches.length - 1 && currentY > 200) {
