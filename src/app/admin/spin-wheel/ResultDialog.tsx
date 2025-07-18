@@ -58,7 +58,7 @@ function ResultDialog({
             </div>
             {categoryType === 'team' ? (
               assignedTeam ? (
-                <div className="text-xl font-bold text-purple-800">{assignedTeam.name}</div>
+                <div className="text-xl font-bold text-purple-800">{assignedTeam.brand_name || assignedTeam.name}</div>
               ) : (
                 <div className="text-lg text-red-600 font-semibold">No available teams</div>
               )

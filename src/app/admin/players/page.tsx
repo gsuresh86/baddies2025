@@ -433,7 +433,7 @@ export default function AdminPlayersPage() {
                   >
                     <option value="">-- Select a team --</option>
                     {teams.map(team => (
-                      <option key={team.id} value={team.id}>{team.name}</option>
+                      <option key={team.id} value={team.id}>{team.brand_name || team.name}</option>
                     ))}
                   </select>
                 </div>

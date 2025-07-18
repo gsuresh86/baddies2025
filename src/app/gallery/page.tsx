@@ -91,8 +91,10 @@ export default function PublicGalleryPage() {
             if (item.match_id) {
               match = matches.find(m => m.id === item.match_id);
             }
-            const team1Name = match?.team1_id ? (teams.find(t => t.id === match.team1_id)?.name || 'Team 1') : '';
-            const team2Name = match?.team2_id ? (teams.find(t => t.id === match.team2_id)?.name || 'Team 2') : '';
+            const team1Obj = match?.team1_id ? teams.find(t => t.id === match.team1_id) : undefined;
+            const team2Obj = match?.team2_id ? teams.find(t => t.id === match.team2_id) : undefined;
+            const team1Name = team1Obj ? (team1Obj.brand_name || team1Obj.name || 'Team 1') : '';
+            const team2Name = team2Obj ? (team2Obj.brand_name || team2Obj.name || 'Team 2') : '';
             const player1Name = match?.player1_id ? (players.find(p => p.id === match.player1_id)?.name || 'Player 1') : '';
             const player2Name = match?.player2_id ? (players.find(p => p.id === match.player2_id)?.name || 'Player 2') : '';
             let winnerLabel = '';

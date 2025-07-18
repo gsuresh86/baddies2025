@@ -14,6 +14,7 @@ export interface Player {
 export interface Team {
   id: string;
   name: string;
+  brand_name?: string;
   pool_id?: string;
   created_at?: string;
   updated_at?: string;
@@ -122,6 +123,7 @@ export interface PlayerTable {
 export interface TeamTable {
   id: string;
   name: string;
+  brand_name?: string;
   pool_id?: string;
   created_at: string;
   updated_at: string;

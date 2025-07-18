@@ -301,7 +301,7 @@ export default function AdminTeamsPage() {
               {filteredTeams.map((team) => (
                 <div key={team.id} className="border border-gray-200 rounded-lg p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-800">{team.name}</h3>
+                    <h3 className="text-lg font-semibold text-gray-800">{team.brand_name || team.name}</h3>
                     <button
                       onClick={() => handleDeleteTeam(team.id)}
                       className="text-red-600 hover:text-red-700 text-sm font-medium"

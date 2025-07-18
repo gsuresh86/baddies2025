@@ -16,7 +16,7 @@ function calculateStandings(teams: Team[], players: Player[], matches: Match[], 
   teams.forEach(team => {
     standings[team.id] = {
       teamId: team.id,
-      teamName: team.name,
+      teamName: team.brand_name || team.name,
       matchesPlayed: 0,
       matchesWon: 0,
       matchesLost: 0,

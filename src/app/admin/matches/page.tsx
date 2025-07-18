@@ -91,7 +91,7 @@ export default function AdminMatchesPage() {
   // Get display name for a participant (team name or player name)
   const getParticipantDisplayName = (participant: any) => {
     if (isTeamCategory) {
-      return participant.name; // Team name
+      return participant.brand_name || participant.name; // Team name
     } else {
       // For player categories, show player name with partner if available
       if (participant.partner_name) {
@@ -289,7 +289,8 @@ export default function AdminMatchesPage() {
   };
 
   const getTeamName = useCallback((teamId: string) => {
-    return teams.find(team => team.id === teamId)?.name || 'Unknown Team';
+    const team = teams.find(team => team.id === teamId);
+    return team?.brand_name || team?.name || 'Unknown Team';
   }, [teams]);
 
   const getPoolName = useCallback((poolId: string) => {

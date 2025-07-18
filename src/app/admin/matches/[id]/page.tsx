@@ -285,7 +285,7 @@ export default function AdminMatchDetailsPage() {
   const getTeamName = (teamId?: string) => {
     if (!teamId) return 'Unknown';
     const team = teams.find(t => t.id === teamId);
-    return team?.name || 'Unknown';
+    return team?.brand_name || team?.name || 'Unknown';
   };
 
   const getPlayerName = (playerId?: string) => {

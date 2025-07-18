@@ -211,7 +211,7 @@ export default function TeamsPage() {
                         );
                       })()}
                       <h3 className="text-xl font-extrabold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent drop-shadow">
-                        {team.name}
+                        {team.brand_name || team.name}
                       </h3>
                     </div>
                     {!team.team_players || team.team_players.length === 0 ? (
@@ -298,7 +298,7 @@ export default function TeamsPage() {
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-3 text-white font-bold text-lg">
                   {team.name.charAt(0).toUpperCase()}
                 </div>
-                <h3 className="text-xl font-bold text-white text-glow-white">{team.name}</h3>
+                <h3 className="text-xl font-bold text-white text-glow-white">{team.brand_name || team.name}</h3>
               </div>
               {!team.players || team.players.length === 0 ? (
                 <div className="text-center py-8">

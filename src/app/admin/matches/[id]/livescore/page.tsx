@@ -114,7 +114,7 @@ export default function LiveScorePage() {
   const getTeamName = (teamId?: string) => {
     if (!teamId) return 'Unknown Team';
     const team = teams.find(t => t.id === teamId);
-    return team?.name || 'Unknown Team';
+    return team?.brand_name || team?.name || 'Unknown Team';
   };
 
   const getPlayerName = (playerId?: string) => {

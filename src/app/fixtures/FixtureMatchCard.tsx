@@ -17,8 +17,8 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({ match, categ
   const categoryCode = category?.code || 'MT'; // Fallback to MT if category is undefined
   
   if (categoryCode === 'MT') {
-    leftName = match.team1?.name || 'Team 1';
-    rightName = match.team2?.name || 'Team 2';
+    leftName = match.team1?.brand_name || match.team1?.name || 'Team 1';
+    rightName = match.team2?.brand_name || match.team2?.name || 'Team 2';
   } else {
     if (match.player1) {
       leftName = getFirstName(match.player1.name);

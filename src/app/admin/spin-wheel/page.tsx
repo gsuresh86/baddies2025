@@ -409,7 +409,7 @@ export default function SpinWheelPage() {
                           >
                             <div className="flex items-center mb-2">
                               <span className="text-2xl mr-2">👥</span>
-                              <span className="font-bold text-gray-900 text-base text-glow">{team.name}</span>
+                              <span className="font-bold text-gray-900 text-base text-glow">{team.brand_name || team.name}</span>
                             </div>
                             <div className="w-full">
                               {teamAssignments.length === 0 ? (

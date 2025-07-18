@@ -26,7 +26,7 @@ const AssignmentList = ({ assignments, teams, pools, playersPerPool, categories,
             return (
               <div key={team.id} className="bg-gray-50 rounded p-3 border border-gray-200">
                 <div className="flex items-center justify-between mb-1">
-                  <h4 className="font-bold text-gray-700 text-sm">{team.name}</h4>
+                  <h4 className="font-bold text-gray-700 text-sm">{team.brand_name || team.name}</h4>
                   <span className="text-xs text-gray-500">0 players</span>
                 </div>
                 <p className="text-gray-400 text-xs">No players assigned yet</p>
@@ -36,7 +36,7 @@ const AssignmentList = ({ assignments, teams, pools, playersPerPool, categories,
           return (
             <div key={team.id} className="bg-gray-100 rounded p-3 border border-gray-300 shadow-lg">
               <div className="flex items-center justify-between mb-2">
-                <h4 className="font-bold text-gray-900 text-sm">{team.name}</h4>
+                <h4 className="font-bold text-gray-900 text-sm">{team.brand_name || team.name}</h4>
                 <span className="text-xs text-gray-700 font-medium">
                   {teamAssignments.length} players
                 </span>

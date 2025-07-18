@@ -468,7 +468,7 @@ export default function AdminPoolsPage() {
                             {pool.teams.map((team) => (
                               <div key={team.id} className="p-3 bg-gray-50 rounded-lg">
                                 <div className="flex items-center justify-between mb-2">
-                                  <span className="font-medium text-gray-800 text-sm sm:text-base">{team.name}</span>
+                                  <span className="font-medium text-gray-800 text-sm sm:text-base">{team.brand_name || team.name}</span>
                                   <button
                                     onClick={() => handleRemoveTeamFromPool(team.id)}
                                     className="text-red-600 hover:text-red-700 text-xs sm:text-sm"
@@ -546,7 +546,7 @@ export default function AdminPoolsPage() {
                 {teams.map((team) => (
                   <div key={team.id} className="border border-gray-200 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-gray-800 text-sm sm:text-base">{team.name}</h3>
+                      <h3 className="font-semibold text-gray-800 text-sm sm:text-base">{team.brand_name || team.name}</h3>
                       <button
                         onClick={() => handleDeleteTeam(team.id)}
                         className="text-red-600 hover:text-red-700 text-xs sm:text-sm"
@@ -675,7 +675,7 @@ export default function AdminPoolsPage() {
                 <div className="space-y-2 max-h-60 overflow-y-auto">
                   {availableTeams.map((team) => (
                     <div key={team.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <span className="font-medium text-gray-800 text-sm sm:text-base">{team.name}</span>
+                      <span className="font-medium text-gray-800 text-sm sm:text-base">{team.brand_name || team.name}</span>
                       <button
                         onClick={() => handleAssignTeamToPool(team.id, selectedPool.id)}
                         className="px-3 py-1 bg-blue-600 text-white rounded text-xs sm:text-sm font-medium hover:bg-blue-700"

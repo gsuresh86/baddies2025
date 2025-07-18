@@ -90,7 +90,7 @@ export default function TeamDetailsPage() {
         <div className="text-center mb-8">
           <div className="text-5xl mb-4">👥</div>
           <h1 className="text-4xl md:text-5xl font-bold text-white text-glow-white mb-4">
-            {team.name}
+            {team.brand_name || team.name}
           </h1>
           <p className="text-white/80 text-xl">
             Team Details & Player Roster
@@ -104,9 +104,9 @@ export default function TeamDetailsPage() {
           <div className="bg-gradient-to-r from-white/10 to-white/5 rounded-3xl p-8 backdrop-blur-md border border-white/20">
             <div className="text-center mb-6">
               <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 text-white font-bold text-3xl">
-                {team.name.charAt(0).toUpperCase()}
+                {team.brand_name || team.name}.charAt(0).toUpperCase()
               </div>
-              <h2 className="text-2xl font-bold text-white mb-2">{team.name}</h2>
+              <h2 className="text-2xl font-bold text-white mb-2">{team.brand_name || team.name}</h2>
               <p className="text-white/60 text-sm">Team #{team.id.slice(0, 8)}</p>
             </div>
 
