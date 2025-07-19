@@ -290,7 +290,20 @@ export default function AdminMatchesPage() {
 
   const getTeamName = useCallback((teamId: string) => {
     const team = teams.find(team => team.id === teamId);
-    return team?.brand_name || team?.name || 'Unknown Team';
+    if (!team) return 'Unknown Team';
+    
+    const displayName = team.brand_name || team.name;
+    
+    // Extract team number from original name if it exists
+    const teamNumberMatch = team.name.match(/(\d+)/);
+    const teamNumber = teamNumberMatch ? teamNumberMatch[1] : null;
+    
+    // If we have a brand name and team number, append the number
+    if (team.brand_name && teamNumber) {
+      return `${team.brand_name} #${teamNumber}`;
+    }
+    
+    return displayName;
   }, [teams]);
 
   const getPoolName = useCallback((poolId: string) => {

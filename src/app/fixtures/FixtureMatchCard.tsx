@@ -17,8 +17,26 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({ match, categ
   const categoryCode = category?.code || 'MT'; // Fallback to MT if category is undefined
   
   if (categoryCode === 'MT') {
-    leftName = match.team1?.brand_name || match.team1?.name || 'Team 1';
-    rightName = match.team2?.brand_name || match.team2?.name || 'Team 2';
+    // Helper function to get team display name with number
+    const getTeamDisplayName = (team: any) => {
+      if (!team) return 'Team';
+      
+      const displayName = team.brand_name || team.name;
+      
+      // Extract team number from original name if it exists
+      const teamNumberMatch = team.name.match(/(\d+)/);
+      const teamNumber = teamNumberMatch ? teamNumberMatch[1] : null;
+      
+      // If we have a brand name and team number, append the number
+      if (team.brand_name && teamNumber) {
+        return `${team.brand_name} #${teamNumber}`;
+      }
+      
+      return displayName;
+    };
+    
+    leftName = getTeamDisplayName(match.team1) || 'Team 1';
+    rightName = getTeamDisplayName(match.team2) || 'Team 2';
   } else {
     if (match.player1) {
       leftName = getFirstName(match.player1.name);
