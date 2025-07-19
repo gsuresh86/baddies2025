@@ -34,10 +34,10 @@ interface GameResult {
 }
 
 const GAME_STRUCTURE = [
-  { type: "singles" },
+  { type: "doubles" },
   { type: "singles" },
   { type: "doubles" },
-  { type: "doubles" },
+  { type: "singles" },
   { type: "doubles" },
 ];
 
@@ -103,6 +103,7 @@ export default function AdminManageMatchPage() {
 
   const [matchWinner, setMatchWinner] = useState<string | null>(null);
   const [matchScore, setMatchScore] = useState<{ team1: number; team2: number }>({ team1: 0, team2: 0 });
+  const [matchStatus, setMatchStatus] = useState<string>('');
   
   useEffect(() => {
     async function fetchData() {
@@ -199,6 +200,10 @@ export default function AdminManageMatchPage() {
       fetchData();
     }
   }, [matchId, showError, cachedPlayers, cachedTeams, teamPlayers, cachedMatches]);
+
+  useEffect(() => {
+    if (match) setMatchStatus(match.status || 'not_started');
+  }, [match]);
 
   // Helper to count wins and update match score in DB
   useEffect(() => {
@@ -388,6 +393,33 @@ export default function AdminManageMatchPage() {
         ← Back to Matches
       </Link>
       <h1 className="text-3xl font-bold text-gray-900 mb-6">Manage Match Lineup</h1>
+      {/* Match Status Dropdown */}
+      <div className="mb-6 flex items-center gap-4">
+        <label className="font-semibold text-gray-700">Match Status:</label>
+        <select
+          className="px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white text-base font-semibold shadow focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition"
+          value={matchStatus}
+          onChange={async (e) => {
+            const newStatus = e.target.value;
+            setMatchStatus(newStatus);
+            setSaving(true);
+            try {
+              const { error } = await supabase.from('matches').update({ status: newStatus }).eq('id', match.id);
+              if (error) throw error;
+              showSuccess('Match status updated!');
+            } catch (err) {
+              showError('Error updating match status', err instanceof Error ? err.message : String(err));
+            }
+            setSaving(false);
+          }}
+          disabled={saving}
+        >
+          <option value="not_started">Not Started</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
+        </select>
+        <span className="text-sm text-gray-500">Current: {matchStatus.replace('_', ' ')}</span>
+      </div>
       {/* Winner Banner */}
       {games.filter(g => g.completed).length === 5 && matchWinner && (
         <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-green-400 to-blue-500 text-white text-center text-2xl font-bold shadow-lg">
