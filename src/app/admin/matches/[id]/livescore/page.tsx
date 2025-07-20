@@ -10,6 +10,7 @@ import Link from 'next/link';
 import AuthGuard from '@/components/AuthGuard';
 import { ArrowLeft, Plus, Minus, RotateCcw } from 'lucide-react';
 import Image from 'next/image';
+import { tournamentStore } from '@/lib/store';
 
 export default function LiveScorePage() {
   const { showSuccess, showError } = useToast();
@@ -26,6 +27,7 @@ export default function LiveScorePage() {
   const [sidesSwitched, setSidesSwitched] = useState(false);
   const [broadcastChannel, setBroadcastChannel] = useState<any>(null);
   const [games, setGames] = useState<GameBase[]>([]);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -227,6 +229,46 @@ export default function LiveScorePage() {
     showSuccess('Scores switched successfully!');
   };
 
+  // Add a handler to save the score to the backend
+  const handleSaveScore = async () => {
+    if (!matchId) return;
+    setSaving(true);
+    // Determine winner
+    let winner: 'team1' | 'team2' | 'player1' | 'player2' | null = null;
+    if (scores.team1_score > scores.team2_score) {
+      winner = isMensTeamCategory ? 'team1' : 'player1';
+    } else if (scores.team2_score > scores.team1_score) {
+      winner = isMensTeamCategory ? 'team2' : 'player2';
+    }
+    try {
+      if (isMensTeamCategory) {
+        if (winner === 'team1' || winner === 'team2') {
+          await tournamentStore.updateMatchResult(matchId, scores.team1_score, scores.team2_score, winner);
+        } else {
+          // fallback: if tie, just mark as completed without winner
+          await tournamentStore.updateMatchScore(matchId, {
+            team1_score: scores.team1_score,
+            team2_score: scores.team2_score,
+            status: 'completed',
+          });
+        }
+      } else {
+        // For non-men's team, winner is player1 or player2
+        await tournamentStore.updateMatchScore(matchId, {
+          team1_score: scores.team1_score,
+          team2_score: scores.team2_score,
+          status: 'completed',
+          winner: winner as 'player1' | 'player2' | undefined,
+        });
+      }
+      showSuccess('Score saved to database!');
+    } catch (error: any) {
+      showError('Error saving score', error?.message || String(error));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // Determine if this is a men's team category match
   const matchPool = pools.find(p => p.id === match?.pool_id);
   const categoryCode = matchPool ? categories.find(c => c.id === matchPool.category_id)?.code : undefined;
@@ -393,15 +435,32 @@ export default function LiveScorePage() {
                 <span className="text-sm sm:text-base">Reset</span>
               </button>
 
-              {/* Switch Sides Button */}
-              <button
-                onClick={handleSwitchSides}
-                className={`flex items-center justify-center px-4 sm:px-8 py-3 sm:py-4 text-white rounded-lg font-semibold transition-all duration-200 transform active:scale-95 ${
-                  sidesSwitched ? 'bg-orange-600 hover:bg-orange-700 active:bg-orange-800' : 'bg-yellow-600 hover:bg-yellow-700 active:bg-yellow-800'
-                }`}
-              >
-                <span className="text-sm sm:text-base">{sidesSwitched ? 'Switched' : 'Switch'}</span>
-              </button>
+              {/* Save Score Button */}
+              {(scores.team1_score === 30 || scores.team2_score === 30) ? (
+                <button
+                  onClick={handleSaveScore}
+                  disabled={saving}
+                  className="flex items-center justify-center px-4 sm:px-8 py-3 sm:py-4 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 active:bg-green-800 transition-all duration-200 transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? (
+                    <span>Saving...</span>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                      <span className="text-sm sm:text-base">Save Score</span>
+                    </>
+                  )}
+                </button>
+              ) : (
+                <button
+                  onClick={handleSwitchSides}
+                  className={`flex items-center justify-center px-4 sm:px-8 py-3 sm:py-4 text-white rounded-lg font-semibold transition-all duration-200 transform active:scale-95 ${
+                    sidesSwitched ? 'bg-orange-600 hover:bg-orange-700 active:bg-orange-800' : 'bg-yellow-600 hover:bg-yellow-700 active:bg-yellow-800'
+                  }`}
+                >
+                  <span className="text-sm sm:text-base">{sidesSwitched ? 'Switched' : 'Switch'}</span>
+                </button>
+              )}
 
               <Link
                 href={`/admin/matches/${matchId}`}
