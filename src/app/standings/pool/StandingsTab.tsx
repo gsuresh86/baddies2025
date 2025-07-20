@@ -70,7 +70,7 @@ export default function StandingsTab({
                   >
                     <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-white font-semibold">
                       <div className="flex items-center gap-2">
-                        {((categoryCode === 'BU18' || categoryCode === 'GU13') && (idx === 0 || idx === 1)) && (
+                        {((categoryCode === 'BU18' && (idx === 0 || idx === 1)) || (categoryCode === 'GU13' && (idx === 0 || idx === 1)) || (categoryCode === 'BU13' && (idx === 0 || idx === 1))) && (
                           <span title="Qualified" className="mr-1 font-bold" style={{ color: '#FFD700' }}>Q</span>
                         )}
                         <span>{standing.teamName}</span>
