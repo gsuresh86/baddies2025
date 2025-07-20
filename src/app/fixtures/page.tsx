@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Match, Category } from '@/types';
 import { useData } from '@/contexts/DataContext';
 import FixtureMatchCard from './FixtureMatchCard';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 interface FixtureData {
   category: string;
@@ -24,12 +25,36 @@ const categoryLabels: Record<string, string> = {
 
 export default function FixturesPage() {
   const { players, teams, pools, categories, matches: cachedMatches } = useData();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [fixtures, setFixtures] = useState<FixtureData | null>(null);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'pool' | 'schedule'>('schedule');
   const [selectedDate, setSelectedDate] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+
+  // Initialize selectedCategory from URL query parameter
+  useEffect(() => {
+    const categoryFromUrl = searchParams.get('category');
+    if (categoryFromUrl) {
+      setSelectedCategory(categoryFromUrl);
+    } else {
+      setSelectedCategory('all');
+    }
+  }, [searchParams]);
+
+  // Update URL when category changes
+  const updateCategory = (category: string) => {
+    setSelectedCategory(category);
+    const params = new URLSearchParams(searchParams.toString());
+    if (category === 'all') {
+      params.delete('category');
+    } else {
+      params.set('category', category);
+    }
+    router.push(`/fixtures?${params.toString()}`);
+  };
 
   const fetchCategories = async () => {
     // Categories are now provided by DataContext, no need to fetch separately
@@ -504,7 +529,7 @@ export default function FixturesPage() {
         <div className="flex justify-center mb-8">
           <div className="flex flex-wrap gap-2">
             <button
-              onClick={() => setSelectedCategory('all')}
+              onClick={() => updateCategory('all')}
               className={`px-4 py-2 rounded-xl font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm
                 ${selectedCategory === 'all' ? 'bg-blue-600 text-white shadow-lg' : 'bg-white/10 text-white/80 hover:bg-blue-500/60'}`}
               style={{ minWidth: 120 }}
@@ -514,7 +539,7 @@ export default function FixturesPage() {
             {categories.map(cat => (
               <button
                 key={cat.id}
-                onClick={() => setSelectedCategory(cat.code)}
+                onClick={() => updateCategory(cat.code)}
                 className={`px-4 py-2 rounded-xl font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm
                   ${selectedCategory === cat.code ? 'bg-blue-600 text-white shadow-lg' : 'bg-white/10 text-white/80 hover:bg-blue-500/60'}`}
                 style={{ minWidth: 120 }}

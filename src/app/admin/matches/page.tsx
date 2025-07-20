@@ -18,8 +18,15 @@ export default function AdminMatchesPage() {
   const [selectedPool, setSelectedPool] = useState<string>('all');
   const [activeCategoryId, setActiveCategoryId] = useState<string>('all');
   // Add state for status and date filter
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [dateFilter, setDateFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('scheduled');
+  const [dateFilter, setDateFilter] = useState<string>(() => {
+    // Set default to today's date
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
   
   // Form states
   const [newMatchTeam1, setNewMatchTeam1] = useState('');
