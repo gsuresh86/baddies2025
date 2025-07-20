@@ -97,13 +97,19 @@ export function calculateStandings(
           team2.matchesWon++;
           team1.matchesLost++;
         }
+
+         // Count games
+      team1.gamesWon += match.team1_score || 0;
+      team1.gamesLost += match.team2_score || 0;
+      team2.gamesWon += match.team2_score || 0;
+      team2.gamesLost += match.team1_score || 0;
       }
     });
     Object.values(standings).forEach(standing => {
       standing.points = (standing.matchesWon * 2);
-      standing.gamesWon = standing.matchesWon;
-      standing.gamesLost = standing.matchesLost;
-      standing.gameDiff = standing.gamesWon - standing.gamesLost;
+      // standing.gamesWon = standing.matchesWon;
+      // standing.gamesLost = standing.matchesLost;
+        // standing.gameDiff = standing.gamesWon - standing.gamesLost;
       standing.pointDiff = standing.pointsWon - standing.pointsLost;
     });
     return Object.values(standings).sort((a, b) => {
