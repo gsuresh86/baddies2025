@@ -2,125 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/store';
-import { Pool, Team, Match, TournamentStandings, Player } from '@/types';
+import { Pool, Team, Match, Player, Game as GameBase } from '@/types';
 import StandingsTab from './pool/StandingsTab';
 import { categoryLabels } from '@/lib/utils';
 import { useData } from '@/contexts/DataContext';
 import { useSearchParams } from 'next/navigation';
-
-function calculateStandings(teams: Team[], players: Player[], matches: Match[], categoryCode?: string): TournamentStandings[] {
-  const standings: { [id: string]: TournamentStandings } = {};
-  const pairFirstNameOnly = ["XD", "FM", "WD"];
-
-  // Initialize standings for teams
-  teams.forEach(team => {
-    standings[team.id] = {
-      teamId: team.id,
-      teamName: team.brand_name || team.name,
-      matchesPlayed: 0,
-      matchesWon: 0,
-      matchesLost: 0,
-      gamesWon: 0,
-      gamesLost: 0,
-      points: 0,
-    };
-  });
-
-  // Initialize standings for players (for player-based categories)
-  players.forEach(player => {
-    let displayName;
-    if (player.partner_name) {
-      if (pairFirstNameOnly.includes(categoryCode || "")) {
-        const first = player.name.split(" ")[0];
-        const partnerFirst = player.partner_name.split(" ")[0];
-        displayName = `${first} / ${partnerFirst}`;
-      } else {
-        displayName = `${player.name} / ${player.partner_name}`;
-      }
-    } else {
-      displayName = player.name;
-    }
-    standings[player.id] = {
-      teamId: player.id,
-      teamName: displayName,
-      matchesPlayed: 0,
-      matchesWon: 0,
-      matchesLost: 0,
-      gamesWon: 0,
-      gamesLost: 0,
-      points: 0,
-    };
-  });
-
-  matches.forEach(match => {
-    if (match.status !== 'completed') return;
-    
-    // Handle team-based matches
-    if (match.team1_id && match.team2_id) {
-      const team1 = standings[match.team1_id];
-      const team2 = standings[match.team2_id];
-      if (!team1 || !team2) return;
-      
-      team1.matchesPlayed++;
-      team2.matchesPlayed++;
-      
-      if ((match.team1_score ?? 0) > (match.team2_score ?? 0)) {
-        team1.matchesWon++;
-        team2.matchesLost++;
-      } else if ((match.team2_score ?? 0) > (match.team1_score ?? 0)) {
-        team2.matchesWon++;
-        team1.matchesLost++;
-      }
-      
-      // Count games
-      team1.gamesWon += match.team1_score || 0;
-      team1.gamesLost += match.team2_score || 0;
-      team2.gamesWon += match.team2_score || 0;
-      team2.gamesLost += match.team1_score || 0;
-    }
-    
-    // Handle player-based matches (for categories like Boys U13)
-    if ((match as any).player1_id && (match as any).player2_id) {
-      const player1 = standings[(match as any).player1_id];
-      const player2 = standings[(match as any).player2_id];
-      if (!player1 || !player2) return;
-      
-      player1.matchesPlayed++;
-      player2.matchesPlayed++;
-      
-      if ((match.team1_score ?? 0) > (match.team2_score ?? 0)) {
-        player1.matchesWon++;
-        player2.matchesLost++;
-      } else if ((match.team2_score ?? 0) > (match.team1_score ?? 0)) {
-        player2.matchesWon++;
-        player1.matchesLost++;
-      }
-      
-      // Count games
-      player1.gamesWon += match.team1_score || 0;
-      player1.gamesLost += match.team2_score || 0;
-      player2.gamesWon += match.team2_score || 0;
-      player2.gamesLost += match.team1_score || 0;
-    }
-  });
-  
-  // Calculate points
-  Object.values(standings).forEach(standing => {
-    standing.points = (standing.matchesWon * 2);
-  });
-  
-  return Object.values(standings).sort((a, b) => {
-    if (b.points !== a.points) return b.points - a.points;
-    if (b.matchesWon !== a.matchesWon) return b.matchesWon - a.matchesWon;
-    // Game win percentage as tiebreaker
-    const aGames = a.gamesWon + a.gamesLost;
-    const bGames = b.gamesWon + b.gamesLost;
-    const aPct = aGames > 0 ? a.gamesWon / aGames : 0;
-    const bPct = bGames > 0 ? b.gamesWon / bGames : 0;
-    if (bPct !== aPct) return bPct - aPct;
-    return b.gamesWon - a.gamesWon;
-  });
-}
+import { calculateStandings } from '@/lib/standingsUtils';
 
 export default function StandingsPage() {
   const { teams, pools, matches: cachedMatches } = useData();
@@ -130,6 +17,7 @@ export default function StandingsPage() {
   const [teamsByPool, setTeamsByPool] = useState<{ [poolId: string]: Team[] }>({});
   const [playersByPool, setPlayersByPool] = useState<{ [poolId: string]: Player[] }>({});
   const [matchesByPool, setMatchesByPool] = useState<{ [poolId: string]: Match[] }>({});
+  const [gamesByPool, setGamesByPool] = useState<{ [poolId: string]: GameBase[] }>({});
   const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
@@ -146,12 +34,26 @@ export default function StandingsPage() {
         const teamsByPool: { [poolId: string]: Team[] } = {};
         const playersByPool: { [poolId: string]: Player[] } = {};
         const matchesByPool: { [poolId: string]: Match[] } = {};
+        const gamesByPool: { [poolId: string]: GameBase[] } = {};
         
-        (poolData as Pool[]).forEach(pool => {
+        for (const pool of poolData as Pool[]) {
           teamsByPool[pool.id] = (teamData || []).filter((t: Team) => t.pool_id === pool.id);
           matchesByPool[pool.id] = (matchData || []).filter((m: Match) => m.pool_id === pool.id);
           playersByPool[pool.id] = [];
-        });
+          // For Men's Team, fetch all games for matches in this pool
+          if (pool.category?.code === 'MT') {
+            const matchIds = matchesByPool[pool.id].map(m => m.id);
+            if (matchIds.length > 0) {
+              const { data: gamesData } = await supabase
+                .from('games')
+                .select('*')
+                .in('match_id', matchIds);
+              gamesByPool[pool.id] = gamesData || [];
+            } else {
+              gamesByPool[pool.id] = [];
+            }
+          }
+        }
         
         // Fetch pool players for player-based categories (this still needs to be an API call)
         const { data: poolPlayersData } = await supabase
@@ -191,6 +93,7 @@ export default function StandingsPage() {
         setTeamsByPool(teamsByPool);
         setPlayersByPool(playersByPool);
         setMatchesByPool(matchesByPool);
+        setGamesByPool(gamesByPool);
         setLoading(false);
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -275,7 +178,30 @@ export default function StandingsPage() {
         teamsByPool[pool.id] || [],
         playersByPool[pool.id] || [],
         matchesByPool[pool.id] || [],
-        pool.category?.code
+        pool.category?.code,
+        pool.category?.code === 'MT' && gamesByPool[pool.id]
+          ? gamesByPool[pool.id]
+              .filter(g => (g as any)['status'] === 'completed')
+              .map(g => {
+                const game = g as any;
+                let winner = game['winner'];
+                if (!winner) {
+                  if (game['team1_score'] > game['team2_score']) winner = 'team1';
+                  else if (game['team2_score'] > game['team1_score']) winner = 'team2';
+                  // If equal, skip winner (do not use 'draw')
+                }
+                return {
+                  id: game['id'],
+                  match_id: game['match_id'],
+                  game_number: 0,
+                  team1_score: game['team1_score'],
+                  team2_score: game['team2_score'],
+                  winner,
+                  created_at: '',
+                  updated_at: '',
+                };
+              })
+          : undefined
       );
       tables.push(
         <div key={pool.id} className="mb-8">
