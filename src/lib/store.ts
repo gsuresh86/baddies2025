@@ -987,7 +987,7 @@ class TournamentStore {
     return data as Match;
   }
 
-  async updateMatchScore(matchId: string, scoreData: { team1_score: number; team2_score: number; status: string }): Promise<void> {
+  async updateMatchScore(matchId: string, scoreData: { team1_score: number; team2_score: number; status: string; winner?: 'team1' | 'team2' | 'player1' | 'player2' | null }): Promise<void> {
     console.log('Updating match score:', { matchId, scoreData });
     const { error } = await supabase
       .from('matches')
