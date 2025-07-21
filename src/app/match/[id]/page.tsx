@@ -219,8 +219,8 @@ export default function MatchDetailsPage() {
           games.forEach(game => {
             if (game.winner === 'team1') team1GamesWon++;
             if (game.winner === 'team2') team2GamesWon++;
-            team1TotalPoints += (game.team1_score ?? game.team1Score ?? 0);
-            team2TotalPoints += (game.team2_score ?? game.team2Score ?? 0);
+            team1TotalPoints += (game.team1_score ?? game.team1_score ?? 0);
+            team2TotalPoints += (game.team2_score ?? game.team2_score ?? 0);
           });
           return (
             <div className="bg-white/10 backdrop-blur-md rounded-3xl p-8 mb-8 border border-white/20">
@@ -251,7 +251,7 @@ export default function MatchDetailsPage() {
                       <div className="flex items-center justify-between">
                         <h3 className="font-semibold text-white">Game {idx + 1}</h3>
                         <span className="text-lg font-bold text-white">
-                          {((game as any).team1_score ?? game.team1Score ?? 0)} - {((game as any).team2_score ?? game.team2Score ?? 0)}
+                          {((game as any).team1_score ?? game.team1_score ?? 0)} - {((game as any).team2_score ?? game.team2_score ?? 0)}
                         </span>
                       </div>
                       <div className="mt-2 text-white/80 text-sm">
