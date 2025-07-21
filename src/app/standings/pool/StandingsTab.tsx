@@ -36,7 +36,7 @@ export default function StandingsTab({
     { key: 'points', label: 'PTS' },
     { key: 'gamesWon', label: 'GW' },
     { key: 'gamesLost', label: 'GL' },
-    { key: 'gameDiff', label: 'GD' },
+    { key: 'gameDiff', label: 'GD', desktopOnly: true },
     // On mobile, only show PD; on desktop, show PW, PL, PD
     { key: 'pointsWon', label: 'PW', desktopOnly: true },
     { key: 'pointsLost', label: 'PL', desktopOnly: true },
@@ -46,9 +46,10 @@ export default function StandingsTab({
     { key: 'matchesPlayed', label: 'MP' },
     { key: 'matchesWon', label: 'W' },
     { key: 'matchesLost', label: 'L' },
+    { key: 'points', label: 'PTS' },
     { key: 'gamesWon', label: 'PW' },
     { key: 'gamesLost', label: 'PL' },
-    { key: 'points', label: 'PTS' },
+    { key: 'gameDiff', label: 'PD' }
   ];
   const dynamicStatLabels = isMensTeam ? mensTeamStatLabels : defaultStatLabels;
   return (
@@ -56,9 +57,14 @@ export default function StandingsTab({
       <table className="w-full text-xs sm:text-sm min-w-max">
         <thead>
           <tr className="bg-gradient-to-r from-white/20 to-white/10 border-b border-white/20">
-            <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-bold text-white uppercase tracking-wider">Team</th>
+            <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-bold text-white uppercase tracking-wider w-24 sm:w-32">Team</th>
             {dynamicStatLabels.map(stat => (
-              <th key={stat.key} className="px-2 sm:px-4 py-2 sm:py-3 text-center font-bold text-white uppercase tracking-wider">{stat.label}</th>
+              <th
+                key={stat.key}
+                className={`px-2 sm:px-4 py-2 sm:py-3 text-center font-bold text-white uppercase tracking-wider${(stat as any).desktopOnly ? ' hidden sm:table-cell' : ''}`}
+              >
+                {stat.label}
+              </th>
             ))}
           </tr>
         </thead>
@@ -82,7 +88,7 @@ export default function StandingsTab({
                     key={standing.teamId}
                     className="transition-all duration-200 hover:bg-white/10"
                   >
-                    <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-white font-semibold">
+                    <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-white font-semibold w-24 sm:w-32">
                       <div className="flex items-center gap-2">
                         {((categoryCode === 'BU18' && (idx === 0 || idx === 1)) || (categoryCode === 'GU13' && (idx === 0 || idx === 1)) || (categoryCode === 'BU13' && (idx === 0 || idx === 1))) && (
                           <span title="Qualified" className="mr-1 font-bold" style={{ color: '#FFD700' }}>Q</span>
@@ -112,12 +118,11 @@ export default function StandingsTab({
                     </td>
                     {dynamicStatLabels.map(stat => {
                       // For men's team, show only PD on mobile, and PW/PL/PD on desktop
-                      if (isMensTeam && (stat.key === 'pointsWon' || stat.key === 'pointsLost')) {
-                        // Hide on mobile, show on desktop
+                      if ((stat as any).desktopOnly) {
                         return (
                           <td
                             key={stat.key}
-                            className={`px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-center ${statColor[stat.key as keyof typeof statColor] || 'text-white'} hidden sm:table-cell`}
+                            className={`px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-center${(stat as any).desktopOnly ? ' hidden sm:table-cell' : ''} ${statColor[stat.key as keyof typeof statColor] || 'text-white'}`}
                           >
                             {(standing as any)[stat.key]}
                           </td>
@@ -129,7 +134,7 @@ export default function StandingsTab({
                             key={stat.key}
                             className={`px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-center text-cyan-300 font-bold relative`}
                           >
-                            {/* On mobile, show PD as button with popover; on desktop, just show value */}
+                            {/* On mobile, show PD as button; on desktop, just show value */}
                             <span className="sm:hidden">
                               <button
                                 className="underline underline-offset-2 cursor-pointer focus:outline-none"
@@ -137,17 +142,6 @@ export default function StandingsTab({
                               >
                                 {(standing as any).pointDiff}
                               </button>
-                              {pdPopoverTeamId === standing.teamId && (
-                                <div
-                                  className="absolute z-20 left-1/2 -translate-x-1/2 mt-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg px-4 py-2 border border-cyan-400 min-w-[90px]"
-                                  style={{ minWidth: 90 }}
-                                  onClick={e => e.stopPropagation()}
-                                >
-                                  <div className="mb-1 font-semibold text-cyan-300">Points</div>
-                                  <div>PW: <span className="font-bold">{(standing as any).pointsWon}</span></div>
-                                  <div>PL: <span className="font-bold">{(standing as any).pointsLost}</span></div>
-                                </div>
-                              )}
                             </span>
                             <span className="hidden sm:inline">{(standing as any).pointDiff}</span>
                           </td>
@@ -163,6 +157,17 @@ export default function StandingsTab({
                       );
                     })}
                   </tr>
+                  {/* PW/PL row for mobile, shown when PD is clicked */}
+                  {isMensTeam && pdPopoverTeamId === standing.teamId && (
+                    <tr className="sm:hidden bg-cyan-950/80">
+                      <td colSpan={dynamicStatLabels.length + 1} className="px-2 py-2 text-center text-cyan-200">
+                        <div className="flex justify-center gap-6">
+                          <div>PW: <span className="font-bold">{(standing as any).pointsWon}</span></div>
+                          <div>PL: <span className="font-bold">{(standing as any).pointsLost}</span></div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                   {/* Players list row */}
                   {isMensTeam && isExpanded && hasPlayers && (
                     <tr key={`${standing.teamId}-players`} className="bg-white/5">

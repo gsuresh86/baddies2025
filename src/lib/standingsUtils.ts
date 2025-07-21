@@ -109,7 +109,7 @@ export function calculateStandings(
       standing.points = (standing.matchesWon * 2);
       // standing.gamesWon = standing.matchesWon;
       // standing.gamesLost = standing.matchesLost;
-        // standing.gameDiff = standing.gamesWon - standing.gamesLost;
+      standing.gameDiff = standing.gamesWon - standing.gamesLost;
       standing.pointDiff = standing.pointsWon - standing.pointsLost;
     });
     return Object.values(standings).sort((a, b) => {
@@ -169,6 +169,7 @@ export function calculateStandings(
   // Calculate points
   Object.values(standings).forEach(standing => {
     standing.points = (standing.matchesWon * 2);
+    standing.gameDiff = (standing.gamesWon ?? 0) - (standing.gamesLost ?? 0);
   });
 
   return Object.values(standings).sort((a, b) => {
