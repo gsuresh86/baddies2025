@@ -263,7 +263,7 @@ export default function LiveScorePage() {
       }
       showSuccess('Score saved to database!');
     } catch (error: any) {
-      showError('Error saving score', error?.message || String(error));
+      showError('Error saving score', error?.message || (typeof error === 'string' ? error : 'Unknown error occurred'));
     } finally {
       setSaving(false);
     }

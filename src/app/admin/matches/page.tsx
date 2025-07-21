@@ -36,7 +36,6 @@ export default function AdminMatchesPage() {
     editTime,
     editCourt,
     editMatchNo,
-
     showCreateMatch,
     showGenerateModal,
     showScoreSheetModal,
@@ -64,7 +63,6 @@ export default function AdminMatchesPage() {
     manualSide2,
     manualMatchCode,
     assignMatch,
-
     assignSide1,
     assignSide2,
     assignLoading,
@@ -72,14 +70,12 @@ export default function AdminMatchesPage() {
     assignPool2,
     scoreSheetDate,
     participantsInSelectedModalPool,
-
     isTeamCategory,
     poolsForCategory,
     filteredMatches,
     filteredMobileMatches,
     
     // Setters
-
     setSelectedPool,
     setActiveCategoryIds,
     setStatusFilter,
@@ -91,12 +87,10 @@ export default function AdminMatchesPage() {
     setNewMatchDate,
     setNewMatchTime,
     setNewMatchCourt,
-
     setEditDate,
     setEditTime,
     setEditCourt,
     setEditMatchNo,
-
     setShowCreateMatch,
     setShowGenerateModal,
     setShowScoreSheetModal,
@@ -140,7 +134,6 @@ export default function AdminMatchesPage() {
     fetchData,
     getTeamName,
     getPlayerName,
-
     getOptionsForPoolHelper,
     
     // Data
@@ -394,10 +387,24 @@ export default function AdminMatchesPage() {
   };
 
   return (
-    <div className="mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">Match Management</h1>
-        <p className="text-gray-600">Create and manage tournament matches, update scores, and track results</p>
+    <div className="space-y-6">
+      {/* Header Section */}
+      <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
+              Match Management
+            </h1>
+            <p className="text-gray-600 text-lg">
+              Create and manage tournament matches, update scores, and track results
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center shadow-sm">
+              <span className="text-gray-700 text-xl">🏸</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -425,39 +432,84 @@ export default function AdminMatchesPage() {
       />
 
       {/* Matches List */}
-      <div className="bg-white rounded-xl shadow-lg border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-800">Tournament Matches</h2>
-          <p className="text-gray-600 mt-1">
-            {selectedPool === 'all' ? 'All matches' : `Matches in ${pools.find(p => p.id === selectedPool)?.name || 'Unknown Pool'}`}
-          </p>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="px-6 py-5 border-b border-gray-200 bg-gray-50">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Tournament Matches</h2>
+              <p className="text-gray-600 mt-1">
+                {selectedPool === 'all' 
+                  ? 'All matches' 
+                  : `Matches in ${pools.find(p => p.id === selectedPool)?.name || 'Unknown Pool'}`
+                }
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center">
+                <span className="text-white text-sm font-bold">
+                  {filteredMatches.length}
+                </span>
+              </div>
+              <span className="text-sm text-gray-600 font-medium">matches</span>
+            </div>
+          </div>
         </div>
-        <div className="p-6">
+        
+        <div className="p-4 sm:p-6">
           {/* Mobile search box */}
-          <div className="mb-4 sm:hidden">
-            <input
-              type="text"
-              value={mobileSearch}
-              onChange={e => setMobileSearch(e.target.value)}
-              placeholder="Search by player name..."
-              className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-            />
+          <div className="mb-6 sm:hidden">
+            <div className="relative">
+              <input
+                type="text"
+                value={mobileSearch}
+                onChange={e => setMobileSearch(e.target.value)}
+                placeholder="Search by player name..."
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent text-gray-900 bg-white shadow-sm"
+              />
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+            </div>
           </div>
           
           {loading ? (
-            <div className="text-center py-8">
-              <p className="text-gray-500 text-lg">Loading matches...</p>
+            <div className="text-center py-12">
+              <div className="inline-flex items-center px-4 py-2 font-semibold leading-6 text-gray-600 shadow rounded-md">
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Loading matches...
+              </div>
             </div>
           ) : filteredMatches.length === 0 ? (
-            <div className="text-center py-8">
-              <div className="text-6xl mb-4">🏸</div>
-              <h3 className="text-lg font-medium text-gray-800 mb-2">No matches found</h3>
-              <p className="text-gray-600">
+            <div className="text-center py-12">
+              <div className="w-24 h-24 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
+                <span className="text-4xl">🏸</span>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No matches found</h3>
+              <p className="text-gray-600 max-w-md mx-auto">
                 {selectedPool === 'all' 
                   ? 'Create your first match to get started' 
                   : 'Generate matches for this pool or create individual matches'
                 }
               </p>
+              <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+                <button
+                  onClick={() => setShowCreateMatch(true)}
+                  className="px-6 py-3 bg-gray-900 text-white font-semibold rounded-lg hover:bg-gray-800 transition-all duration-200 shadow-sm hover:shadow-md"
+                >
+                  Create Match
+                </button>
+                <button
+                  onClick={() => setShowGenerateModal(true)}
+                  className="px-6 py-3 bg-gray-700 text-white font-semibold rounded-lg hover:bg-gray-600 transition-all duration-200 shadow-sm hover:shadow-md"
+                >
+                  Generate Matches
+                </button>
+              </div>
             </div>
           ) : (
             <>
@@ -534,25 +586,28 @@ export default function AdminMatchesPage() {
 
       {/* Score Sheet Modal */}
       {showScoreSheetModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-xs mx-auto flex flex-col items-center">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Select Date for Score Sheet</h3>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-sm mx-auto shadow-lg border border-gray-200">
+            <div className="text-center mb-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Generate Score Sheet</h3>
+              <p className="text-gray-600">Select a date to generate score sheets for all matches</p>
+            </div>
             <input
               type="date"
               value={scoreSheetDate}
               onChange={e => setScoreSheetDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white mb-4"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent text-gray-900 bg-white mb-6"
             />
-            <div className="flex gap-3 w-full">
+            <div className="flex gap-3">
               <button
                 onClick={handleGenerateScoreSheetPDF}
-                className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700"
+                className="flex-1 px-4 py-3 bg-gray-900 text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-200 shadow-sm hover:shadow-md"
               >
                 Generate
               </button>
               <button
                 onClick={() => setShowScoreSheetModal(false)}
-                className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-400"
+                className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-all duration-200"
               >
                 Cancel
               </button>

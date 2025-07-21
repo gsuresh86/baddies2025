@@ -42,8 +42,7 @@ export const useMatchManagement = () => {
   const [editTime, setEditTime] = useState('');
   const [editCourt, setEditCourt] = useState('');
   const [editMatchNo, setEditMatchNo] = useState('');
-  const [editSide1, setEditSide1] = useState('');
-  const [editSide2, setEditSide2] = useState('');
+
   
   // Modal states
   const [showCreateMatch, setShowCreateMatch] = useState(false);
@@ -211,8 +210,7 @@ export const useMatchManagement = () => {
     setEditTime(time);
     setEditCourt(match.court || '');
     setEditMatchNo(match.match_no || '');
-    setEditSide1(match.team1_id || match.player1_id || match.side1_label || '');
-    setEditSide2(match.team2_id || match.player2_id || match.side2_label || '');
+
   }, []);
   
   const cancelEditMatch = useCallback(() => {
@@ -221,8 +219,7 @@ export const useMatchManagement = () => {
     setEditTime('');
     setEditCourt('');
     setEditMatchNo('');
-    setEditSide1('');
-    setEditSide2('');
+
   }, []);
   
   const saveEditMatch = useCallback(async (match: Match) => {
@@ -232,29 +229,12 @@ export const useMatchManagement = () => {
         scheduledDate = `${editDate}T${editTime}:00+05:30`;
       }
       
-      const matchCategory = match.category_id
-        ? categories.find(c => c.id === match.category_id)
-        : getCategoryForMatch(match, pools, categories);
-      const isTeamCategory = matchCategory?.type === 'team';
-      const isPlayerCategory = matchCategory?.type === 'player' || matchCategory?.type === 'pair';
-      
+      // Only update date, court, and time - preserve existing side assignments and labels
       const updated: any = {
         scheduled_date: scheduledDate,
         court: editCourt || null,
         match_no: editMatchNo || null,
       };
-      
-      if (isTeamCategory) {
-        updated.team1_id = editSide1 || null;
-        updated.team2_id = editSide2 || null;
-        updated.side1_label = null;
-        updated.side2_label = null;
-      } else if (isPlayerCategory) {
-        updated.player1_id = editSide1 || null;
-        updated.player2_id = editSide2 || null;
-        updated.side1_label = null;
-        updated.side2_label = null;
-      }
       
       const { error } = await supabase
         .from('matches')
@@ -268,9 +248,9 @@ export const useMatchManagement = () => {
           {
             match_id: match.id,
             activity_type: 'MATCH_RESCHEDULED',
-            description: `Match rescheduled to ${scheduledDate || 'unspecified date'}${editCourt ? ` on Court ${editCourt}` : ''}${editMatchNo ? `, Match No: ${editMatchNo}` : ''}`,
+            description: `Match scheduling updated: ${scheduledDate || 'unspecified date'}${editCourt ? ` on Court ${editCourt}` : ''}${editMatchNo ? `, Match No: ${editMatchNo}` : ''}`,
             performed_by_user_id: user.id,
-            metadata: { scheduled_date: scheduledDate, court: editCourt, match_no: editMatchNo, side1: editSide1, side2: editSide2 }
+            metadata: { scheduled_date: scheduledDate, court: editCourt, match_no: editMatchNo }
           }
         ]);
       }
@@ -279,9 +259,10 @@ export const useMatchManagement = () => {
       setEditingMatchId(null);
       await refreshData();
     } catch (err) {
-      showError('Error updating match', err as string);
+      const errorMessage = err instanceof Error ? err.message : (typeof err === 'string' ? err : 'Unknown error occurred');
+      showError('Error updating match', errorMessage);
     }
-  }, [editDate, editTime, editCourt, editMatchNo, editSide1, editSide2, categories, pools, refreshData, showSuccess, showError]);
+  }, [editDate, editTime, editCourt, editMatchNo, refreshData, showSuccess, showError]);
   
   const handleCreateMatch = useCallback(async () => {
     if (!newMatchTeam1 || !newMatchTeam2 || !newMatchPool) return;
@@ -357,8 +338,7 @@ export const useMatchManagement = () => {
     editTime,
     editCourt,
     editMatchNo,
-    editSide1,
-    editSide2,
+
     showCreateMatch,
     showGenerateModal,
     showScoreSheetModal,
@@ -419,8 +399,7 @@ export const useMatchManagement = () => {
     setEditTime,
     setEditCourt,
     setEditMatchNo,
-    setEditSide1,
-    setEditSide2,
+
     setShowCreateMatch,
     setShowGenerateModal,
     setShowScoreSheetModal,

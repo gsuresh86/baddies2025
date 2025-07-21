@@ -187,7 +187,7 @@ export default function AdminManageMatchPage() {
           }))
         );
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : String(err);
+        const errorMessage = err instanceof Error ? err.message : (typeof err === 'string' ? err : 'Unknown error occurred');
         setError(errorMessage);
         showError("Error fetching match data", errorMessage);
       }
@@ -328,7 +328,7 @@ export default function AdminManageMatchPage() {
       );
       showSuccess("Game saved successfully!");
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
+      const errorMessage = err instanceof Error ? err.message : (typeof err === 'string' ? err : 'Unknown error occurred');
       showError("Error saving game", errorMessage);
     }
     setSaving(false);
@@ -362,7 +362,7 @@ export default function AdminManageMatchPage() {
       );
       showSuccess("Game marked as completed!");
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
+      const errorMessage = err instanceof Error ? err.message : (typeof err === 'string' ? err : 'Unknown error occurred');
       showError("Error marking game as completed", errorMessage);
     }
     setSaving(false);
@@ -406,7 +406,7 @@ export default function AdminManageMatchPage() {
               if (error) throw error;
               showSuccess('Match status updated!');
             } catch (err) {
-              showError('Error updating match status', err instanceof Error ? err.message : String(err));
+              showError('Error updating match status', err instanceof Error ? err.message : (typeof err === 'string' ? err : 'Unknown error occurred'));
             }
             setSaving(false);
           }}
@@ -655,7 +655,7 @@ export default function AdminManageMatchPage() {
                                 // setGames(mergedGames);
                                 showSuccess('Game status updated!');
                               } catch (err) {
-                                showError('Error updating game status', err instanceof Error ? err.message : String(err));
+                                showError('Error updating game status', err instanceof Error ? err.message : (typeof err === 'string' ? err : 'Unknown error occurred'));
                               }
                               setSaving(false);
                             }}

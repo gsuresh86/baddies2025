@@ -80,7 +80,7 @@ export const CrossPoolMatchModal: React.FC<CrossPoolMatchModalProps> = ({
         <div className="flex items-center justify-center min-h-screen px-4">
           <Dialog.Panel className="relative bg-white rounded-2xl shadow-xl max-w-md w-full mx-auto p-6 z-10">
             <Dialog.Title className="text-xl font-bold mb-4 text-gray-800 flex items-center gap-2">
-              <span>🔀</span> Create Cross-Pool Match
+                              Create Cross-Pool Match
             </Dialog.Title>
             
             <div className="mb-4">

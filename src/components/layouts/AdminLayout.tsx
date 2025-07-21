@@ -69,46 +69,52 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
   const pageTitle = routeTitleMap[pathname] || 'Admin';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
+    <div className="min-h-screen bg-gray-50 flex">
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
         <div 
-          className="fixed inset-0 bg-gray-300/60 z-40 lg:hidden backdrop-blur-sm"
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
+      
       {/* Sidebar */}
       <aside className={`
         fixed lg:static inset-y-0 left-0 z-50
-        bg-white border-r border-gray-200 shadow-md
+        bg-white border-r border-gray-200 shadow-lg
         flex flex-col py-6 px-2 min-h-screen transition-all duration-300 ease-in-out
         ${sidebarCollapsed ? 'w-16' : 'w-64'}
         ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         lg:flex-shrink-0
       `}>
         {/* Logo/Header */}
-        <div className={`mb-8 flex items-center gap-2 px-2 ${sidebarCollapsed ? 'justify-center' : ''}`}>
-          <div className="w-10 h-10 relative">
+        <div className={`mb-8 flex items-center gap-3 px-3 ${sidebarCollapsed ? 'justify-center' : ''}`}>
+          <div className="w-10 h-10 relative bg-gray-100 rounded-lg p-1 shadow-sm">
             <Image src="/pcbt.png" alt="Logo" fill style={{ objectFit: 'contain' }} draggable={false} priority />
           </div>
           {!sidebarCollapsed && (
-            <span className="text-lg font-bold text-blue-700 tracking-tight">Baddies 2025</span>
+            <div>
+              <span className="text-lg font-bold text-gray-900 tracking-tight">
+                Baddies 2025
+              </span>
+              <div className="text-xs text-gray-500 font-medium">Admin Panel</div>
+            </div>
           )}
         </div>
+        
         {/* Navigation */}
-        <nav className="flex-1 space-y-2">
-          <div className="text-xs font-bold text-gray-400 px-4 mb-2 uppercase tracking-widest">Main</div>
+        <nav className="flex-1 space-y-1">
+          <div className="text-xs font-bold text-gray-400 px-4 mb-3 uppercase tracking-widest">Overview</div>
           {navigationItems.slice(0, 2).map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center px-4 py-2 text-sm font-bold rounded-lg transition-all
-                  ${isActive ? 'bg-blue-600 text-white shadow scale-[1.03]' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'}
+                className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200
+                  ${isActive ? 'bg-gray-900 text-white shadow-md' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'}
                   ${sidebarCollapsed ? 'justify-center px-2' : 'px-4'}
                 `}
-                style={{ transition: 'all 0.18s cubic-bezier(.4,2,.6,1)' }}
                 title={sidebarCollapsed ? item.label : undefined}
                 onClick={() => { if (mobileMenuOpen) setMobileMenuOpen(false); }}
               >
@@ -117,18 +123,18 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
               </Link>
             );
           })}
-          <div className="text-xs font-bold text-gray-400 px-4 mt-6 mb-2 uppercase tracking-widest">Management</div>
+          
+          <div className="text-xs font-bold text-gray-400 px-4 mt-6 mb-3 uppercase tracking-widest">Management</div>
           {navigationItems.slice(2).map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center px-4 py-2 text-sm font-semibold rounded-lg transition-all
-                  ${isActive ? 'bg-green-600 text-white shadow scale-[1.03]' : 'text-gray-700 hover:bg-green-50 hover:text-green-700'}
+                className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200
+                  ${isActive ? 'bg-gray-900 text-white shadow-md' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'}
                   ${sidebarCollapsed ? 'justify-center px-2' : 'px-4'}
                 `}
-                style={{ transition: 'all 0.18s cubic-bezier(.4,2,.6,1)' }}
                 title={sidebarCollapsed ? item.label : undefined}
                 onClick={() => { if (mobileMenuOpen) setMobileMenuOpen(false); }}
               >
@@ -138,72 +144,100 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
             );
           })}
         </nav>
+        
         {/* Collapse/Expand Button */}
-        <div className="mt-auto flex flex-col items-center gap-2 pb-4">
+        <div className="mt-auto flex flex-col items-center gap-3 pb-4">
           <button
             onClick={toggleSidebar}
-            className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-700 shadow transition"
+            className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 shadow-sm transition-all duration-200 hover:shadow-md"
             title={sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
           >
             {sidebarCollapsed ? (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 12h16" /></svg>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 12h16" />
+              </svg>
             ) : (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H8m0 0l4-4m-4 4l4 4" /></svg>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H8m0 0l4-4m-4 4l4 4" />
+              </svg>
             )}
           </button>
           <button
             onClick={handleSignOut}
-            className="w-full px-3 py-2 rounded-lg bg-red-50 text-red-700 font-semibold hover:bg-red-100 hover:shadow-lg transition"
+            className="w-full px-3 py-2 rounded-lg bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 hover:shadow-md transition-all duration-200 border border-gray-200"
             title={sidebarCollapsed ? 'Sign Out' : undefined}
           >
             {sidebarCollapsed ? '🚪' : '🚪 Sign Out'}
           </button>
         </div>
       </aside>
+      
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-h-screen">
         {/* Top Bar */}
-        <header className="w-full flex items-center justify-between px-6 py-3 bg-white/90 shadow sticky top-0 z-30 border-b border-gray-200">
+        <header className="w-full flex items-center justify-between px-4 sm:px-6 py-4 bg-white shadow-sm sticky top-0 z-30 border-b border-gray-200">
           {/* Mobile Menu Button */}
           <button
             onClick={toggleMobileMenu}
-            className="lg:hidden p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 mr-2"
+            className="lg:hidden p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 mr-3 transition-all duration-200 hover:shadow-md"
             aria-label="Open sidebar menu"
           >
-            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
+          
           <div className="flex items-center gap-4">
-            <span className="text-2xl font-bold text-gray-800 tracking-tight">{pageTitle}</span>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">
+                  {pageTitle.charAt(0)}
+                </span>
+              </div>
+              <div>
+                <span className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
+                  {pageTitle}
+                </span>
+                <div className="text-xs text-gray-500 font-medium">Administration</div>
+              </div>
+            </div>
           </div>
+          
           {/* User Info Dropdown */}
           <div className="relative">
             <button
               onClick={() => setUserMenuOpen(v => !v)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium shadow"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium shadow-sm transition-all duration-200 hover:shadow-md border border-gray-200"
             >
-              <span className="inline-block w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-lg">
+              <span className="inline-block w-8 h-8 rounded-full bg-gray-900 text-white flex items-center justify-center font-bold text-sm shadow-sm">
                 {user.email?.[0]?.toUpperCase() || 'A'}
               </span>
-              <span className="hidden sm:block">{user.email}</span>
-              <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              <span className="hidden sm:block text-sm font-medium">{user.email}</span>
+              <svg className="w-4 h-4 ml-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
             </button>
             {userMenuOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50 animate-fade-in">
-                <div className="px-4 py-3 text-sm text-gray-700 border-b">Signed in as<br /><span className="font-semibold">{user.email}</span></div>
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                <div className="px-4 py-3 text-sm text-gray-700 border-b border-gray-200">
+                  Signed in as<br />
+                  <span className="font-semibold text-gray-900">{user.email}</span>
+                </div>
                 <button
                   onClick={handleSignOut}
-                  className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded-b-lg"
-                >Sign Out</button>
+                  className="w-full text-left px-4 py-3 text-red-600 hover:bg-red-50 rounded-b-lg transition-colors duration-200 font-medium"
+                >
+                  🚪 Sign Out
+                </button>
               </div>
             )}
           </div>
         </header>
+        
         {/* Content Area */}
-        <main className="flex-1 px-1 sm:px-3 py-4 bg-gradient-to-br from-gray-50/80 to-gray-100/80 overflow-y-auto rounded-2xl mt-4 shadow-xl">
-          <div className="max-w-9xl mx-auto">
-            <div className="bg-white rounded-2xl shadow-lg p-3 md:p-5 min-h-[60vh]">
+        <main className="flex-1 px-2 sm:px-4 py-4 bg-gray-50 overflow-y-auto">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 min-h-[60vh]">
               {children}
             </div>
           </div>

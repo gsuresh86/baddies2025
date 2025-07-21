@@ -173,7 +173,7 @@ export default function AdminPlayersPage() {
       setPlayers(prev => prev.map(p => p.id === playerId ? { ...p, stage: newStage } : p));
       setFilteredPlayers(prev => prev.map(p => p.id === playerId ? { ...p, stage: newStage } : p));
     } catch (error) {
-      showError('Error updating stage', error instanceof Error ? error.message : String(error));
+      showError('Error updating stage', error instanceof Error ? error.message : (typeof error === 'string' ? error : 'Unknown error occurred'));
     } finally {
       setSavingStage(prev => ({ ...prev, [playerId]: false }));
     }
@@ -454,7 +454,7 @@ export default function AdminPlayersPage() {
                       showSuccess('Player assigned to team successfully');
                       fetchData();
                     } catch (error) {
-                      showError('Error assigning player to team', error instanceof Error ? error.message : String(error));
+                      showError('Error assigning player to team', error instanceof Error ? error.message : (typeof error === 'string' ? error : 'Unknown error occurred'));
                     }
                   }}
                   disabled={!selectedTeamId}
