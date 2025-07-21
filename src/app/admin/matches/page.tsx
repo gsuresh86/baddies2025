@@ -16,7 +16,7 @@ export default function AdminMatchesPage() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPool, setSelectedPool] = useState<string>('all');
-  const [activeCategoryId, setActiveCategoryId] = useState<string>('all');
+  const [activeCategoryIds, setActiveCategoryIds] = useState<string[]>(['all']);
   // Add state for status and date filter
   const [statusFilter, setStatusFilter] = useState<string>('scheduled');
   const [dateFilter, setDateFilter] = useState<string>(() => {
@@ -440,8 +440,11 @@ export default function AdminMatchesPage() {
 
   const filteredMatches = useMemo(() => {
     let ms = selectedPool === 'all' ? matches : matches.filter(match => match.pool_id === selectedPool);
-    if (activeCategoryId !== 'all') {
-      ms = ms.filter(match => getCategoryForMatch(match)?.id === activeCategoryId);
+    if (!activeCategoryIds.includes('all')) {
+      ms = ms.filter(match => {
+        const category = getCategoryForMatch(match);
+        return category && activeCategoryIds.includes(category.id);
+      });
     }
     if (statusFilter !== 'all') {
       ms = ms.filter(match => (match.status || 'scheduled') === statusFilter);
@@ -456,7 +459,7 @@ export default function AdminMatchesPage() {
       });
     }
     // Sort by scheduled date and time when "All Categories" is selected
-    if (activeCategoryId === 'all') {
+    if (activeCategoryIds.includes('all')) {
       ms = ms.sort((a, b) => {
         // Handle matches without scheduled dates
         if (!a.scheduled_date && !b.scheduled_date) return 0;
@@ -471,7 +474,7 @@ export default function AdminMatchesPage() {
     }
     
     return ms;
-  }, [matches, selectedPool, activeCategoryId, statusFilter, dateFilter, getCategoryForMatch]);
+  }, [matches, selectedPool, activeCategoryIds, statusFilter, dateFilter, getCategoryForMatch]);
 
   // Get the next match number for a given category and pool
   const getNextMatchNumber = useCallback((categoryId: string, poolId: string) => {
@@ -1037,9 +1040,14 @@ export default function AdminMatchesPage() {
             <label htmlFor="category-select" className="text-sm font-medium text-gray-700">Category:</label>
             <select
               id="category-select"
-              value={activeCategoryId}
-              onChange={e => setActiveCategoryId(e.target.value)}
+              multiple
+              value={activeCategoryIds}
+              onChange={e => {
+                const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
+                setActiveCategoryIds(selectedOptions.length > 0 ? selectedOptions : ['all']);
+              }}
               className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white text-sm"
+              style={{ height: '100px' }}
             >
               <option value="all">All</option>
               {categories.map(cat => (
@@ -1057,7 +1065,7 @@ export default function AdminMatchesPage() {
             >
               <option value="all">All</option>
               {pools
-                .filter(pool => activeCategoryId === 'all' || pool.category_id === activeCategoryId)
+                .filter(pool => activeCategoryIds.includes('all') || activeCategoryIds.includes(pool.category_id!))
                 .map(pool => (
                   <option key={pool.id} value={pool.id}>{pool.name}</option>
                 ))}
