@@ -63,10 +63,8 @@ function mergeGamesWithStructure(dbGames: Game[]): Game[] {
       mergedGames.push({
         id: `new-${idx}`,
         type: g.type as 'singles' | 'doubles',
-        team1_score: null,
-        team2_score: null,
-        team1Score: 0,
-        team2Score: 0,
+        team1_score: 0,
+        team2_score: 0,
         winner: '' as any,
         completed: false,
         player1_id: '',

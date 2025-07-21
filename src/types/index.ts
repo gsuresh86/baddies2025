@@ -31,8 +31,8 @@ export interface Game {
   player2Id?: string;
   player3Id?: string;
   player4Id?: string;
-  team1_score: number;
-  team2_score: number;
+  team1_score?: number;
+  team2_score?: number;
   winner: 'team1' | 'team2';
   completed: boolean;
 }
