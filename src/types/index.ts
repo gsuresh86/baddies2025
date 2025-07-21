@@ -38,6 +38,7 @@ export interface Game {
 }
 
 export interface Match {
+  category_id: any;
   id: string;
   team1_id?: string;
   team2_id?: string;
@@ -72,6 +73,11 @@ export interface Match {
   media?: MatchMedia[];
   history?: MatchHistory[];
   highlights?: MatchHighlight[];
+  // Side labels for manual/future matches
+  side1_label?: string;
+  side2_label?: string;
+  // Stage for knockout/future matches
+  stage?: string;
 }
 
 export interface Pool {

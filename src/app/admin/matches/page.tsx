@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { tournamentStore, supabase } from '@/lib/store';
-import { Match } from '@/types';
+import { Match, Player, Team } from '@/types';
 import { useToast } from '@/contexts/ToastContext';
 import { useData } from '@/contexts/DataContext';
 import * as XLSX from 'xlsx';
@@ -19,14 +19,7 @@ export default function AdminMatchesPage() {
   const [activeCategoryIds, setActiveCategoryIds] = useState<string[]>(['all']);
   // Add state for status and date filter
   const [statusFilter, setStatusFilter] = useState<string>('scheduled');
-  const [dateFilter, setDateFilter] = useState<string>(() => {
-    // Set default to today's date
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  });
+  const [dateFilter, setDateFilter] = useState<string>('');
   
   // Form states
   const [newMatchTeam1, setNewMatchTeam1] = useState('');
@@ -58,6 +51,26 @@ export default function AdminMatchesPage() {
   const [scheduleDate, setScheduleDate] = useState('');
   const [court, setCourt] = useState('');
   const [stage, setStage] = useState('');
+  // Add state for usePool switch and manual entry fields
+  const [usePool, setUsePool] = useState(true);
+  const [manualSide1, setManualSide1] = useState('');
+  const [manualSide2, setManualSide2] = useState('');
+  const [manualMatchCode, setManualMatchCode] = useState('');
+
+  // Add state for editing side1/side2
+  const [editSide1, setEditSide1] = useState('');
+  const [editSide2, setEditSide2] = useState('');
+
+  // Add state for assign dialog:
+  const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [assignMatch, setAssignMatch] = useState<Match | null>(null);
+  const [, setAssignPool] = useState('');
+  const [assignSide1, setAssignSide1] = useState('');
+  const [assignSide2, setAssignSide2] = useState('');
+  const [assignLoading, setAssignLoading] = useState(false);
+  // In Assign Player/Team dialog state:
+  const [assignPool1, setAssignPool1] = useState('');
+  const [assignPool2, setAssignPool2] = useState('');
 
   // Helper to get pools for a category
   const getPoolsForCategory = (categoryId: string) => pools.filter(pool => pool.category_id === categoryId);
@@ -124,6 +137,8 @@ export default function AdminMatchesPage() {
     setEditTime(time);
     setEditCourt(match.court || '');
     setEditMatchNo(match.match_no || '');
+    setEditSide1(match.team1_id || match.player1_id || match.side1_label || '');
+    setEditSide2(match.team2_id || match.player2_id || match.side2_label || '');
   };
 
   // Handler to cancel editing
@@ -133,6 +148,8 @@ export default function AdminMatchesPage() {
     setEditTime('');
     setEditCourt('');
     setEditMatchNo('');
+    setEditSide1('');
+    setEditSide2('');
   };
 
   // Handler to save changes
@@ -140,21 +157,36 @@ export default function AdminMatchesPage() {
     try {
       let scheduledDate = null;
       if (editDate && editTime) {
-        // Store IST time directly as ISO string
-        scheduledDate = `${editDate}T${editTime}:00+05:30`; // IST timezone offset
+        scheduledDate = `${editDate}T${editTime}:00+05:30`;
       }
-      
-      const updated = {
+      // Determine category type
+      const matchCategory = match.category_id
+        ? categories.find(c => c.id === match.category_id)
+        : getCategoryForMatch(match);
+      const isTeamCategory = matchCategory?.type === 'team';
+      const isPlayerCategory = matchCategory?.type === 'player' || matchCategory?.type === 'pair';
+      const updated: any = {
         scheduled_date: scheduledDate,
         court: editCourt || null,
         match_no: editMatchNo || null,
       };
+      if (isTeamCategory) {
+        updated.team1_id = editSide1 || null;
+        updated.team2_id = editSide2 || null;
+        updated.side1_label = null;
+        updated.side2_label = null;
+      } else if (isPlayerCategory) {
+        updated.player1_id = editSide1 || null;
+        updated.player2_id = editSide2 || null;
+        updated.side1_label = null;
+        updated.side2_label = null;
+      }
       const { error } = await supabase
         .from('matches')
         .update(updated)
         .eq('id', match.id);
       if (error) throw error;
-      // Log activity
+      // Log activity (optional)
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         await supabase.from('activity_logs').insert([
@@ -163,7 +195,7 @@ export default function AdminMatchesPage() {
             activity_type: 'MATCH_RESCHEDULED',
             description: `Match rescheduled to ${scheduledDate || 'unspecified date'}${editCourt ? ` on Court ${editCourt}` : ''}${editMatchNo ? `, Match No: ${editMatchNo}` : ''}`,
             performed_by_user_id: user.id,
-            metadata: { scheduled_date: scheduledDate, court: editCourt, match_no: editMatchNo }
+            metadata: { scheduled_date: scheduledDate, court: editCourt, match_no: editMatchNo, side1: editSide1, side2: editSide2 }
           }
         ]);
       }
@@ -353,7 +385,9 @@ export default function AdminMatchesPage() {
     ];
 
     const data = filteredMatches.map((match) => {
-      const matchCategory = getCategoryForMatch(match);
+      const matchCategory = match.category_id
+        ? categories.find(c => c.id === match.category_id)
+        : getCategoryForMatch(match);
       const matchType = matchCategory?.type;
       const { date, time } = formatISTDateTime(match.scheduled_date);
       
@@ -535,7 +569,9 @@ export default function AdminMatchesPage() {
   }
 
   function getParticipantNamesForSheet(match: Match) {
-    const matchCategory = getCategoryForMatch(match);
+    const matchCategory = match.category_id
+      ? categories.find(c => c.id === match.category_id)
+      : getCategoryForMatch(match);
     const matchType = matchCategory?.type;
     if (matchType === 'team') {
       return [getTeamName(match.team1_id || ''), getTeamName(match.team2_id || '')];
@@ -549,10 +585,10 @@ export default function AdminMatchesPage() {
       // Use only first names for player and partner
       const player1First = player1 ? player1.name.split(' ')[0] : '-';
       const player2First = player2 ? player2.name.split(' ')[0] : '-';
-      const player1PartnerFirst = player1?.partner_name ? player1.partner_name.split(' ')[0] : '';
-      const player2PartnerFirst = player2?.partner_name ? player2.partner_name.split(' ')[0] : '';
-      const player1Full = player1PartnerFirst ? `${player1First} / ${player1PartnerFirst}` : player1First;
-      const player2Full = player2PartnerFirst ? `${player2First} / ${player2PartnerFirst}` : player2First;
+      const player1PartnerFirstName = player1?.partner_name ? player1.partner_name.split(' ')[0] : '';
+      const player2PartnerFirstName = player2?.partner_name ? player2.partner_name.split(' ')[0] : '';
+      const player1Full = player1PartnerFirstName ? `${player1First} / ${player1PartnerFirstName}` : player1First;
+      const player2Full = player2PartnerFirstName ? `${player2First} / ${player2PartnerFirstName}` : player2First;
       return [player1Full, player2Full];
     }
     return ['-', '-'];
@@ -577,8 +613,10 @@ export default function AdminMatchesPage() {
     }
     
     // Filter out Men's team category matches (code: 'MT')
-    return matchesToFilter.filter(m => {
-      const matchCategory = getCategoryForMatch(m);
+    return matchesToFilter.filter(match => {
+      const matchCategory = match.category_id
+        ? categories.find(c => c.id === match.category_id)
+        : getCategoryForMatch(match);
       return matchCategory?.code !== 'MT';
     });
   };
@@ -610,7 +648,9 @@ export default function AdminMatchesPage() {
         chunk.forEach((match, idx) => {
           const [p1, p2] = getParticipantNamesForSheet(match);
           // Get category for this match
-          const matchCategory = getCategoryForMatch(match);
+          const matchCategory = match.category_id
+            ? categories.find(c => c.id === match.category_id)
+            : getCategoryForMatch(match);
           // Color map for category code
           const categoryColorMap: Record<string, { bg: [number, number, number], text: [number, number, number] }> = {
             'MT': { bg: [41, 128, 185], text: [255,255,255] }, // blue (Men's Team)
@@ -777,8 +817,10 @@ export default function AdminMatchesPage() {
     const matchesToPrint = filteredMatches;
     
     // Filter only Men's team matches
-    const mensTeamMatches = matchesToPrint.filter(m => {
-      const matchCategory = getCategoryForMatch(m);
+    const mensTeamMatches = matchesToPrint.filter(match => {
+      const matchCategory = match.category_id
+        ? categories.find(c => c.id === match.category_id)
+        : getCategoryForMatch(match);
       return matchCategory?.code === 'MT';
     });
     
@@ -902,7 +944,9 @@ export default function AdminMatchesPage() {
     if (!mobileSearch.trim()) return filteredMatches;
     const search = mobileSearch.trim().toLowerCase();
     return filteredMatches.filter((match) => {
-      const matchCategory = getCategoryForMatch(match);
+      const matchCategory = match.category_id
+        ? categories.find(c => c.id === match.category_id)
+        : getCategoryForMatch(match);
       const matchType = matchCategory?.type;
       let participant1 = '';
       let participant2 = '';
@@ -917,7 +961,7 @@ export default function AdminMatchesPage() {
       }
       return participant1.includes(search) || participant2.includes(search);
     });
-  }, [mobileSearch, filteredMatches, getCategoryForMatch, getTeamName, players]);
+  }, [mobileSearch, filteredMatches, getCategoryForMatch, getTeamName, players, categories]);
 
   // Filter pools by selected category
   const poolsForCategory = pools.filter(p => p.category?.code === crossCategory);
@@ -930,46 +974,6 @@ export default function AdminMatchesPage() {
     } else {
       const playerIds = poolPlayers.filter(pp => pp.pool_id === poolId).map(pp => pp.player_id);
       return players.filter(p => playerIds.includes(p.id)).map(p => ({ id: p.id, name: p.name }));
-    }
-  };
-  // Create match handler
-  const handleCreateCrossPoolMatch = async () => {
-    setCreating(true);
-    try {
-      const selectedCategoryObj = categories.find(cat => cat.code === crossCategory);
-      const isTeamCategory = selectedCategoryObj?.type === 'team';
-      const { error } = await supabase.from('matches').insert([
-        {
-          category_id: selectedCategoryObj?.id,
-          ...(isTeamCategory
-            ? { team1_id: side1Player, team2_id: side2Player }
-            : { player1_id: side1Player, player2_id: side2Player }),
-          scheduled_date: scheduleDate || null,
-          court: court || null,
-          stage: stage || null,
-          status: 'scheduled',
-        }
-      ]);
-      if (error) throw error;
-      setShowCrossPoolModal(false);
-      setCrossCategory('');
-      setSide1Pool('');
-      setSide2Pool('');
-      setSide1Player('');
-      setSide2Player('');
-      setScheduleDate('');
-      setCourt('');
-      setStage('');
-      // Optionally refresh data
-      if (typeof refreshData === 'function') refreshData();
-    } catch (err) {
-      if (err && typeof err === 'object' && 'message' in err) {
-        alert('Error creating match: ' + (err as any).message);
-      } else {
-        alert('Error creating match.');
-      }
-    } finally {
-      setCreating(false);
     }
   };
 
@@ -1122,38 +1126,37 @@ export default function AdminMatchesPage() {
             onClick={() => setShowCreateMatch(true)}
             className="px-3 py-1.5 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center gap-1 text-sm"
           >
-            <span>➕</span> <span>Match</span>
+            Match
           </button>
           <button
             onClick={() => setShowGenerateModal(true)}
-            className="px-3 py-1.5 bg-green-600 text-white rounded-md font-medium hover:bg-green-700 transition-colors flex items-center gap-1 text-sm"
+            className="px-3 py-1.5 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center gap-1 text-sm"
           >
-            <span>🎲</span> <span>Matches</span>
+            Matches
           </button>
           <button
             onClick={exportToExcel}
-            className="px-3 py-1.5 bg-purple-600 text-white rounded-md font-medium hover:bg-purple-700 transition-colors flex items-center gap-1 text-sm"
+            className="px-3 py-1.5 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center gap-1 text-sm"
           >
-            <span>📊</span> <span>Excel</span>
+            Excel
           </button>
           <button
             onClick={() => setShowScoreSheetModal(true)}
-            className="px-3 py-1.5 bg-orange-600 text-white rounded-md font-medium hover:bg-orange-700 transition-colors flex items-center gap-1 text-sm"
+            className="px-3 py-1.5 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center gap-1 text-sm"
           >
-            <span>📝</span> <span>Sheets</span>
+            Sheets
           </button>
           <button
             onClick={generateMensTeamScoreSheets}
-            className="px-3 py-1.5 bg-indigo-600 text-white rounded-md font-medium hover:bg-indigo-700 transition-colors flex items-center gap-1 text-sm"
+            className="px-3 py-1.5 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center gap-1 text-sm"
           >
-            <span>🏆</span> <span>Men&apos;s Team</span>
+            Men&apos;s Team
           </button>
           <button
             onClick={() => setShowCrossPoolModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-pink-500 to-pink-700 text-white rounded-xl font-semibold shadow hover:from-pink-600 hover:to-pink-800 focus:ring-2 focus:ring-pink-400 transition-all text-base group"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold shadow hover:bg-blue-700 focus:ring-2 focus:ring-blue-400 transition-all text-base group"
           >
-            <span className="text-xl group-hover:scale-110 transition-transform">🔀</span>
-            <span>Create Cross-Pool Match</span>
+            Create Cross-Pool Match
           </button>
         </div>
       </div>
@@ -1197,44 +1200,61 @@ export default function AdminMatchesPage() {
               {/* Mobile: Cards */}
               <div className="grid grid-cols-1 gap-4 sm:hidden">
                 {filteredMobileMatches.map((match) => {
-                  const matchCategory = getCategoryForMatch(match);
+                  // Use category_id if present, otherwise fallback to getCategoryForMatch
+                  const matchCategory = match.category_id
+                    ? categories.find(c => c.id === match.category_id)
+                    : getCategoryForMatch(match);
                   const matchType = matchCategory?.type;
                   const isEditing = editingMatchId === match.id;
+                 
                   const { participant1, participant2 } = (() => {
                     if (matchType === 'team') {
                       return {
-                        participant1: getTeamName(match.team1_id || ''),
-                        participant2: getTeamName(match.team2_id || '')
+                        participant1: getTeamName(match.team1_id || '') || match.side1_label || '-',
+                        participant2: getTeamName(match.team2_id || '') || match.side2_label || '-'
                       };
                     } else if (matchType === 'player' || (!match.pool_id && match.player1_id && match.player2_id)) {
-                      const player1 = players.find(p => p.id === (match as any).player1_id);
-                      const player2 = players.find(p => p.id === (match as any).player2_id);
                       return {
-                        participant1: player1 ? player1.name.split(' ')[0] : '-',
-                        participant2: player2 ? player2.name.split(' ')[0] : '-'
+                        participant1: getPlayerName(match.player1_id ?? '') || match.side1_label || '-',
+                        participant2: getPlayerName(match.player2_id ?? '') || match.side2_label || '-'
                       };
                     } else if (matchType === 'pair') {
                       const player1 = players.find(p => p.id === (match as any).player1_id);
                       const player2 = players.find(p => p.id === (match as any).player2_id);
-                      const player1FirstName = player1 ? player1.name.split(' ')[0] : '-';
-                      const player2FirstName = player2 ? player2.name.split(' ')[0] : '-';
+                      const player1FirstName = player1 ? player1.name.split(' ')[0] : '';
+                      const player2FirstName = player2 ? player2.name.split(' ')[0] : '';
                       const player1PartnerFirstName = player1?.partner_name ? player1.partner_name.split(' ')[0] : '';
                       const player2PartnerFirstName = player2?.partner_name ? player2.partner_name.split(' ')[0] : '';
+                      if (!match.player1_id && match.side1_label) {
+                        // fallback to side1_label/side2_label if both player1_id and player2_id are missing
+                        return {
+                          participant1: match.side1_label || '-',
+                          participant2: match.side2_label || '-',
+                        };
+                      }
                       return {
-                        participant1: player1PartnerFirstName ? `${player1FirstName} / ${player1PartnerFirstName}` : player1FirstName,
-                        participant2: player2PartnerFirstName ? `${player2FirstName} / ${player2PartnerFirstName}` : player2FirstName
+                        participant1: player1PartnerFirstName ? `${player1FirstName} / ${player1PartnerFirstName}` : player1FirstName || match.side1_label || '-',
+                        participant2: player2PartnerFirstName ? `${player2FirstName} / ${player2PartnerFirstName}` : player2FirstName || match.side2_label || '-',
                       };
                     }
                     return { participant1: '-', participant2: '-' };
                   })();
                   const { date, time } = formatISTDateTime(match.scheduled_date);
-                  const poolName = match.pool_id ? pools.find(p => p.id === match.pool_id)?.name || '-' : ((match as any).stage || 'N/A');
+                  const poolName = match.pool_id
+                    ? pools.find(p => p.id === match.pool_id)?.name || '-'
+                    : matchCategory?.code
+                      ? matchCategory.code + (match.stage ? ` - ${match.stage}` : '')
+                      : (match.stage || 'N/A');
                   return (
                     <div key={match.id} className="bg-white rounded-xl p-4 shadow-lg border border-gray-200 flex flex-col gap-2">
                       <div className="flex items-center justify-between mb-2">
                         <div>
                           <div className="text-xs font-medium text-gray-600">{poolName}</div>
-                          <div className="text-lg font-bold text-blue-700">{participant1} <span className="text-gray-500 text-xs">vs</span> {participant2}</div>
+                          <div className="text-lg font-bold text-blue-700">
+                            {participant1}
+                            <span className="text-gray-500 text-xs">vs</span>
+                            {participant2}
+                          </div>
                         </div>
                         <div className="flex flex-col items-end">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(match.status || 'scheduled')}`}>{getStatusIcon(match.status || 'scheduled')}</span>
@@ -1317,6 +1337,20 @@ export default function AdminMatchesPage() {
                             Lineup
                           </Link>
                         )}
+                        {match.side1_label && (
+                          <button
+                            onClick={() => {
+                              setAssignMatch(match);
+                              setAssignPool(match.pool_id || '');
+                              setAssignSide1(match.team1_id || match.player1_id || '');
+                              setAssignSide2(match.team2_id || match.player2_id || '');
+                              setShowAssignDialog(true);
+                            }}
+                            className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 ml-1"
+                          >
+                            Assign Player/Team
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -1340,40 +1374,51 @@ export default function AdminMatchesPage() {
                   </thead>
                   <tbody>
                     {filteredMatches.map((match, idx) => {
-                      const matchCategory = getCategoryForMatch(match);
+                      const matchCategory = match.category_id
+                        ? categories.find(c => c.id === match.category_id)
+                        : getCategoryForMatch(match);
                       const matchType = matchCategory?.type;
                       const isEditing = editingMatchId === match.id;
                       // Helper to get participant names
                       const getParticipantNames = () => {
                         if (matchType === 'team') {
                           return {
-                            participant1: getTeamName(match.team1_id || ''),
-                            participant2: getTeamName(match.team2_id || '')
+                            participant1: getTeamName(match.team1_id || '') || match.side1_label || '-',
+                            participant2: getTeamName(match.team2_id || '') || match.side2_label || '-'
                           };
                         } else if (matchType === 'player' || (!match.pool_id && match.player1_id && match.player2_id)) {
-                          const player1 = players.find(p => p.id === (match as any).player1_id);
-                          const player2 = players.find(p => p.id === (match as any).player2_id);
                           return {
-                            participant1: player1 ? player1.name.split(' ')[0] : '-',
-                            participant2: player2 ? player2.name.split(' ')[0] : '-'
+                            participant1: getPlayerName(match.player1_id ?? '') || match.side1_label || '-',
+                            participant2: getPlayerName(match.player2_id ?? '') || match.side2_label || '-'
                           };
                         } else if (matchType === 'pair') {
                           const player1 = players.find(p => p.id === (match as any).player1_id);
                           const player2 = players.find(p => p.id === (match as any).player2_id);
-                          const player1FirstName = player1 ? player1.name.split(' ')[0] : '-';
-                          const player2FirstName = player2 ? player2.name.split(' ')[0] : '-';
+                          const player1FirstName = player1 ? player1.name.split(' ')[0] : '';
+                          const player2FirstName = player2 ? player2.name.split(' ')[0] : '';
                           const player1PartnerFirstName = player1?.partner_name ? player1.partner_name.split(' ')[0] : '';
                           const player2PartnerFirstName = player2?.partner_name ? player2.partner_name.split(' ')[0] : '';
+                          if (!match.player1_id && match.side1_label) {
+                            // fallback to side1_label/side2_label if both player1_id and player2_id are missing
+                            return {
+                              participant1: match.side1_label || '-',
+                              participant2: match.side2_label || '-',
+                            };
+                          }
                           return {
-                            participant1: player1PartnerFirstName ? `${player1FirstName} / ${player1PartnerFirstName}` : player1FirstName,
-                            participant2: player2PartnerFirstName ? `${player2FirstName} / ${player2PartnerFirstName}` : player2FirstName
+                            participant1: player1PartnerFirstName ? `${player1FirstName} / ${player1PartnerFirstName}` : player1FirstName || match.side1_label || '-',
+                            participant2: player2PartnerFirstName ? `${player2FirstName} / ${player2PartnerFirstName}` : player2FirstName || match.side2_label || '-',
                           };
                         }
                         return { participant1: '-', participant2: '-' };
                       };
                       const { participant1, participant2 } = getParticipantNames();
                       const { date, time } = formatISTDateTime(match.scheduled_date);
-                      const poolName = match.pool_id ? pools.find(p => p.id === match.pool_id)?.name || '-' : ((match as any).stage || 'N/A');
+                      const poolName = match.pool_id
+                        ? pools.find(p => p.id === match.pool_id)?.name || '-'
+                        : matchCategory?.code
+                          ? matchCategory.code + (match.stage ? ` - ${match.stage}` : '')
+                          : (match.stage || 'N/A');
                       return (
                         <tr
                           key={match.id}
@@ -1385,9 +1430,13 @@ export default function AdminMatchesPage() {
                         >
                           <td className="px-3 py-2 whitespace-nowrap align-middle">
                             <div className="text-sm font-medium text-gray-900">
-                              <div className="font-semibold">{participant1}</div>
+                              <div className="font-semibold">
+                                {participant1}
+                              </div>
                               <div className="text-gray-500 text-xs">vs</div>
-                              <div className="font-semibold">{participant2}</div>
+                              <div className="font-semibold">
+                                {participant2}
+                              </div>
                             </div>
                           </td>
                           <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 align-middle">{poolName}</td>
@@ -1478,6 +1527,20 @@ export default function AdminMatchesPage() {
                                   >
                                     Edit
                                   </button>
+                                  {match.side1_label && (
+                          <button
+                            onClick={() => {
+                              setAssignMatch(match);
+                              setAssignPool(match.pool_id || '');
+                              setAssignSide1(match.team1_id || match.player1_id || '');
+                              setAssignSide2(match.team2_id || match.player2_id || '');
+                              setShowAssignDialog(true);
+                            }}
+                            className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 ml-1"
+                          >
+                            Assign
+                          </button>
+                        )}
                                   {matchType === 'team' && (
                                     <a 
                                       href={`/admin/matches/${match.id}/manage`} 
@@ -1760,6 +1823,8 @@ export default function AdminMatchesPage() {
                       setCrossCategory(e.target.value);
                       setSide1Pool(''); setSide2Pool(''); setSide1Player(''); setSide2Player('');
                       setScheduleDate(''); setCourt(''); setStage('');
+                      setUsePool(true); // reset switch
+                      setManualSide1(''); setManualSide2(''); setManualMatchCode('');
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 text-gray-900 bg-white"
                   >
@@ -1768,96 +1833,144 @@ export default function AdminMatchesPage() {
                       <option key={cat.code} value={cat.code}>{cat.label || cat.code}</option>
                     ))}
                   </select>
+                  {crossCategory && (
+                    <div className="flex items-center mt-2">
+                      <input
+                        id="use-pool-switch"
+                        type="checkbox"
+                        checked={usePool}
+                        onChange={e => setUsePool(e.target.checked)}
+                        className="mr-2"
+                      />
+                      <label htmlFor="use-pool-switch" className="text-sm text-gray-700">Use Pool</label>
+                    </div>
+                  )}
                 </div>
-                <div className="mb-4 flex flex-col gap-4">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Side 1: Select Pool</label>
-                    <select
-                      value={side1Pool}
-                      onChange={e => { setSide1Pool(e.target.value); setSide1Player(''); }}
-                      className="w-full px-2 py-1 border rounded"
-                      disabled={!crossCategory}
-                    >
-                      <option value="">-- Select Pool --</option>
-                      {poolsForCategory.map(pool => (
-                        <option key={pool.id} value={pool.id}>{pool.name}</option>
-                      ))}
-                    </select>
-                    <label className="block text-xs font-medium text-gray-600 mt-2 mb-1">Select Team/Player</label>
-                    <select
-                      value={side1Player}
-                      onChange={e => setSide1Player(e.target.value)}
-                      className="w-full px-2 py-1 border rounded"
-                      disabled={!side1Pool}
-                    >
-                      <option value="">-- Select --</option>
-                      {getOptionsForPool(side1Pool).map(opt => (
-                        <option key={opt.id} value={opt.id}>{opt.name}</option>
-                      ))}
-                    </select>
+                {usePool ? (
+                  <div className="mb-4 flex flex-col gap-4">
+                    {/* Existing pool/team/player selectors */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Side 1: Select Pool</label>
+                      <select
+                        value={side1Pool}
+                        onChange={e => { setSide1Pool(e.target.value); setSide1Player(''); }}
+                        className="w-full px-2 py-1 border rounded text-gray-900 bg-white"
+                        disabled={!crossCategory}
+                      >
+                        <option value="">-- Select Pool --</option>
+                        {poolsForCategory.map(pool => (
+                          <option key={pool.id} value={pool.id}>{pool.name}</option>
+                        ))}
+                      </select>
+                      <label className="block text-xs font-medium text-gray-600 mt-2 mb-1">Select Team/Player</label>
+                      <select
+                        value={side1Player}
+                        onChange={e => setSide1Player(e.target.value)}
+                        className="w-full px-2 py-1 border rounded text-gray-900 bg-white"
+                        disabled={!side1Pool}
+                      >
+                        <option value="">-- Select --</option>
+                        {getOptionsForPool(side1Pool).map(opt => (
+                          <option key={opt.id} value={opt.id}>{opt.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Side 2: Select Pool</label>
+                      <select
+                        value={side2Pool}
+                        onChange={e => { setSide2Pool(e.target.value); setSide2Player(''); }}
+                        className="w-full px-2 py-1 border rounded text-gray-900 bg-white"
+                        disabled={!crossCategory}
+                      >
+                        <option value="">-- Select Pool --</option>
+                        {poolsForCategory.map(pool => (
+                          <option key={pool.id} value={pool.id}>{pool.name}</option>
+                        ))}
+                      </select>
+                      <label className="block text-xs font-medium text-gray-600 mt-2 mb-1">Select Team/Player</label>
+                      <select
+                        value={side2Player}
+                        onChange={e => setSide2Player(e.target.value)}
+                        className="w-full px-2 py-1 border rounded text-gray-900 bg-white"
+                        disabled={!side2Pool}
+                      >
+                        <option value="">-- Select --</option>
+                        {getOptionsForPool(side2Pool).map(opt => (
+                          <option key={opt.id} value={opt.id}>{opt.name}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Side 2: Select Pool</label>
-                    <select
-                      value={side2Pool}
-                      onChange={e => { setSide2Pool(e.target.value); setSide2Player(''); }}
-                      className="w-full px-2 py-1 border rounded"
-                      disabled={!crossCategory}
-                    >
-                      <option value="">-- Select Pool --</option>
-                      {poolsForCategory.map(pool => (
-                        <option key={pool.id} value={pool.id}>{pool.name}</option>
-                      ))}
-                    </select>
-                    <label className="block text-xs font-medium text-gray-600 mt-2 mb-1">Select Team/Player</label>
-                    <select
-                      value={side2Player}
-                      onChange={e => setSide2Player(e.target.value)}
-                      className="w-full px-2 py-1 border rounded"
-                      disabled={!side2Pool}
-                    >
-                      <option value="">-- Select --</option>
-                      {getOptionsForPool(side2Pool).map(opt => (
-                        <option key={opt.id} value={opt.id}>{opt.name}</option>
-                      ))}
-                    </select>
+                ) : (
+                  <div className="mb-4 flex flex-col gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Side 1: Team/Player Name</label>
+                      <input
+                        type="text"
+                        value={manualSide1}
+                        onChange={e => setManualSide1(e.target.value)}
+                        className="w-full px-2 py-1 border rounded text-gray-900 bg-white"
+                        placeholder="e.g. Top Team Group A"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Side 2: Team/Player Name</label>
+                      <input
+                        type="text"
+                        value={manualSide2}
+                        onChange={e => setManualSide2(e.target.value)}
+                        className="w-full px-2 py-1 border rounded text-gray-900 bg-white"
+                        placeholder="e.g. 2nd Top Team Group D"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Match Code</label>
+                      <input
+                        type="text"
+                        value={manualMatchCode}
+                        onChange={e => setManualMatchCode(e.target.value)}
+                        className="w-full px-2 py-1 border rounded text-gray-900 bg-white"
+                        placeholder="e.g. FMXD-R16-M2"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Schedule Date</label>
-                    <input
-                      type="date"
-                      value={scheduleDate}
-                      onChange={e => setScheduleDate(e.target.value)}
-                      className="w-full px-2 py-1 border rounded"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Court</label>
-                    <select
-                      value={court}
-                      onChange={e => setCourt(e.target.value)}
-                      className="w-full px-2 py-1 border rounded"
-                    >
-                      <option value="">-- Select Court --</option>
-                      <option value="C">C</option>
-                      <option value="G">G</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Stage</label>
-                    <select
-                      value={stage}
-                      onChange={e => setStage(e.target.value)}
-                      className="w-full px-2 py-1 border rounded"
-                    >
-                      <option value="">-- Select Stage --</option>
-                      <option value="Round 1">Round 1</option>
-                      <option value="R16">R16</option>
-                      <option value="QF">QF</option>
-                      <option value="SF">SF</option>
-                      <option value="F">F</option>
-                    </select>
-                  </div>
+                )}
+                <div className="mb-4">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Schedule Date</label>
+                  <input
+                    type="date"
+                    value={scheduleDate}
+                    onChange={e => setScheduleDate(e.target.value)}
+                    className="w-full px-2 py-1 border rounded"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Court</label>
+                  <select
+                    value={court}
+                    onChange={e => setCourt(e.target.value)}
+                    className="w-full px-2 py-1 border rounded text-gray-900 bg-white"
+                  >
+                    <option value="">-- Select Court --</option>
+                    <option value="C">C</option>
+                    <option value="G">G</option>
+                  </select>
+                </div>
+                <div className="mb-4">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Stage</label>
+                  <select
+                    value={stage}
+                    onChange={e => setStage(e.target.value)}
+                    className="w-full px-2 py-1 border rounded text-gray-900 bg-white"
+                  >
+                    <option value="">-- Select Stage --</option>
+                    <option value="Round 1">Round 1</option>
+                    <option value="R16">R16</option>
+                    <option value="QF">QF</option>
+                    <option value="SF">SF</option>
+                    <option value="F">F</option>
+                  </select>
                 </div>
                 <div className="flex justify-end gap-2 mt-6">
                   <button
@@ -1868,9 +1981,74 @@ export default function AdminMatchesPage() {
                     Cancel
                   </button>
                   <button
-                    onClick={handleCreateCrossPoolMatch}
-                    disabled={creating || !crossCategory || !side1Pool || !side2Pool || !side1Player || !side2Player || !scheduleDate || !court || !stage}
-                    className={`px-4 py-2 bg-pink-600 text-white rounded-lg font-medium ${creating || !crossCategory || !side1Pool || !side2Pool || !side1Player || !side2Player || !scheduleDate || !court || !stage ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    onClick={async () => {
+                      setCreating(true);
+                      try {
+                        if (usePool) {
+                          // Existing pool-based logic
+                          const selectedCategoryObj = categories.find(cat => cat.code === crossCategory);
+                          const isTeamCategory = selectedCategoryObj?.type === 'team';
+                          const { error } = await supabase.from('matches').insert([
+                            {
+                              category_id: selectedCategoryObj?.id,
+                              ...(isTeamCategory
+                                ? { team1_id: side1Player, team2_id: side2Player }
+                                : { player1_id: side1Player, player2_id: side2Player }),
+                              scheduled_date: scheduleDate || null,
+                              court: court || null,
+                              stage: stage || null,
+                              status: 'scheduled',
+                            }
+                          ]);
+                          if (error) throw error;
+                        } else {
+                          // Manual entry logic
+                          if (!manualSide1 || !manualSide2 || !manualMatchCode || !crossCategory || !scheduleDate || !court || !stage) {
+                            alert('Please fill all fields');
+                            setCreating(false);
+                            return;
+                          }
+                          const selectedCategoryObj = categories.find(cat => cat.code === crossCategory);
+                          const payload = {
+                            category_id: selectedCategoryObj?.id,
+                            match_no: manualMatchCode,
+                            scheduled_date: scheduleDate || null,
+                            court: court || null,
+                            stage: stage || null,
+                            status: 'scheduled',
+                            side1_label: manualSide1,
+                            side2_label: manualSide2,
+                          };
+                          const { error } = await supabase.from('matches').insert([
+                            payload
+                          ]);
+                          if (error) throw error;
+                        }
+                        setShowCrossPoolModal(false);
+                        setCrossCategory('');
+                        setSide1Pool('');
+                        setSide2Pool('');
+                        setSide1Player('');
+                        setSide2Player('');
+                        setScheduleDate('');
+                        setCourt('');
+                        setStage('');
+                        setManualSide1('');
+                        setManualSide2('');
+                        setManualMatchCode('');
+                        if (typeof refreshData === 'function') refreshData();
+                      } catch (err) {
+                        if (err && typeof err === 'object' && 'message' in err) {
+                          alert('Error creating match: ' + (err as any).message);
+                        } else {
+                          alert('Error creating match.');
+                        }
+                      } finally {
+                        setCreating(false);
+                      }
+                    }}
+                    disabled={creating || !crossCategory || !scheduleDate || !court || !stage || (usePool ? (!side1Pool || !side2Pool || !side1Player || !side2Player) : (!manualSide1 || !manualSide2 || !manualMatchCode))}
+                    className={`px-4 py-2 bg-blue-600 text-white rounded-lg font-medium ${creating || !crossCategory || !scheduleDate || !court || !stage || (usePool ? (!side1Pool || !side2Pool || !side1Player || !side2Player) : (!manualSide1 || !manualSide2 || !manualMatchCode)) ? 'opacity-60 cursor-not-allowed' : ''}`}
                   >
                     {creating ? 'Creating...' : 'Create Match'}
                   </button>
@@ -1878,6 +2056,196 @@ export default function AdminMatchesPage() {
               </Dialog.Panel>
             </div>
           </div>
+        </Dialog>
+      )}
+
+      {showAssignDialog && assignMatch && (
+        <Dialog open={showAssignDialog} onClose={() => setShowAssignDialog(false)} className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black bg-opacity-40" aria-hidden="true" />
+          <Dialog.Panel className="relative bg-white rounded-2xl shadow-xl max-w-md w-full mx-auto p-6 z-10">
+            <Dialog.Title className="text-xl font-bold mb-4 text-gray-800">Assign Player/Team</Dialog.Title>
+            {(() => {
+              // Determine category and options
+              const matchCategory = assignMatch.category_id
+                ? categories.find(c => c.id === assignMatch.category_id)
+                : getCategoryForMatch(assignMatch);
+              const isTeamCategory = matchCategory?.type === 'team';
+              const isPlayerCategory = matchCategory?.type === 'player' || matchCategory?.type === 'pair';
+
+              // Pool options (for this category)
+              const poolOptions = pools.filter(p => matchCategory && p.category_id === matchCategory.id);
+
+              // Team options for each side
+              const teamOptions1: Team[] = isTeamCategory ? teams.filter(t => assignPool1 ? t.pool_id === assignPool1 : true) : [];
+              const teamOptions2: Team[] = isTeamCategory ? teams.filter(t => assignPool2 ? t.pool_id === assignPool2 : true) : [];
+
+              // Player options for each side
+              const playerOptions1: Player[] = isPlayerCategory ? players.filter(p => {
+                if (assignPool1) {
+                  return poolPlayers.some(pp => pp.pool_id === assignPool1 && pp.player_id === p.id);
+                } else if (matchCategory?.code) {
+                  return p.category === matchCategory.code;
+                }
+                return true;
+              }) : [];
+              const playerOptions2: Player[] = isPlayerCategory ? players.filter(p => {
+                if (assignPool2) {
+                  return poolPlayers.some(pp => pp.pool_id === assignPool2 && pp.player_id === p.id);
+                } else if (matchCategory?.code) {
+                  return p.category === matchCategory.code;
+                }
+                return true;
+              }) : [];
+
+
+
+              return (
+                <form
+                  onSubmit={async e => {
+                    e.preventDefault();
+                    setAssignLoading(true);
+                    try {
+                      const update: any = {};
+                      if (isTeamCategory) {
+                        update.team1_id = assignSide1 || null;
+                        update.team2_id = assignSide2 || null;
+                        update.side1_label = null;
+                        update.side2_label = null;
+                      } else if (isPlayerCategory) {
+                        update.player1_id = assignSide1 || null;
+                        update.player2_id = assignSide2 || null;
+                        update.side1_label = null;
+                        update.side2_label = null;
+                      }
+                      // Don't update pool_id - keep the existing pool assignment
+                      const { error } = await supabase
+                        .from('matches')
+                        .update(update)
+                        .eq('id', assignMatch.id);
+                      if (error) throw error;
+                      setShowAssignDialog(false);
+                      setAssignMatch(null);
+                      setAssignPool1('');
+                      setAssignPool2('');
+                      setAssignSide1('');
+                      setAssignSide2('');
+                      if (typeof refreshData === 'function') refreshData();
+                      showSuccess('Assignment updated!');
+                    } catch (err) {
+                      showError('Error updating assignment', err as string);
+                    } finally {
+                      setAssignLoading(false);
+                    }
+                  }}
+                  className="space-y-4"
+                >
+                  {/* Side 1: Pool and Player/Team */}
+                  {poolOptions.length > 1 && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Pool (Side 1)</label>
+                      <select
+                        value={assignPool1}
+                        onChange={e => {
+                          setAssignPool1(e.target.value);
+                          setAssignSide1('');
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      >
+                        <option value="">Select Pool</option>
+                        {poolOptions.map(pool => (
+                          <option key={pool.id} value={pool.id}>{pool.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{isTeamCategory ? 'Team 1' : 'Player 1'}</label>
+                    <select
+                      value={assignSide1}
+                      onChange={e => setAssignSide1(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    >
+                      <option value="">Select {isTeamCategory ? 'Team' : 'Player'} 1</option>
+                      {isTeamCategory
+                        ? teamOptions1.map((opt: Team) => (
+                            <option key={opt.id} value={opt.id}>
+                              {opt.brand_name || opt.name}
+                            </option>
+                          ))
+                        : playerOptions1.map((opt: Player) => (
+                            <option key={opt.id} value={opt.id}>
+                              {opt.name + (opt.partner_name ? ` / ${opt.partner_name}` : '')}
+                            </option>
+                          ))}
+                    </select>
+                  </div>
+                  {/* Side 2: Pool and Player/Team */}
+                  {poolOptions.length > 1 && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Pool (Side 2)</label>
+                      <select
+                        value={assignPool2}
+                        onChange={e => {
+                          setAssignPool2(e.target.value);
+                          setAssignSide2('');
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      >
+                        <option value="">Select Pool</option>
+                        {poolOptions.map(pool => (
+                          <option key={pool.id} value={pool.id}>{pool.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{isTeamCategory ? 'Team 2' : 'Player 2'}</label>
+                    <select
+                      value={assignSide2}
+                      onChange={e => setAssignSide2(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    >
+                      <option value="">Select {isTeamCategory ? 'Team' : 'Player'} 2</option>
+                      {isTeamCategory
+                        ? teamOptions2.map((opt: Team) => (
+                            <option key={opt.id} value={opt.id}>
+                              {opt.brand_name || opt.name}
+                            </option>
+                          ))
+                        : playerOptions2.map((opt: Player) => (
+                            <option key={opt.id} value={opt.id}>
+                              {opt.name + (opt.partner_name ? ` / ${opt.partner_name}` : '')}
+                            </option>
+                          ))}
+                    </select>
+                  </div>
+                  <div className="flex gap-2 mt-4">
+                    <button
+                      type="submit"
+                      disabled={assignLoading || !assignSide1 || !assignSide2}
+                      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      {assignLoading ? 'Saving...' : 'Save'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAssignDialog(false);
+                        setAssignMatch(null);
+                        setAssignPool1('');
+                        setAssignPool2('');
+                        setAssignSide1('');
+                        setAssignSide2('');
+                      }}
+                      className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-400"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              );
+            })()}
+          </Dialog.Panel>
         </Dialog>
       )}
     </div>

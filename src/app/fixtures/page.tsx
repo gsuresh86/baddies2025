@@ -419,8 +419,15 @@ export default function FixturesPage() {
       const matches = dateGroups[dateKey];
       filteredDateGroups[dateKey] = statusFilter === 'all' ? matches : matches.filter(m => m.status === statusFilter);
     }
-    filteredDateKeys = Object.keys(filteredDateGroups).filter(dateKey => filteredDateGroups[dateKey].length > 0);
-    filteredDateKeys = filteredDateKeys.slice(0, 4);
+    filteredDateKeys = Object.keys(filteredDateGroups)
+      .filter(dateKey => filteredDateGroups[dateKey].length > 0)
+      .filter(dateKey => {
+        // Only allow valid dates (not 'Invalid Date')
+        const [date] = dateKey.split(' - ');
+        const [day, month, year] = date.split('/');
+        const d = new Date(`${year}-${month}-${day}T00:00:00+05:30`);
+        return d instanceof Date && !isNaN(d.getTime());
+      });
   }
 
   // --- useEffect to update selectedDate if not in filteredDateKeys ---
