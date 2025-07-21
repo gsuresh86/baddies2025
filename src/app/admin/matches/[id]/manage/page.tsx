@@ -417,6 +417,7 @@ export default function AdminManageMatchPage() {
           <option value="not_started">Not Started</option>
           <option value="in_progress">In Progress</option>
           <option value="completed">Completed</option>
+          <option value="walkover">Walkover</option>
         </select>
         <span className="text-sm text-gray-500">Current: {matchStatus.replace('_', ' ')}</span>
       </div>

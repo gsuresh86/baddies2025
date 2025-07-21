@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { tournamentStore, supabase } from '@/lib/store';
-import { Match, MatchMedia, MatchHistory, MatchHighlight } from '@/types';
+import { Match, MatchMedia, MatchHistory, MatchHighlight, Game } from '@/types';
 import { useData } from '@/contexts/DataContext';
 import { useToast } from '@/contexts/ToastContext';
 import Link from 'next/link';
@@ -19,6 +19,7 @@ export default function MatchDetailsPage() {
   const [media, setMedia] = useState<MatchMedia[]>([]);
   const [history, setHistory] = useState<MatchHistory[]>([]);
   const [highlights, setHighlights] = useState<MatchHighlight[]>([]);
+  const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMedia, setSelectedMedia] = useState<MatchMedia | null>(null);
 
@@ -26,33 +27,36 @@ export default function MatchDetailsPage() {
     async function fetchData() {
       if (!matchId) return;
       setLoading(true);
-      
       try {
         // Get match from cached data first, then from database if not found
         let matchData = cachedMatches.find(m => m.id === matchId);
         if (!matchData) {
-          console.log('Match not found in cache, fetching from database...');
-          try {
-            const { data: dbMatch, error } = await supabase
-              .from('matches')
-              .select('*')
-              .eq('id', matchId)
-              .single();
-            
-            if (error || !dbMatch) {
-              console.error('Match not found in database:', error);
-              showError('Match not found');
-              return;
-            }
-            matchData = dbMatch;
-          } catch (error) {
-            console.error('Error fetching match from database:', error);
-            showError('Error loading match');
+          const { data: dbMatch, error } = await supabase
+            .from('matches')
+            .select('*')
+            .eq('id', matchId)
+            .single();
+          if (error || !dbMatch) {
+            showError('Match not found');
             return;
           }
+          matchData = dbMatch;
         }
         if (matchData) {
           setMatch(matchData);
+        } else {
+          setMatch(null);
+        }
+
+        // Fetch games for this match
+        const { data: gamesData, error: gamesError } = await supabase
+          .from('games')
+          .select('*')
+          .eq('match_id', matchId);
+        if (gamesError) {
+          showError('Error loading games');
+        } else {
+          setGames(gamesData || []);
         }
 
         // Fetch media, history, and highlights
@@ -61,17 +65,16 @@ export default function MatchDetailsPage() {
           tournamentStore.getMatchHistory(matchId),
           tournamentStore.getMatchHighlights(matchId)
         ]);
-
         setMedia(mediaData);
         setHistory(historyData);
         setHighlights(highlightsData);
-      } catch (error) {
-        console.error('Error fetching data:', error);
+      } catch (e) {
+        console.log(e);
+        showError('Error loading match');
       } finally {
         setLoading(false);
       }
     }
-
     fetchData();
   }, [matchId, cachedMatches, showError]);
 
@@ -111,12 +114,26 @@ export default function MatchDetailsPage() {
     }
   };
 
-  const formatDuration = (minutes?: number) => {
-    if (!minutes) return 'N/A';
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+  const getGamePlayers = (game: any) => {
+    if ((game.type || (game as any).type) === 'singles') {
+      return {
+        team1: [game.player1_id].filter(Boolean).map(getPlayerName),
+        team2: [game.player2_id].filter(Boolean).map(getPlayerName),
+      };
+    } else {
+      return {
+        team1: [game.player1_id, game.player2_id].filter(Boolean).map(getPlayerName),
+        team2: [game.player3_id, game.player4_id].filter(Boolean).map(getPlayerName),
+      };
+    }
   };
+
+  // Get category code from pool
+  let categoryCode: string | undefined = undefined;
+  if (match && match.pool_id) {
+    const pool = pools.find(p => p.id === match.pool_id);
+    categoryCode = pool?.category?.code;
+  }
 
   if (loading) {
     return (
@@ -170,8 +187,8 @@ export default function MatchDetailsPage() {
               </p>
             </div>
             <div className="text-center">
-              <h3 className="font-semibold mb-2">Duration</h3>
-              <p>{formatDuration(match.match_duration)}</p>
+              <h3 className="font-semibold mb-2">Referee</h3>
+              <p>{match.match_referee || 'N/A'}</p>
             </div>
             <div className="text-center">
               <h3 className="font-semibold mb-2">Winner</h3>
@@ -192,6 +209,79 @@ export default function MatchDetailsPage() {
           )}
         </div>
 
+        {/* Game Details for Men's Team matches */}
+        {categoryCode === 'MT' && games.length > 0 && (() => {
+          // Calculate games won by each team
+          let team1GamesWon = 0;
+          let team2GamesWon = 0;
+          let team1TotalPoints = 0;
+          let team2TotalPoints = 0;
+          games.forEach(game => {
+            if (game.winner === 'team1') team1GamesWon++;
+            if (game.winner === 'team2') team2GamesWon++;
+            team1TotalPoints += (game.team1_score ?? game.team1Score ?? 0);
+            team2TotalPoints += (game.team2_score ?? game.team2Score ?? 0);
+          });
+          return (
+            <div className="bg-white/10 backdrop-blur-md rounded-3xl p-8 mb-8 border border-white/20">
+              <h2 className="text-2xl font-bold text-white mb-6">Game Details</h2>
+              {/* Team Score and Winner */}
+              <div className="flex items-center justify-center gap-6 mb-6 text-2xl font-bold">
+                <span className={
+                  team1GamesWon > team2GamesWon ? 'text-green-400' : 'text-white'
+                }>
+                  {getTeamName(match.team1_id)}
+                  <span className="text-base text-white/70 ml-1">({team1TotalPoints})</span>
+                  {team1GamesWon > team2GamesWon && <span title="Winner" className="ml-2">🏆</span>}
+                </span>
+                <span className="text-white">-</span>
+                <span className={
+                  team2GamesWon > team1GamesWon ? 'text-green-400' : 'text-white'
+                }>
+                  {getTeamName(match.team2_id)}
+                  <span className="text-base text-white/70 ml-1">({team2TotalPoints})</span>
+                  {team2GamesWon > team1GamesWon && <span title="Winner" className="ml-2">🏆</span>}
+                </span>
+              </div>
+              <div className="space-y-4">
+                {games.map((game, idx) => {
+                  const winner = game.winner === 'team1' ? getTeamName(match.team1_id) : game.winner === 'team2' ? getTeamName(match.team2_id) : null;
+                  return (
+                    <div key={game.id || idx} className="bg-white/5 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-white">Game {idx + 1}</h3>
+                        <span className="text-lg font-bold text-white">
+                          {((game as any).team1_score ?? game.team1Score ?? 0)} - {((game as any).team2_score ?? game.team2Score ?? 0)}
+                        </span>
+                      </div>
+                      <div className="mt-2 text-white/80 text-sm">
+                        {game.type && (
+                          <div><span className="font-semibold">Type:</span> {game.type}</div>
+                        )}
+                        <div className="flex gap-4 mt-1">
+                          <div className={game.winner === 'team1' ? 'text-green-400 font-bold' : ''}>
+                            <span className="font-semibold">{getTeamName(match.team1_id)}:</span> {getGamePlayers(game).team1.join(', ') || 'N/A'}
+                            {game.winner === 'team1' && <span title="Winner" className="ml-1">🏆</span>}
+                          </div>
+                          <div className={game.winner === 'team2' ? 'text-green-400 font-bold' : ''}>
+                            <span className="font-semibold">{getTeamName(match.team2_id)}:</span> {getGamePlayers(game).team2.join(', ') || 'N/A'}
+                            {game.winner === 'team2' && <span title="Winner" className="ml-1">🏆</span>}
+                          </div>
+                        </div>
+                      </div>
+                      {winner && (
+                        <p className="text-green-400 text-sm mt-1 font-bold flex items-center">
+                          Winner: {winner} <span className="ml-1">🏆</span>
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Match History */}
         {history.length > 0 && (
           <div className="bg-white/10 backdrop-blur-md rounded-3xl p-8 mb-8 border border-white/20">
@@ -205,6 +295,33 @@ export default function MatchDetailsPage() {
                       {game.team1_score} - {game.team2_score}
                     </span>
                   </div>
+                  {/* Show player details for Men's Team matches */}
+                  {(() => {
+                    // Try to get category code from match, fallback to pool
+                    let categoryCode = (match as any).category_code;
+                    if (!categoryCode && match.pool_id) {
+                      const pool = pools.find(p => p.id === match.pool_id);
+                      categoryCode = pool?.category?.code;
+                    }
+                    if (categoryCode === 'MT') {
+                      return (
+                        <div className="mt-2 text-white/80 text-sm">
+                          {(game as any).type && (
+                            <div><span className="font-semibold">Type:</span> {(game as any).type}</div>
+                          )}
+                          <div className="flex gap-4 mt-1">
+                            <div>
+                              <span className="font-semibold">{getTeamName(match.team1_id)}:</span> {getGamePlayers(game).team1.join(', ') || 'N/A'}
+                            </div>
+                            <div>
+                              <span className="font-semibold">{getTeamName(match.team2_id)}:</span> {getGamePlayers(game).team2.join(', ') || 'N/A'}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                   {game.winner && game.winner !== 'draw' && (
                     <p className="text-green-400 text-sm mt-1">
                       Winner: {getTeamName(match[`${game.winner}_id`])}

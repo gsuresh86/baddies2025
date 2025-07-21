@@ -46,7 +46,7 @@ export interface Match {
   team1_score?: number;
   team2_score?: number;
   winner?: 'team1' | 'team2' | 'player1' | 'player2';
-  status?: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+  status?: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'walkover';
   pool_id: string;
   scheduled_date?: string;
   court?: string;
