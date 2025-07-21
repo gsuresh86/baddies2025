@@ -364,21 +364,23 @@ export default function AdminMatchesPage() {
             participant1: getTeamName(match.team1_id || ''),
             participant2: getTeamName(match.team2_id || '')
           };
-        } else if (matchType === 'player') {
+        } else if (matchType === 'player' || (!match.pool_id && match.player1_id && match.player2_id)) {
           const player1 = players.find(p => p.id === (match as any).player1_id);
           const player2 = players.find(p => p.id === (match as any).player2_id);
           return {
-            participant1: player1 ? player1.name : '-',
-            participant2: player2 ? player2.name : '-'
+            participant1: player1 ? player1.name.split(' ')[0] : '-',
+            participant2: player2 ? player2.name.split(' ')[0] : '-'
           };
         } else if (matchType === 'pair') {
           const player1 = players.find(p => p.id === (match as any).player1_id);
           const player2 = players.find(p => p.id === (match as any).player2_id);
-          const player1Full = player1 ? (player1.partner_name ? `${player1.name} / ${player1.partner_name}` : player1.name) : '-';
-          const player2Full = player2 ? (player2.partner_name ? `${player2.name} / ${player2.partner_name}` : player2.name) : '-';
+          const player1FirstName = player1 ? player1.name.split(' ')[0] : '-';
+          const player2FirstName = player2 ? player2.name.split(' ')[0] : '-';
+          const player1PartnerFirstName = player1?.partner_name ? player1.partner_name.split(' ')[0] : '';
+          const player2PartnerFirstName = player2?.partner_name ? player2.partner_name.split(' ')[0] : '';
           return {
-            participant1: player1Full,
-            participant2: player2Full
+            participant1: player1PartnerFirstName ? `${player1FirstName} / ${player1PartnerFirstName}` : player1FirstName,
+            participant2: player2PartnerFirstName ? `${player2FirstName} / ${player2PartnerFirstName}` : player2FirstName
           };
         }
         return { participant1: '-', participant2: '-' };
@@ -442,8 +444,13 @@ export default function AdminMatchesPage() {
     let ms = selectedPool === 'all' ? matches : matches.filter(match => match.pool_id === selectedPool);
     if (!activeCategoryIds.includes('all')) {
       ms = ms.filter(match => {
-        const category = getCategoryForMatch(match);
-        return category && activeCategoryIds.includes(category.id);
+        // If match has pool_id, use pool's category_id; else use match.category_id
+        if (match.pool_id) {
+          const category = getCategoryForMatch(match);
+          return category && activeCategoryIds.includes(category.id);
+        } else {
+          return (match as any).category_id && activeCategoryIds.includes((match as any).category_id);
+        }
       });
     }
     if (statusFilter !== 'all') {
@@ -465,7 +472,6 @@ export default function AdminMatchesPage() {
         if (!a.scheduled_date && !b.scheduled_date) return 0;
         if (!a.scheduled_date) return 1; // Put unscheduled matches at the end
         if (!b.scheduled_date) return -1;
-        
         // Sort by scheduled date and time
         const dateA = new Date(a.scheduled_date);
         const dateB = new Date(b.scheduled_date);
@@ -1200,7 +1206,7 @@ export default function AdminMatchesPage() {
                         participant1: getTeamName(match.team1_id || ''),
                         participant2: getTeamName(match.team2_id || '')
                       };
-                    } else if (matchType === 'player') {
+                    } else if (matchType === 'player' || (!match.pool_id && match.player1_id && match.player2_id)) {
                       const player1 = players.find(p => p.id === (match as any).player1_id);
                       const player2 = players.find(p => p.id === (match as any).player2_id);
                       return {
@@ -1222,7 +1228,7 @@ export default function AdminMatchesPage() {
                     return { participant1: '-', participant2: '-' };
                   })();
                   const { date, time } = formatISTDateTime(match.scheduled_date);
-                  const poolName = pools.find(p => p.id === match.pool_id)?.name || '-';
+                  const poolName = match.pool_id ? pools.find(p => p.id === match.pool_id)?.name || '-' : ((match as any).stage || 'N/A');
                   return (
                     <div key={match.id} className="bg-white rounded-xl p-4 shadow-lg border border-gray-200 flex flex-col gap-2">
                       <div className="flex items-center justify-between mb-2">
@@ -1344,7 +1350,7 @@ export default function AdminMatchesPage() {
                             participant1: getTeamName(match.team1_id || ''),
                             participant2: getTeamName(match.team2_id || '')
                           };
-                        } else if (matchType === 'player') {
+                        } else if (matchType === 'player' || (!match.pool_id && match.player1_id && match.player2_id)) {
                           const player1 = players.find(p => p.id === (match as any).player1_id);
                           const player2 = players.find(p => p.id === (match as any).player2_id);
                           return {
@@ -1367,7 +1373,7 @@ export default function AdminMatchesPage() {
                       };
                       const { participant1, participant2 } = getParticipantNames();
                       const { date, time } = formatISTDateTime(match.scheduled_date);
-                      const poolName = pools.find(p => p.id === match.pool_id)?.name || '-';
+                      const poolName = match.pool_id ? pools.find(p => p.id === match.pool_id)?.name || '-' : ((match as any).stage || 'N/A');
                       return (
                         <tr
                           key={match.id}
