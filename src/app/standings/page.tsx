@@ -8,6 +8,7 @@ import { categoryLabels } from '@/lib/utils';
 import { useData } from '@/contexts/DataContext';
 import { useSearchParams } from 'next/navigation';
 import { calculateStandings } from '@/lib/standingsUtils';
+import { TournamentStandings } from '@/types';
 
 export default function StandingsPage() {
   const { teams, pools, matches: cachedMatches } = useData();
@@ -20,6 +21,7 @@ export default function StandingsPage() {
   const [gamesByPool, setGamesByPool] = useState<{ [poolId: string]: GameBase[] }>({});
   const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [qualifiedPlayerIds, setQualifiedPlayerIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     async function fetchAll() {
@@ -112,6 +114,56 @@ export default function StandingsPage() {
       window.history.replaceState({}, '', newUrl);
     }
   }, [selectedCategory]);
+
+  useEffect(() => {
+    if (loading || selectedCategory !== 'BU13') {
+      setQualifiedPlayerIds(new Set());
+      return;
+    }
+    const bu13Pools = pools.filter(pool => pool.category?.code === 'BU13');
+    if (bu13Pools.length === 0) return;
+
+    const allQualifiedIds = new Set<string>();
+    const thirdPlacePlayers: TournamentStandings[] = [];
+
+    bu13Pools.forEach(pool => {
+      const poolStandings = calculateStandings(
+        teamsByPool[pool.id] || [],
+        playersByPool[pool.id] || [],
+        matchesByPool[pool.id] || [],
+        pool.category?.code
+      );
+
+      if (poolStandings.length > 0) {
+        allQualifiedIds.add(poolStandings[0].teamId);
+        if (poolStandings.length > 1) {
+          allQualifiedIds.add(poolStandings[1].teamId);
+        }
+        if (poolStandings.length > 2) {
+          thirdPlacePlayers.push(poolStandings[2]);
+        }
+      }
+    });
+    thirdPlacePlayers.sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      if (b.matchesWon !== a.matchesWon) return b.matchesWon - a.matchesWon;
+      const aGames = a.gamesWon + a.gamesLost;
+      const bGames = b.gamesWon + b.gamesLost;
+      const aPct = aGames > 0 ? a.gamesWon / aGames : 0;
+      const bPct = bGames > 0 ? b.gamesWon / bGames : 0;
+      if (bPct !== aPct) return bPct - aPct;
+      return b.gamesWon - a.gamesWon;
+    });
+
+    if (thirdPlacePlayers.length > 0) {
+      allQualifiedIds.add(thirdPlacePlayers[0].teamId);
+    }
+    if (thirdPlacePlayers.length > 1) {
+      allQualifiedIds.add(thirdPlacePlayers[1].teamId);
+    }
+
+    setQualifiedPlayerIds(allQualifiedIds);
+  }, [loading, selectedCategory, pools, teamsByPool, playersByPool, matchesByPool]);
 
   // Filter pools by selected category
   const filteredPools = pools.filter(pool => {
@@ -216,6 +268,7 @@ export default function StandingsPage() {
               expandedTeams={expandedTeams}
               onToggleTeamExpansion={toggleTeamExpansion}
               categoryCode={pool.category?.code}
+              qualifiedPlayerIds={pool.category?.code === 'BU13' ? qualifiedPlayerIds : undefined}
             />
           </div>
         </div>

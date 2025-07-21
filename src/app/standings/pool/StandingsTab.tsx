@@ -17,6 +17,7 @@ interface StandingsTabProps {
   expandedTeams?: Set<string>;
   onToggleTeamExpansion?: (teamId: string) => void;
   categoryCode?: string;
+  qualifiedPlayerIds?: Set<string>;
 }
 
 export default function StandingsTab({ 
@@ -25,7 +26,8 @@ export default function StandingsTab({
   isMensTeam = false, 
   expandedTeams = new Set(), 
   onToggleTeamExpansion,
-  categoryCode
+  categoryCode,
+  qualifiedPlayerIds
 }: StandingsTabProps) {
   const [pdPopoverTeamId, setPdPopoverTeamId] = React.useState<string | null>(null);
   // Dynamically set stat labels based on category
@@ -81,7 +83,10 @@ export default function StandingsTab({
               const team = teams.find(t => t.id === standing.teamId);
               const isExpanded = expandedTeams.has(standing.teamId);
               const hasPlayers = team?.players && team.players.length > 0;
-              
+              const isQualified = qualifiedPlayerIds
+                ? qualifiedPlayerIds.has(standing.teamId)
+                : ((categoryCode === 'BU18' && (idx === 0 || idx === 1)) || (categoryCode === 'GU13' && (idx === 0 || idx === 1)));
+
               return (
                 <React.Fragment key={standing.teamId}>
                   <tr
@@ -90,7 +95,7 @@ export default function StandingsTab({
                   >
                     <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-white font-semibold w-24 sm:w-32">
                       <div className="flex items-center gap-2">
-                        {((categoryCode === 'BU18' && (idx === 0 || idx === 1)) || (categoryCode === 'GU13' && (idx === 0 || idx === 1)) || (categoryCode === 'BU13' && (idx === 0 || idx === 1))) && (
+                        {isQualified && (
                           <span title="Qualified" className="mr-1 font-bold" style={{ color: '#FFD700' }}>Q</span>
                         )}
                         <span className={isMensTeam ? "text-cyan-300 font-bold" : undefined}>
