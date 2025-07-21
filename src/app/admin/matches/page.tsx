@@ -1,858 +1,208 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useEffect } from 'react';
+import { useMatchManagement } from './hooks/useMatchManagement';
+import { CreateMatchModal } from './components/CreateMatchModal';
+import { MatchTable } from './components/MatchTable';
+import { MobileMatchCards } from './components/MobileMatchCards';
+import { StatsCards } from './components/StatsCards';
+import { MatchFilters } from './components/MatchFilters';
+import { GenerateMatchesModal } from './components/GenerateMatchesModal';
+import { CrossPoolMatchModal } from './components/CrossPoolMatchModal';
+import { AssignDialogModal } from './components/AssignDialogModal';
+import { exportMatchesToExcel } from './utils/excelUtils';
+import { generateScoreSheetPDFForDate, generateMensTeamScoreSheets } from './utils/pdfUtils';
+import { getCategoryForMatch, getNextMatchNumber, formatISTDateTime } from './utils/matchUtils';
 import { tournamentStore, supabase } from '@/lib/store';
-import { Match, Player, Team } from '@/types';
-import { useToast } from '@/contexts/ToastContext';
-import { useData } from '@/contexts/DataContext';
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import Link from 'next/link';
-import { Dialog } from '@headlessui/react';
 
 export default function AdminMatchesPage() {
-  const { showSuccess, showError } = useToast();
-  const { players, teams, pools, categories, poolPlayers, matches: cachedMatches, refreshData } = useData();
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedPool, setSelectedPool] = useState<string>('all');
-  const [activeCategoryIds, setActiveCategoryIds] = useState<string[]>(['all']);
-  // Add state for status and date filter
-  const [statusFilter, setStatusFilter] = useState<string>('scheduled');
-  const [dateFilter, setDateFilter] = useState<string>('');
-  
-  // Form states
-  const [newMatchTeam1, setNewMatchTeam1] = useState('');
-  const [newMatchTeam2, setNewMatchTeam2] = useState('');
-  const [newMatchPool, setNewMatchPool] = useState('');
-  const [newMatchDate, setNewMatchDate] = useState('');
-  const [newMatchTime, setNewMatchTime] = useState('');
-  const [newMatchCourt, setNewMatchCourt] = useState('');
-  
-  // Modal states
-  const [showCreateMatch, setShowCreateMatch] = useState(false);
-  const [showGenerateModal, setShowGenerateModal] = useState(false);
-  const [generateCategory, setGenerateCategory] = useState('');
-  const [generatePools, setGeneratePools] = useState<string[]>([]);
-  const [generateDate, setGenerateDate] = useState('');
-  const [generateTime, setGenerateTime] = useState('');
-  const [generateDuration, setGenerateDuration] = useState(30);
-  const [generatePreview, setGeneratePreview] = useState<any[]>([]);
-  const [generateLoading, setGenerateLoading] = useState(false);
-  const [generateError, setGenerateError] = useState<string | null>(null);
-  // State for cross-pool match creation
-  const [showCrossPoolModal, setShowCrossPoolModal] = useState(false);
-  const [crossCategory, setCrossCategory] = useState('');
-  const [side1Pool, setSide1Pool] = useState('');
-  const [side2Pool, setSide2Pool] = useState('');
-  const [side1Player, setSide1Player] = useState('');
-  const [side2Player, setSide2Player] = useState('');
-  const [creating, setCreating] = useState(false);
-  const [scheduleDate, setScheduleDate] = useState('');
-  const [court, setCourt] = useState('');
-  const [stage, setStage] = useState('');
-  // Add state for usePool switch and manual entry fields
-  const [usePool, setUsePool] = useState(true);
-  const [manualSide1, setManualSide1] = useState('');
-  const [manualSide2, setManualSide2] = useState('');
-  const [manualMatchCode, setManualMatchCode] = useState('');
+  const {
+    // State
+    matches,
+    loading,
+    selectedPool,
+    activeCategoryIds,
+    statusFilter,
+    dateFilter,
+    mobileSearch,
+    newMatchTeam1,
+    newMatchTeam2,
+    newMatchPool,
+    newMatchDate,
+    newMatchTime,
+    newMatchCourt,
+    editingMatchId,
+    editDate,
+    editTime,
+    editCourt,
+    editMatchNo,
 
-  // Add state for editing side1/side2
-  const [editSide1, setEditSide1] = useState('');
-  const [editSide2, setEditSide2] = useState('');
+    showCreateMatch,
+    showGenerateModal,
+    showScoreSheetModal,
+    showCrossPoolModal,
+    showAssignDialog,
+    generateCategory,
+    generatePools,
+    generateDate,
+    generateTime,
+    generateDuration,
+    generatePreview,
+    generateLoading,
+    generateError,
+    crossCategory,
+    side1Pool,
+    side2Pool,
+    side1Player,
+    side2Player,
+    creating,
+    scheduleDate,
+    court,
+    stage,
+    usePool,
+    manualSide1,
+    manualSide2,
+    manualMatchCode,
+    assignMatch,
 
-  // Add state for assign dialog:
-  const [showAssignDialog, setShowAssignDialog] = useState(false);
-  const [assignMatch, setAssignMatch] = useState<Match | null>(null);
-  const [, setAssignPool] = useState('');
-  const [assignSide1, setAssignSide1] = useState('');
-  const [assignSide2, setAssignSide2] = useState('');
-  const [assignLoading, setAssignLoading] = useState(false);
-  // In Assign Player/Team dialog state:
-  const [assignPool1, setAssignPool1] = useState('');
-  const [assignPool2, setAssignPool2] = useState('');
+    assignSide1,
+    assignSide2,
+    assignLoading,
+    assignPool1,
+    assignPool2,
+    scoreSheetDate,
+    participantsInSelectedModalPool,
 
-  // Helper to get pools for a category
-  const getPoolsForCategory = (categoryId: string) => pools.filter(pool => pool.category_id === categoryId);
-
-  // Get participants (teams or players) for the selected pool
-  const participantsInSelectedModalPool = useMemo(() => {
-    if (!newMatchPool) return [];
+    isTeamCategory,
+    poolsForCategory,
+    filteredMatches,
+    filteredMobileMatches,
     
-    const selectedPool = pools.find(p => p.id === newMatchPool);
-    if (!selectedPool) return [];
+    // Setters
+
+    setSelectedPool,
+    setActiveCategoryIds,
+    setStatusFilter,
+    setDateFilter,
+    setMobileSearch,
+    setNewMatchTeam1,
+    setNewMatchTeam2,
+    setNewMatchPool,
+    setNewMatchDate,
+    setNewMatchTime,
+    setNewMatchCourt,
+
+    setEditDate,
+    setEditTime,
+    setEditCourt,
+    setEditMatchNo,
+
+    setShowCreateMatch,
+    setShowGenerateModal,
+    setShowScoreSheetModal,
+    setShowCrossPoolModal,
+    setShowAssignDialog,
+    setGenerateCategory,
+    setGeneratePools,
+    setGenerateDate,
+    setGenerateTime,
+    setGenerateDuration,
+    setGeneratePreview,
+    setGenerateLoading,
+    setGenerateError,
+    setCrossCategory,
+    setSide1Pool,
+    setSide2Pool,
+    setSide1Player,
+    setSide2Player,
+    setCreating,
+    setScheduleDate,
+    setCourt,
+    setStage,
+    setUsePool,
+    setManualSide1,
+    setManualSide2,
+    setManualMatchCode,
+    setAssignMatch,
+    setAssignPool,
+    setAssignSide1,
+    setAssignSide2,
+    setAssignLoading,
+    setAssignPool1,
+    setAssignPool2,
+    setScoreSheetDate,
     
-    // Check if this is a team-based category (like Men's Team)
-    const isTeamCategory = selectedPool.category?.type === 'team';
+    // Actions
+    startEditMatch,
+    cancelEditMatch,
+    saveEditMatch,
+    handleCreateMatch,
+    fetchData,
+    getTeamName,
+    getPlayerName,
+
+    getOptionsForPoolHelper,
     
-    if (isTeamCategory) {
-      // For team categories, return teams in this pool
-      const teamsInPool = teams.filter(team => team.pool_id === newMatchPool);
-      return teamsInPool;
-    } else {
-      // For player/pair categories, return players in this pool
-      const poolPlayerIds = poolPlayers
-        .filter(pp => pp.pool_id === newMatchPool)
-        .map(pp => pp.player_id);
-      
-      const playersInPool = players.filter(player => poolPlayerIds.includes(player.id));
-      return playersInPool;
-    }
-  }, [newMatchPool, pools, teams, poolPlayers, players]);
-
-  // Get the selected pool to determine if it's team-based or player-based
-  const selectedPoolForModal = useMemo(() => {
-    return pools.find(p => p.id === newMatchPool);
-  }, [newMatchPool, pools]);
-
-  // Check if the selected pool is for a team category
-  const isTeamCategory = selectedPoolForModal?.category?.type === 'team';
-
-  // Get display name for a participant (team name or player name)
-  const getParticipantDisplayName = (participant: any) => {
-    if (isTeamCategory) {
-      return participant.brand_name || participant.name; // Team name
-    } else {
-      // For player categories, show player name with partner if available
-      if (participant.partner_name) {
-        return `${participant.name} / ${participant.partner_name}`;
-      }
-      return participant.name;
-    }
-  };
-
-  // Add state for editing
-  const [editingMatchId, setEditingMatchId] = useState<string | null>(null);
-  const [editDate, setEditDate] = useState('');
-  const [editTime, setEditTime] = useState('');
-  const [editCourt, setEditCourt] = useState('');
-  const [editMatchNo, setEditMatchNo] = useState('');
-
-  // Handler to start editing
-  const startEditMatch = (match: Match) => {
-    setEditingMatchId(match.id);
-    // Parse date and time from scheduled_date in IST
-    const { date, time } = getISTTimeFromStored(match.scheduled_date);
-    setEditDate(date);
-    setEditTime(time);
-    setEditCourt(match.court || '');
-    setEditMatchNo(match.match_no || '');
-    setEditSide1(match.team1_id || match.player1_id || match.side1_label || '');
-    setEditSide2(match.team2_id || match.player2_id || match.side2_label || '');
-  };
-
-  // Handler to cancel editing
-  const cancelEditMatch = () => {
-    setEditingMatchId(null);
-    setEditDate('');
-    setEditTime('');
-    setEditCourt('');
-    setEditMatchNo('');
-    setEditSide1('');
-    setEditSide2('');
-  };
-
-  // Handler to save changes
-  const saveEditMatch = async (match: Match) => {
-    try {
-      let scheduledDate = null;
-      if (editDate && editTime) {
-        scheduledDate = `${editDate}T${editTime}:00+05:30`;
-      }
-      // Determine category type
-      const matchCategory = match.category_id
-        ? categories.find(c => c.id === match.category_id)
-        : getCategoryForMatch(match);
-      const isTeamCategory = matchCategory?.type === 'team';
-      const isPlayerCategory = matchCategory?.type === 'player' || matchCategory?.type === 'pair';
-      const updated: any = {
-        scheduled_date: scheduledDate,
-        court: editCourt || null,
-        match_no: editMatchNo || null,
-      };
-      if (isTeamCategory) {
-        updated.team1_id = editSide1 || null;
-        updated.team2_id = editSide2 || null;
-        updated.side1_label = null;
-        updated.side2_label = null;
-      } else if (isPlayerCategory) {
-        updated.player1_id = editSide1 || null;
-        updated.player2_id = editSide2 || null;
-        updated.side1_label = null;
-        updated.side2_label = null;
-      }
-      const { error } = await supabase
-        .from('matches')
-        .update(updated)
-        .eq('id', match.id);
-      if (error) throw error;
-      // Log activity (optional)
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase.from('activity_logs').insert([
-          {
-            match_id: match.id,
-            activity_type: 'MATCH_RESCHEDULED',
-            description: `Match rescheduled to ${scheduledDate || 'unspecified date'}${editCourt ? ` on Court ${editCourt}` : ''}${editMatchNo ? `, Match No: ${editMatchNo}` : ''}`,
-            performed_by_user_id: user.id,
-            metadata: { scheduled_date: scheduledDate, court: editCourt, match_no: editMatchNo, side1: editSide1, side2: editSide2 }
-          }
-        ]);
-      }
-      showSuccess('Match updated');
-      setEditingMatchId(null);
-      await refreshData();
-    } catch (err) {
-      showError('Error updating match', err as string);
-    }
-  };
-
-  // Helper function to format date and time in IST
-  const formatISTDateTime = (dateString: string | undefined | null) => {
-    if (!dateString) return { date: '-', time: '-' };
-    try {
-      // Parse the date string (could be UTC or IST)
-      const dt = new Date(dateString);
-      
-      // Extract date and time in IST format
-      const istDate = dt.toLocaleDateString('en-IN', { 
-        timeZone: 'Asia/Kolkata',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      });
-      const istTime = dt.toLocaleTimeString('en-IN', { 
-        timeZone: 'Asia/Kolkata',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-      });
-      return { date: istDate, time: istTime };
-    } catch (error) {
-      console.error('Error formatting date and time:', error);
-      return { date: '-', time: '-' };
-    }
-  };
-
-  // Helper function to get IST time from stored date
-  const getISTTimeFromStored = (storedDateString: string | undefined | null) => {
-    if (!storedDateString) return { date: '', time: '' };
-    try {
-      const dt = new Date(storedDateString);
-      // Convert to IST for editing
-      const istDate = dt.toLocaleDateString('en-IN', { 
-        timeZone: 'Asia/Kolkata',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      }).split('/').reverse().join('-'); // Convert DD/MM/YYYY to YYYY-MM-DD
-      
-      const istTime = dt.toLocaleTimeString('en-IN', { 
-        timeZone: 'Asia/Kolkata',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-      });
-      
-      return { date: istDate, time: istTime };
-    } catch (error) {
-      console.error('Error getting IST time from stored date:', error);
-      return { date: '', time: '' };
-    }
-  };
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      console.log('Using cached matches data...');
-      
-      // Use cached matches data from DataContext
-      setMatches(cachedMatches);
-      
-    } catch (err) {
-      console.error('Error fetching data:', err);
-    }
-    setLoading(false);
-  }, [cachedMatches]);
+    // Data
+    players,
+    teams,
+    pools,
+    categories,
+    poolPlayers,
+    refreshData
+  } = useMatchManagement();
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  const handleCreateMatch = async () => {
-    if (!newMatchTeam1 || !newMatchTeam2 || !newMatchPool) return;
-    
-    try {
-      // Determine if this is a team-based or player-based category
-      const selectedPool = pools.find(p => p.id === newMatchPool);
-      const isTeamCategory = selectedPool?.category?.type === 'team';
-      
-      // Get the next match number for this category and pool
-      const nextMatchNumber = getNextMatchNumber(selectedPool?.category_id || '', newMatchPool);
-      
-      const matchData: any = {
-        pool_id: newMatchPool,
-        scheduled_date: newMatchDate ? `${newMatchDate}T${newMatchTime || '00:00'}:00` : undefined,
-        court: newMatchCourt || undefined,
-        status: 'scheduled' as const,
-        match_no: nextMatchNumber
-      };
-      
-      if (isTeamCategory) {
-        // For team categories, use team1_id and team2_id
-        matchData.team1_id = newMatchTeam1;
-        matchData.team2_id = newMatchTeam2;
-      } else {
-        // For player categories, use player1_id and player2_id
-        matchData.player1_id = newMatchTeam1;
-        matchData.player2_id = newMatchTeam2;
-      }
-      
-      await tournamentStore.createMatch(matchData);
-      
-      // Reset form
-      setNewMatchTeam1('');
-      setNewMatchTeam2('');
-      setNewMatchPool('');
-      setNewMatchDate('');
-      setNewMatchTime('');
-      setNewMatchCourt('');
-      setShowCreateMatch(false);
-      
-      showSuccess('Match created successfully');
-      fetchData();
-    } catch (error) {
-      console.error('Error creating match:', error);
-      showError('Error creating match');
-    }
+  // Handler functions
+  const handleExportExcel = () => {
+    exportMatchesToExcel(filteredMatches, categories, pools, teams, players);
   };
 
-  const getTeamName = useCallback((teamId: string) => {
-    const team = teams.find(team => team.id === teamId);
-    if (!team) return 'Unknown Team';
-    
-    const displayName = team.brand_name || team.name;
-    
-    // Extract team number from original name if it exists
-    const teamNumberMatch = team.name.match(/(\d+)/);
-    const teamNumber = teamNumberMatch ? teamNumberMatch[1] : null;
-    
-    // If we have a brand name and team number, append the number
-    if (team.brand_name && teamNumber) {
-      return `${team.brand_name} #${teamNumber}`;
-    }
-    
-    return displayName;
-  }, [teams]);
-
-  const getPoolName = useCallback((poolId: string) => {
-    return pools.find(pool => pool.id === poolId)?.name || 'Unknown Pool';
-  }, [pools]);
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'in_progress': return 'bg-yellow-100 text-yellow-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+  const handleGenerateScoreSheets = () => {
+    setShowScoreSheetModal(true);
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed': return '✅';
-      case 'in_progress': return '🔄';
-      case 'cancelled': return '❌';
-      default: return '⏰';
-    }
-  };
-
-  // Excel Export function
-  const exportToExcel = () => {
-    const headers = [
-      'Match ID',
-      'Team 1',
-      'Team 2', 
-      'Pool',
-      'Category',
-      'Date',
-      'Time',
-      'Court',
-      'Status',
-      'Team 1 Score',
-      'Team 2 Score',
-      'Created At'
-    ];
-
-    const data = filteredMatches.map((match) => {
-      const matchCategory = match.category_id
-        ? categories.find(c => c.id === match.category_id)
-        : getCategoryForMatch(match);
-      const matchType = matchCategory?.type;
-      const { date, time } = formatISTDateTime(match.scheduled_date);
-      
-      // Helper to get participant names
-      const getParticipantNames = () => {
-        if (matchType === 'team') {
-          return {
-            participant1: getTeamName(match.team1_id || ''),
-            participant2: getTeamName(match.team2_id || '')
-          };
-        } else if (matchType === 'player' || (!match.pool_id && match.player1_id && match.player2_id)) {
-          const player1 = players.find(p => p.id === (match as any).player1_id);
-          const player2 = players.find(p => p.id === (match as any).player2_id);
-          return {
-            participant1: player1 ? player1.name.split(' ')[0] : '-',
-            participant2: player2 ? player2.name.split(' ')[0] : '-'
-          };
-        } else if (matchType === 'pair') {
-          const player1 = players.find(p => p.id === (match as any).player1_id);
-          const player2 = players.find(p => p.id === (match as any).player2_id);
-          const player1FirstName = player1 ? player1.name.split(' ')[0] : '-';
-          const player2FirstName = player2 ? player2.name.split(' ')[0] : '-';
-          const player1PartnerFirstName = player1?.partner_name ? player1.partner_name.split(' ')[0] : '';
-          const player2PartnerFirstName = player2?.partner_name ? player2.partner_name.split(' ')[0] : '';
-          return {
-            participant1: player1PartnerFirstName ? `${player1FirstName} / ${player1PartnerFirstName}` : player1FirstName,
-            participant2: player2PartnerFirstName ? `${player2FirstName} / ${player2PartnerFirstName}` : player2FirstName
-          };
-        }
-        return { participant1: '-', participant2: '-' };
-      };
-      
-      const { participant1, participant2 } = getParticipantNames();
-      
-      return [
-        match.id,
-        participant1,
-        participant2,
-        getPoolName(match.pool_id),
-        matchCategory?.label || '-',
-        date,
-        time,
-        match.court || '-',
-        match.status || 'scheduled',
-        match.team1_score || '-',
-        match.team2_score || '-',
-        match.created_at ? new Date(match.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : '-'
-      ];
-    });
-
-    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...data]);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Matches');
-    
-    // Auto-size columns
-    const columnWidths = [
-      { wch: 15 }, // Match ID
-      { wch: 25 }, // Team 1
-      { wch: 25 }, // Team 2
-      { wch: 15 }, // Pool
-      { wch: 20 }, // Category
-      { wch: 12 }, // Date
-      { wch: 10 }, // Time
-      { wch: 8 },  // Court
-      { wch: 12 }, // Status
-      { wch: 12 }, // Team 1 Score
-      { wch: 12 }, // Team 2 Score
-      { wch: 20 }  // Created At
-    ];
-    worksheet['!cols'] = columnWidths;
-    
-    const fileName = `tournament-matches-${new Date().toISOString().split('T')[0]}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
-  };
-
-  // Memoize expensive computations
-  const getCategoryForMatch = useCallback((match: Match) => {
-    const pool = pools.find(p => p.id === match.pool_id);
-    if (!pool) return undefined;
-    return categories.find(c => c.id === pool.category_id);
-  }, [pools, categories]);
-
-  const getPlayerName = useCallback((id: string) => {
-    return players.find(p => p.id === id)?.name || '-';
-  }, [players]);
-
-  const filteredMatches = useMemo(() => {
-    let ms = selectedPool === 'all' ? matches : matches.filter(match => match.pool_id === selectedPool);
-    if (!activeCategoryIds.includes('all')) {
-      ms = ms.filter(match => {
-        // If match has pool_id, use pool's category_id; else use match.category_id
-        if (match.pool_id) {
-          const category = getCategoryForMatch(match);
-          return category && activeCategoryIds.includes(category.id);
-        } else {
-          return (match as any).category_id && activeCategoryIds.includes((match as any).category_id);
-        }
-      });
-    }
-    if (statusFilter !== 'all') {
-      ms = ms.filter(match => (match.status || 'scheduled') === statusFilter);
-    }
-    if (dateFilter) {
-      ms = ms.filter(match => {
+  const handleGenerateScoreSheetPDF = () => {
+    const matchesToPrint = filteredMatches.filter(match => {
+      if (scoreSheetDate) {
         if (!match.scheduled_date) return false;
         const matchDate = new Date(match.scheduled_date);
-        // Format as yyyy-mm-dd
-        const matchDateStr = matchDate.toISOString().split('T')[0];
-        return matchDateStr === dateFilter;
-      });
-    }
-    // Sort by scheduled date and time when "All Categories" is selected
-    if (activeCategoryIds.includes('all')) {
-      ms = ms.sort((a, b) => {
-        // Handle matches without scheduled dates
-        if (!a.scheduled_date && !b.scheduled_date) return 0;
-        if (!a.scheduled_date) return 1; // Put unscheduled matches at the end
-        if (!b.scheduled_date) return -1;
-        // Sort by scheduled date and time
-        const dateA = new Date(a.scheduled_date);
-        const dateB = new Date(b.scheduled_date);
-        return dateA.getTime() - dateB.getTime();
-      });
-    }
-    
-    return ms;
-  }, [matches, selectedPool, activeCategoryIds, statusFilter, dateFilter, getCategoryForMatch]);
-
-  // Get the next match number for a given category and pool
-  const getNextMatchNumber = useCallback((categoryId: string, poolId: string) => {
-    const category = categories.find(c => c.id === categoryId);
-    if (!category) return 'CAT-001';
-    
-    const code = category.code || category.label.replace(/\s/g, '').substring(0, 3);
-    
-    // Get existing matches for this category and pool
-    const existingMatches = matches.filter(match => {
-      const matchPool = pools.find(p => p.id === match.pool_id);
-      return matchPool?.category_id === categoryId && match.pool_id === poolId;
-    });
-    
-    // Find the highest sequence number
-    let maxSequence = 0;
-    existingMatches.forEach(existingMatch => {
-      if (existingMatch.match_no) {
-        const matchNoPattern = new RegExp(`^${code}-(\\d+)$`);
-        const matchResult = existingMatch.match_no.match(matchNoPattern);
-        if (matchResult && matchResult[1]) {
-          const sequence = parseInt(matchResult[1]);
-          if (sequence > maxSequence) {
-            maxSequence = sequence;
-          }
-        }
-      }
-    });
-    
-    // Return next sequence number
-    const nextSequence = maxSequence + 1;
-    return `${code}-${String(nextSequence).padStart(3, '0')}`;
-  }, [categories, matches, pools]);
-
-  // --- PDF Score Sheet Generation ---
-  function groupMatchesByCourt(matches: Match[]) {
-    const grouped: Record<string, Match[]> = {};
-    matches.forEach((m) => {
-      const court = m.court || 'Unknown';
-      if (!grouped[court]) grouped[court] = [];
-      grouped[court].push(m);
-    });
-    return grouped;
-  }
-
-  function chunkArray<T>(arr: T[], size: number): T[][] {
-    const result: T[][] = [];
-    for (let i = 0; i < arr.length; i += size) {
-      result.push(arr.slice(i, i + size));
-    }
-    return result;
-  }
-
-  function getParticipantNamesForSheet(match: Match) {
-    const matchCategory = match.category_id
-      ? categories.find(c => c.id === match.category_id)
-      : getCategoryForMatch(match);
-    const matchType = matchCategory?.type;
-    if (matchType === 'team') {
-      return [getTeamName(match.team1_id || ''), getTeamName(match.team2_id || '')];
-    } else if (matchType === 'player') {
-      const player1 = players.find(p => p.id === match.player1_id);
-      const player2 = players.find(p => p.id === match.player2_id);
-      return [player1?.name || '-', player2?.name || '-'];
-    } else if (matchType === 'pair') {
-      const player1 = players.find(p => p.id === match.player1_id);
-      const player2 = players.find(p => p.id === match.player2_id);
-      // Use only first names for player and partner
-      const player1First = player1 ? player1.name.split(' ')[0] : '-';
-      const player2First = player2 ? player2.name.split(' ')[0] : '-';
-      const player1PartnerFirstName = player1?.partner_name ? player1.partner_name.split(' ')[0] : '';
-      const player2PartnerFirstName = player2?.partner_name ? player2.partner_name.split(' ')[0] : '';
-      const player1Full = player1PartnerFirstName ? `${player1First} / ${player1PartnerFirstName}` : player1First;
-      const player2Full = player2PartnerFirstName ? `${player2First} / ${player2PartnerFirstName}` : player2First;
-      return [player1Full, player2Full];
-    }
-    return ['-', '-'];
-  }
-
-  // Add state for generate matches modal
-  const [showScoreSheetModal, setShowScoreSheetModal] = useState(false);
-  const [scoreSheetDate, setScoreSheetDate] = useState('');
-
-  // Helper to filter matches by selected date
-  const getMatchesForScoreSheet = () => {
-    let matchesToFilter = filteredMatches;
-    
-    // Filter by date if selected
-    if (scoreSheetDate) {
-      matchesToFilter = matchesToFilter.filter(m => {
-        if (!m.scheduled_date) return false;
-        const matchDate = new Date(m.scheduled_date);
         const matchDateStr = matchDate.toISOString().split('T')[0];
         return matchDateStr === scoreSheetDate;
-      });
-    }
-    
-    // Filter out Men's team category matches (code: 'MT')
-    return matchesToFilter.filter(match => {
+      }
+      return true;
+    }).filter(match => {
       const matchCategory = match.category_id
         ? categories.find(c => c.id === match.category_id)
-        : getCategoryForMatch(match);
+        : getCategoryForMatch(match, pools, categories);
       return matchCategory?.code !== 'MT';
     });
+
+    generateScoreSheetPDFForDate(matchesToPrint, categories, pools, teams, players);
+    setShowScoreSheetModal(false);
   };
 
-  // PDF generation for selected date
-  function generateScoreSheetPDFForDate() {
-    const matchesToPrint = getMatchesForScoreSheet();
-    const grouped = groupMatchesByCourt(matchesToPrint);
-    const doc = new jsPDF();
-    let firstPage = true;
-    // Base64 PNG for logo
-    Object.entries(grouped).forEach(([court, matches]) => {
-      const matchChunks = chunkArray(matches, 5);
-      matchChunks.forEach((chunk) => {
-        if (!firstPage) doc.addPage();
-        firstPage = false;
-        // Add Baddies logo at top left
-        // Header
-        doc.setFontSize(18);
-        doc.setTextColor(41, 128, 185); // blue
-        doc.text('PBEL City Badminton 2025', 105, 18, { align: 'center' });
-        doc.setTextColor(0, 0, 0);
-        doc.setFontSize(12);
-        doc.text(`Court: ${court}`, 20, 28);
-        doc.text('Score Sheet (30 Points)', 160, 28, { align: 'right' });
-        doc.setLineWidth(0.5);
-        doc.line(15, 32, 195, 32);
-        let y = 40;
-        chunk.forEach((match, idx) => {
-          const [p1, p2] = getParticipantNamesForSheet(match);
-          // Get category for this match
-          const matchCategory = match.category_id
-            ? categories.find(c => c.id === match.category_id)
-            : getCategoryForMatch(match);
-          // Color map for category code
-          const categoryColorMap: Record<string, { bg: [number, number, number], text: [number, number, number] }> = {
-            'MT': { bg: [41, 128, 185], text: [255,255,255] }, // blue (Men's Team)
-            'WS': { bg: [39, 174, 96], text: [255,255,255] }, // green (Women's Singles)
-            'WD': { bg: [142, 68, 173], text: [255,255,255] }, // purple (Women's Doubles)
-            'XD': { bg: [243, 156, 18], text: [255,255,255] }, // orange (Mixed Doubles)
-            'BU18': { bg: [52, 152, 219], text: [255,255,255] }, // light blue (Boys U18)
-            'BU13': { bg: [22, 160, 133], text: [255,255,255] }, // teal (Boys U13)
-            'GU18': { bg: [231, 76, 60], text: [255,255,255] }, // red (Girls U18)
-            'GU13': { bg: [241, 196, 15], text: [0,0,0] }, // yellow (Girls U13)
-            'FM': { bg: [127, 140, 141], text: [255,255,255] }, // gray (Family Mixed)
-            'default': { bg: [155, 89, 182], text: [255,255,255] } // fallback purple
-          };
-          const catCode = matchCategory?.code || 'default';
-          const catColor = categoryColorMap[catCode] || categoryColorMap['default'];
-          // Colored match label
-          doc.setFillColor(...catColor.bg);
-          doc.setTextColor(...catColor.text);
-          doc.setFontSize(12);
-          doc.rect(20, y-5, 40, 8, 'F');
-          doc.text(`Match #${match.match_no || '-'}`, 22, y, { baseline: 'middle' });
-          doc.setTextColor(0,0,0);
-          doc.setFontSize(11);
-          doc.text(`Date: ${formatISTDateTime(match.scheduled_date).date}`, 70, y);
-          doc.text(`Time: ${formatISTDateTime(match.scheduled_date).time}`, 130, y);
-          y += 8;
-          // Player 1 row
-          doc.setFontSize(10);
-          doc.text(p1, 20, y+6);
-          // Draw score boxes on the same row
-          for (let i = 0; i < 30; i++) {
-            doc.rect(70 + i*4, y, 4, 8);
-            doc.setFontSize(7);
-            doc.text(String(i+1), 72 + i*4 - (i+1 >= 10 ? 1 : 0), y+6);
-          }
-          y += 10;
-          // Player 2 row
-          doc.setFontSize(10);
-          doc.text(p2, 20, y+6);
-          for (let i = 0; i < 30; i++) {
-            doc.rect(70 + i*4, y, 4, 8);
-            doc.setFontSize(7);
-            doc.text(String(i+1), 72 + i*4 - (i+1 >= 10 ? 1 : 0), y+6);
-          }
-          y += 14;
-          // Add Referee Name and Signature fields
-          doc.setFontSize(9);
-          doc.text('Referee Name: ____________________', 20, y + 6);
-          doc.text('Signature: ____________________', 120, y + 6);
-          y += 14;
-          if (idx < chunk.length - 1) {
-            doc.setDrawColor(180);
-            doc.line(20, y, 190, y);
-            y += 6;
-          }
-        });
-      });
-    });
-    doc.save('PBEL_Badminton_Score_Sheets.pdf');
-    setShowScoreSheetModal(false);
-  }
-
-  // Function to generate Men's team score sheet with 5 games (D-S-D-S-D)
-  function generateMensTeamScoreSheet(doc: jsPDF, match: Match) {
-    const [team1, team2] = getParticipantNamesForSheet(match);
-    
-    // Header for Men's Team match
-    doc.setFontSize(18);
-    doc.setTextColor(41, 128, 185); // blue
-    doc.text('PBEL City Badminton 2025', 105, 18, { align: 'center' });
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(12);
-    doc.text(`Match #${match.match_no || '-'} - Men's Team`, 20, 28);
-    doc.text(`Date: ${formatISTDateTime(match.scheduled_date).date}`, 130, 28);
-    doc.setLineWidth(0.5);
-    doc.line(15, 32, 195, 32);
-    
-    // Teams section
-    doc.setFontSize(12);
-    doc.text(`${team1} vs ${team2}`, 105, 42, { align: 'center' });
-    
-    // Game types: D-S-D-S-D (Doubles-Singles-Doubles-Singles-Doubles)
-    const gameTypes = [
-      { name: '1st Doubles', type: 'D' },
-      { name: '1st Singles', type: 'S' },
-      { name: '2nd Doubles', type: 'D' },
-      { name: '2nd Singles', type: 'S' },
-      { name: '3rd Doubles', type: 'D' }
-    ];
-    
-    let currentY = 50;
-    
-    gameTypes.forEach((game, gameIndex) => {
-      // Game header
-      doc.setFontSize(10);
-      doc.setFillColor(41, 128, 185);
-      doc.setTextColor(255, 255, 255);
-      doc.rect(20, currentY-3, 160, 6, 'F');
-      doc.text(`Game ${gameIndex + 1}: ${game.name} (${game.type})`, 22, currentY, { baseline: 'middle' });
-      doc.setTextColor(0, 0, 0);
-      currentY += 8;
-      
-      // Standard 2-row format like other categories
-      doc.setFontSize(9);
-      doc.text('P1: _________________', 20, currentY);
-      // Draw score boxes for P1
-      for (let i = 0; i < 30; i++) {
-        doc.rect(70 + i*4, currentY, 4, 6);
-        doc.setFontSize(6);
-        doc.text(String(i+1), 72 + i*4 - (i+1 >= 10 ? 1 : 0), currentY+4);
-      }
-      currentY += 8;
-      
-      // Second row for P2
-      doc.setFontSize(9);
-      doc.text('P2: _________________', 20, currentY);
-      // Draw score boxes for P2
-      for (let i = 0; i < 30; i++) {
-        doc.rect(70 + i*4, currentY, 4, 6);
-        doc.setFontSize(6);
-        doc.text(String(i+1), 72 + i*4 - (i+1 >= 10 ? 1 : 0), currentY+4);
-      }
-      currentY += 8;
-      
-      // Game result
-      doc.setFontSize(8);
-      doc.text('Winner: Team 1 [ ]  Team 2 [ ]', 20, currentY);
-      currentY += 6;
-      
-      // Separator line
-      if (gameIndex < gameTypes.length - 1) {
-        doc.setDrawColor(180);
-        doc.line(20, currentY, 190, currentY);
-        currentY += 4;
-      }
-    });
-    
-    // Match result section
-    currentY += 3;
-    doc.setFontSize(10);
-    doc.setFillColor(39, 174, 96);
-    doc.setTextColor(255, 255, 255);
-    doc.rect(20, currentY-3, 160, 6, 'F');
-    doc.text('MATCH RESULT', 22, currentY, { baseline: 'middle' });
-    doc.setTextColor(0, 0, 0);
-    currentY += 8;
-    
-    doc.setFontSize(9);
-    doc.text('Games Won - Team 1: ___  Team 2: ___', 20, currentY);
-    currentY += 6;
-    doc.text('Overall Winner: Team 1 [ ]  Team 2 [ ]', 20, currentY);
-    currentY += 8;
-    
-    // Referee section
-    doc.setFontSize(8);
-    doc.text('Referee Name: ____________________', 20, currentY);
-    doc.text('Signature: ____________________', 120, currentY);
-    
-    return currentY + 10; // Return the Y position for next match
-  }
-
-  // Function to generate only Men's team score sheets
-  function generateMensTeamScoreSheets() {
-    const matchesToPrint = filteredMatches;
-    
-    // Filter only Men's team matches
-    const mensTeamMatches = matchesToPrint.filter(match => {
-      const matchCategory = match.category_id
-        ? categories.find(c => c.id === match.category_id)
-        : getCategoryForMatch(match);
-      return matchCategory?.code === 'MT';
-    });
-    
-    if (mensTeamMatches.length === 0) {
-      showError('No Men\'s team matches found');
-      return;
+  const handleGenerateMensTeamSheets = () => {
+    try {
+      const count = generateMensTeamScoreSheets(filteredMatches, categories, pools, teams, players);
+      console.log(`Generated ${count} Men's team score sheet(s)`);
+    } catch (error) {
+      console.error('Error generating Men\'s team score sheets:', error);
     }
-    
-    const doc = new jsPDF();
-    let currentY = 40;
-    
-    // Generate Men's team score sheets
-    mensTeamMatches.forEach((match, idx) => {
-      // Add new page only if not the first match and current page is full
-      if (idx > 0 && currentY > 250) {
-        doc.addPage();
-        currentY = 40;
-      }
-      
-      currentY = generateMensTeamScoreSheet(doc, match);
-      
-      // Add new page only if there are more matches and current page is getting full
-      if (idx < mensTeamMatches.length - 1 && currentY > 200) {
-        doc.addPage();
-        currentY = 40;
-      }
-    });
-    
-    doc.save('PBEL_Mens_Team_Score_Sheets.pdf');
-    showSuccess(`Generated ${mensTeamMatches.length} Men's team score sheet(s)`);
-  }
+  };
 
+  const handleAssignMatch = (match: any) => {
+    setAssignMatch(match);
+    setAssignPool(match.pool_id || '');
+    setAssignSide1(match.team1_id || match.player1_id || '');
+    setAssignSide2(match.team2_id || match.player2_id || '');
+    setShowAssignDialog(true);
+  };
+
+  // Generate matches handlers
   const handleAnalyzeGenerate = async () => {
     if (!generateCategory || generatePools.length === 0) {
       setGenerateError('Please select a category and at least one pool.');
@@ -863,7 +213,7 @@ export default function AdminMatchesPage() {
     setGeneratePreview([]);
 
     try {
-      const generatedMatches: Match[] = [];
+      const generatedMatches: any[] = [];
       const startDateTime = new Date(`${generateDate}T${generateTime}:00`);
       const duration = generateDuration * 60 * 1000; // Duration in milliseconds
 
@@ -883,7 +233,7 @@ export default function AdminMatchesPage() {
         }
 
         const isTeamCategory = category.type === 'team';
-        const nextMatchNumber = getNextMatchNumber(category.id, poolId);
+        const nextMatchNumber = getNextMatchNumber(category.id, poolId, categories, matches, pools);
 
         const matchData: any = {
           pool_id: poolId,
@@ -894,26 +244,23 @@ export default function AdminMatchesPage() {
         };
 
         if (isTeamCategory) {
-          // For team categories, use team1_id and team2_id
-          matchData.team1_id = newMatchTeam1; // Assuming newMatchTeam1 and newMatchTeam2 are pre-filled for team categories
+          matchData.team1_id = newMatchTeam1;
           matchData.team2_id = newMatchTeam2;
         } else {
-          // For player categories, use player1_id and player2_id
           matchData.player1_id = newMatchTeam1;
           matchData.player2_id = newMatchTeam2;
         }
 
-        generatedMatches.push(await tournamentStore.createMatch(matchData));
-        startDateTime.setTime(startDateTime.getTime() + duration); // Increment time for next match
+        generatedMatches.push(matchData);
+        startDateTime.setTime(startDateTime.getTime() + duration);
       }
 
       setGeneratePreview(generatedMatches);
       setShowGenerateModal(false);
-      showSuccess('Matches generated successfully!');
-      fetchData();
+      console.log('Matches generated successfully!');
+      await refreshData();
     } catch (error) {
       console.error('Error generating matches:', error);
-      showError('Error generating matches', error as string);
     } finally {
       setGenerateLoading(false);
     }
@@ -926,54 +273,123 @@ export default function AdminMatchesPage() {
       for (const match of generatePreview) {
         await tournamentStore.createMatch(match);
       }
-      showSuccess('Matches generated and saved successfully!');
-      fetchData();
+      console.log('Matches generated and saved successfully!');
+      await refreshData();
       setGeneratePreview([]);
       setShowGenerateModal(false);
     } catch (error) {
       console.error('Error saving generated matches:', error);
-      showError('Error saving generated matches', error as string);
     }
   };
 
-  // Add state for mobile search
-  const [mobileSearch, setMobileSearch] = useState('');
-
-  // Filtered matches for mobile search
-  const filteredMobileMatches = useMemo(() => {
-    if (!mobileSearch.trim()) return filteredMatches;
-    const search = mobileSearch.trim().toLowerCase();
-    return filteredMatches.filter((match) => {
-      const matchCategory = match.category_id
-        ? categories.find(c => c.id === match.category_id)
-        : getCategoryForMatch(match);
-      const matchType = matchCategory?.type;
-      let participant1 = '';
-      let participant2 = '';
-      if (matchType === 'team') {
-        participant1 = getTeamName(match.team1_id || '').toLowerCase();
-        participant2 = getTeamName(match.team2_id || '').toLowerCase();
-      } else if (matchType === 'player' || matchType === 'pair') {
-        const player1 = players.find(p => p.id === (match as any).player1_id);
-        const player2 = players.find(p => p.id === (match as any).player2_id);
-        participant1 = player1 ? player1.name.toLowerCase() : '';
-        participant2 = player2 ? player2.name.toLowerCase() : '';
+  // Cross-pool match handlers
+  const handleCreateCrossPoolMatch = async () => {
+    setCreating(true);
+    try {
+      if (usePool) {
+        const selectedCategoryObj = categories.find(cat => cat.code === crossCategory);
+        const isTeamCategory = selectedCategoryObj?.type === 'team';
+        const { error } = await supabase.from('matches').insert([
+          {
+            category_id: selectedCategoryObj?.id,
+            ...(isTeamCategory
+              ? { team1_id: side1Player, team2_id: side2Player }
+              : { player1_id: side1Player, player2_id: side2Player }),
+            scheduled_date: scheduleDate || null,
+            court: court || null,
+            stage: stage || null,
+            status: 'scheduled',
+          }
+        ]);
+        if (error) throw error;
+      } else {
+        if (!manualSide1 || !manualSide2 || !manualMatchCode || !crossCategory || !scheduleDate || !court || !stage) {
+          alert('Please fill all fields');
+          setCreating(false);
+          return;
+        }
+        const selectedCategoryObj = categories.find(cat => cat.code === crossCategory);
+        const payload = {
+          category_id: selectedCategoryObj?.id,
+          match_no: manualMatchCode,
+          scheduled_date: scheduleDate || null,
+          court: court || null,
+          stage: stage || null,
+          status: 'scheduled',
+          side1_label: manualSide1,
+          side2_label: manualSide2,
+        };
+        const { error } = await supabase.from('matches').insert([payload]);
+        if (error) throw error;
       }
-      return participant1.includes(search) || participant2.includes(search);
-    });
-  }, [mobileSearch, filteredMatches, getCategoryForMatch, getTeamName, players, categories]);
+      setShowCrossPoolModal(false);
+      setCrossCategory('');
+      setSide1Pool('');
+      setSide2Pool('');
+      setSide1Player('');
+      setSide2Player('');
+      setScheduleDate('');
+      setCourt('');
+      setStage('');
+      setManualSide1('');
+      setManualSide2('');
+      setManualMatchCode('');
+      await refreshData();
+    } catch (err) {
+      if (err && typeof err === 'object' && 'message' in err) {
+        alert('Error creating match: ' + (err as any).message);
+      } else {
+        alert('Error creating match.');
+      }
+    } finally {
+      setCreating(false);
+    }
+  };
 
-  // Filter pools by selected category
-  const poolsForCategory = pools.filter(p => p.category?.code === crossCategory);
-  // Get teams/players for selected pool
-  const getOptionsForPool = (poolId: string) => {
-    const pool = pools.find(p => p.id === poolId);
-    if (!pool) return [];
-    if (pool.category?.type === 'team') {
-      return teams.filter(t => t.pool_id === poolId).map(t => ({ id: t.id, name: t.name }));
-    } else {
-      const playerIds = poolPlayers.filter(pp => pp.pool_id === poolId).map(pp => pp.player_id);
-      return players.filter(p => playerIds.includes(p.id)).map(p => ({ id: p.id, name: p.name }));
+  // Assign dialog handlers
+  const handleAssignSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAssignLoading(true);
+    try {
+      if (!assignMatch) return;
+
+      const matchCategory = assignMatch.category_id
+        ? categories.find(c => c.id === assignMatch.category_id)
+        : getCategoryForMatch(assignMatch, pools, categories);
+      const isTeamCategory = matchCategory?.type === 'team';
+      const isPlayerCategory = matchCategory?.type === 'player' || matchCategory?.type === 'pair';
+
+      const update: any = {};
+      if (isTeamCategory) {
+        update.team1_id = assignSide1 || null;
+        update.team2_id = assignSide2 || null;
+        update.side1_label = null;
+        update.side2_label = null;
+      } else if (isPlayerCategory) {
+        update.player1_id = assignSide1 || null;
+        update.player2_id = assignSide2 || null;
+        update.side1_label = null;
+        update.side2_label = null;
+      }
+
+      const { error } = await supabase
+        .from('matches')
+        .update(update)
+        .eq('id', assignMatch.id);
+      if (error) throw error;
+      
+      setShowAssignDialog(false);
+      setAssignMatch(null);
+      setAssignPool1('');
+      setAssignPool2('');
+      setAssignSide1('');
+      setAssignSide2('');
+      await refreshData();
+      console.log('Assignment updated!');
+    } catch (err) {
+      console.error('Error updating assignment', err);
+    } finally {
+      setAssignLoading(false);
     }
   };
 
@@ -984,189 +400,36 @@ export default function AdminMatchesPage() {
         <p className="text-gray-600">Create and manage tournament matches, update scores, and track results</p>
       </div>
 
-      {/* Matches Stats Cards - Dashboard Style, Mobile Friendly */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 mb-8">
-        <div className="bg-white rounded-xl p-4 sm:p-6 shadow-lg border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs sm:text-sm font-medium text-gray-600">Total Matches</p>
-              <p className="text-xl sm:text-3xl font-bold text-blue-600">{matches.length}</p>
-            </div>
-            <div className="p-2 sm:p-3 bg-blue-100 rounded-lg">
-              <span className="text-lg sm:text-2xl">🏸</span>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl p-4 sm:p-6 shadow-lg border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs sm:text-sm font-medium text-gray-600">Completed</p>
-              <p className="text-xl sm:text-3xl font-bold text-green-600">{matches.filter(m => m.status === 'completed').length}</p>
-            </div>
-            <div className="p-2 sm:p-3 bg-green-100 rounded-lg">
-              <span className="text-lg sm:text-2xl">✅</span>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl p-4 sm:p-6 shadow-lg border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs sm:text-sm font-medium text-gray-600">In Progress</p>
-              <p className="text-xl sm:text-3xl font-bold text-purple-600">{matches.filter(m => m.status === 'in_progress').length}</p>
-            </div>
-            <div className="p-2 sm:p-3 bg-purple-100 rounded-lg">
-              <span className="text-lg sm:text-2xl">🔄</span>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl p-4 sm:p-6 shadow-lg border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs sm:text-sm font-medium text-gray-600">Scheduled</p>
-              <p className="text-xl sm:text-3xl font-bold text-orange-600">{matches.filter(m => m.status === 'scheduled').length}</p>
-            </div>
-            <div className="p-2 sm:p-3 bg-orange-100 rounded-lg">
-              <span className="text-lg sm:text-2xl">⏰</span>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl p-4 sm:p-6 shadow-lg border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs sm:text-sm font-medium text-gray-600">Cancelled</p>
-              <p className="text-xl sm:text-3xl font-bold text-red-600">{matches.filter(m => m.status === 'cancelled').length}</p>
-            </div>
-            <div className="p-2 sm:p-3 bg-red-100 rounded-lg">
-              <span className="text-lg sm:text-2xl">❌</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Stats Cards */}
+      <StatsCards matches={matches} />
 
       {/* Filters and Actions */}
-      <div className="mb-6 flex flex-col gap-2 w-full max-w-2xl">
-        <div className="flex flex-row gap-2 w-full flex-wrap">
-          <div className="w-[180px] min-w-[180px]">
-            <label htmlFor="category-select" className="text-sm font-medium text-gray-700">Category:</label>
-            <select
-              id="category-select"
-              multiple
-              value={activeCategoryIds}
-              onChange={e => {
-                const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
-                setActiveCategoryIds(selectedOptions.length > 0 ? selectedOptions : ['all']);
-              }}
-              className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white text-sm"
-              style={{ height: '100px' }}
-            >
-              <option value="all">All</option>
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.label}</option>
-              ))}
-            </select>
-          </div>
-          <div className="w-[180px] min-w-[180px]">
-            <label htmlFor="pool-select" className="text-sm font-medium text-gray-700">Pool:</label>
-            <select
-              id="pool-select"
-              value={selectedPool}
-              onChange={e => setSelectedPool(e.target.value)}
-              className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white text-sm"
-            >
-              <option value="all">All</option>
-              {pools
-                .filter(pool => activeCategoryIds.includes('all') || activeCategoryIds.includes(pool.category_id!))
-                .map(pool => (
-                  <option key={pool.id} value={pool.id}>{pool.name}</option>
-                ))}
-            </select>
-          </div>
-          {/* Status Filter */}
-          <div className="w-[180px] min-w-[180px]">
-            <label htmlFor="status-filter" className="text-sm font-medium text-gray-700">Status:</label>
-            <select
-              id="status-filter"
-              value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white text-sm"
-            >
-              <option value="all">All</option>
-              <option value="scheduled">Scheduled</option>
-              <option value="in_progress">In Progress</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-          </div>
-          {/* Date Filter */}
-          <div className="w-[180px] min-w-[180px]">
-            <label htmlFor="date-filter" className="text-sm font-medium text-gray-700">Date:</label>
-            <div className="flex items-center gap-1">
-              <input
-                id="date-filter"
-                type="date"
-                value={dateFilter}
-                onChange={e => setDateFilter(e.target.value)}
-                className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white text-sm"
-              />
-              {dateFilter && (
-                <button
-                  type="button"
-                  onClick={() => setDateFilter('')}
-                  className="ml-1 px-2 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-semibold border border-gray-300"
-                  title="Clear date filter"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="flex gap-2 flex-wrap mt-1">
-          <button
-            onClick={() => setShowCreateMatch(true)}
-            className="px-3 py-1.5 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center gap-1 text-sm"
-          >
-            Match
-          </button>
-          <button
-            onClick={() => setShowGenerateModal(true)}
-            className="px-3 py-1.5 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center gap-1 text-sm"
-          >
-            Matches
-          </button>
-          <button
-            onClick={exportToExcel}
-            className="px-3 py-1.5 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center gap-1 text-sm"
-          >
-            Excel
-          </button>
-          <button
-            onClick={() => setShowScoreSheetModal(true)}
-            className="px-3 py-1.5 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center gap-1 text-sm"
-          >
-            Sheets
-          </button>
-          <button
-            onClick={generateMensTeamScoreSheets}
-            className="px-3 py-1.5 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center gap-1 text-sm"
-          >
-            Men&apos;s Team
-          </button>
-          <button
-            onClick={() => setShowCrossPoolModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold shadow hover:bg-blue-700 focus:ring-2 focus:ring-blue-400 transition-all text-base group"
-          >
-            Create Cross-Pool Match
-          </button>
-        </div>
-      </div>
+      <MatchFilters
+        categories={categories}
+        pools={pools}
+        activeCategoryIds={activeCategoryIds}
+        selectedPool={selectedPool}
+        statusFilter={statusFilter}
+        dateFilter={dateFilter}
+        onCategoryChange={setActiveCategoryIds}
+        onPoolChange={setSelectedPool}
+        onStatusChange={setStatusFilter}
+        onDateChange={setDateFilter}
+        onClearDate={() => setDateFilter('')}
+        onCreateMatch={() => setShowCreateMatch(true)}
+        onGenerateMatches={() => setShowGenerateModal(true)}
+        onExportExcel={handleExportExcel}
+        onGenerateScoreSheets={handleGenerateScoreSheets}
+        onGenerateMensTeamSheets={handleGenerateMensTeamSheets}
+        onCreateCrossPoolMatch={() => setShowCrossPoolModal(true)}
+      />
 
       {/* Matches List */}
       <div className="bg-white rounded-xl shadow-lg border border-gray-200">
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-800">Tournament Matches</h2>
           <p className="text-gray-600 mt-1">
-            {selectedPool === 'all' ? 'All matches' : `Matches in ${getPoolName(selectedPool)}`}
+            {selectedPool === 'all' ? 'All matches' : `Matches in ${pools.find(p => p.id === selectedPool)?.name || 'Unknown Pool'}`}
           </p>
         </div>
         <div className="p-6">
@@ -1180,6 +443,7 @@ export default function AdminMatchesPage() {
               className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
             />
           </div>
+          
           {loading ? (
             <div className="text-center py-8">
               <p className="text-gray-500 text-lg">Loading matches...</p>
@@ -1198,585 +462,77 @@ export default function AdminMatchesPage() {
           ) : (
             <>
               {/* Mobile: Cards */}
-              <div className="grid grid-cols-1 gap-4 sm:hidden">
-                {filteredMobileMatches.map((match) => {
-                  // Use category_id if present, otherwise fallback to getCategoryForMatch
-                  const matchCategory = match.category_id
-                    ? categories.find(c => c.id === match.category_id)
-                    : getCategoryForMatch(match);
-                  const matchType = matchCategory?.type;
-                  const isEditing = editingMatchId === match.id;
-                 
-                  const { participant1, participant2 } = (() => {
-                    if (matchType === 'team') {
-                      return {
-                        participant1: getTeamName(match.team1_id || '') || match.side1_label || '-',
-                        participant2: getTeamName(match.team2_id || '') || match.side2_label || '-'
-                      };
-                    } else if (matchType === 'player' || (!match.pool_id && match.player1_id && match.player2_id)) {
-                      return {
-                        participant1: getPlayerName(match.player1_id ?? '') || match.side1_label || '-',
-                        participant2: getPlayerName(match.player2_id ?? '') || match.side2_label || '-'
-                      };
-                    } else if (matchType === 'pair') {
-                      const player1 = players.find(p => p.id === (match as any).player1_id);
-                      const player2 = players.find(p => p.id === (match as any).player2_id);
-                      const player1FirstName = player1 ? player1.name.split(' ')[0] : '';
-                      const player2FirstName = player2 ? player2.name.split(' ')[0] : '';
-                      const player1PartnerFirstName = player1?.partner_name ? player1.partner_name.split(' ')[0] : '';
-                      const player2PartnerFirstName = player2?.partner_name ? player2.partner_name.split(' ')[0] : '';
-                      if (!match.player1_id && match.side1_label) {
-                        // fallback to side1_label/side2_label if both player1_id and player2_id are missing
-                        return {
-                          participant1: match.side1_label || '-',
-                          participant2: match.side2_label || '-',
-                        };
-                      }
-                      return {
-                        participant1: player1PartnerFirstName ? `${player1FirstName} / ${player1PartnerFirstName}` : player1FirstName || match.side1_label || '-',
-                        participant2: player2PartnerFirstName ? `${player2FirstName} / ${player2PartnerFirstName}` : player2FirstName || match.side2_label || '-',
-                      };
-                    }
-                    return { participant1: '-', participant2: '-' };
-                  })();
-                  const { date, time } = formatISTDateTime(match.scheduled_date);
-                  const poolName = match.pool_id
-                    ? pools.find(p => p.id === match.pool_id)?.name || '-'
-                    : matchCategory?.code
-                      ? matchCategory.code + (match.stage ? ` - ${match.stage}` : '')
-                      : (match.stage || 'N/A');
-                  return (
-                    <div key={match.id} className="bg-white rounded-xl p-4 shadow-lg border border-gray-200 flex flex-col gap-2">
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <div className="text-xs font-medium text-gray-600">{poolName}</div>
-                          <div className="text-lg font-bold text-blue-700">
-                            {participant1}
-                            <span className="text-gray-500 text-xs">vs</span>
-                            {participant2}
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-end">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(match.status || 'scheduled')}`}>{getStatusIcon(match.status || 'scheduled')}</span>
-                          <span className="text-xs text-gray-500 mt-1">{date} {time}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 text-sm">
-                        <div className="flex items-center gap-1">
-                          <span className="font-bold text-blue-600">{match.team1_score ?? '-'}</span>
-                          <span className="text-gray-400">-</span>
-                          <span className="font-bold text-red-600">{match.team2_score ?? '-'}</span>
-                        </div>
-                        <span className="text-gray-400">|</span>
-                        <span className="text-xs text-gray-500">Court: {isEditing ? (
-                          <select value={editCourt} onChange={e => setEditCourt(e.target.value)} className="px-2 py-1 border rounded text-xs">
-                            <option value="">-</option>
-                            <option value="C">C</option>
-                            <option value="G">G</option>
-                          </select>
-                        ) : (match.court || '-')}</span>
-                        <span className="text-gray-400">|</span>
-                        <span className="text-xs text-gray-500">Match No: {isEditing ? (
-                          <input
-                            type="text"
-                            value={editMatchNo}
-                            onChange={e => setEditMatchNo(e.target.value)}
-                            className="px-1 py-0.5 border rounded text-xs w-20"
-                            placeholder="Match No"
-                          />
-                        ) : (
-                          match.match_no || '-'
-                        )}</span>
-                      </div>
-                      <div className="flex items-center gap-3 text-xs mt-1">
-                        <span className="text-gray-500">Date: {isEditing ? (
-                          <input type="date" value={editDate} onChange={e => setEditDate(e.target.value)} className="px-2 py-1 border rounded text-xs" />
-                        ) : date}</span>
-                        <span className="text-gray-400">|</span>
-                        <span className="text-gray-500">Time: {isEditing ? (
-                          <input type="time" value={editTime} onChange={e => setEditTime(e.target.value)} className="px-2 py-1 border rounded text-xs" />
-                        ) : time}</span>
-                      </div>
-                      <div className="flex gap-2 mt-2">
-                        {isEditing ? (
-                          <>
-                            <button
-                              onClick={() => saveEditMatch(match)}
-                              className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg text-xs font-semibold text-center hover:bg-green-700 transition"
-                            >
-                              Save
-                            </button>
-                            <button
-                              onClick={cancelEditMatch}
-                              className="flex-1 px-3 py-2 bg-gray-400 text-white rounded-lg text-xs font-semibold text-center hover:bg-gray-500 transition"
-                            >
-                              Cancel
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            onClick={() => startEditMatch(match)}
-                            className="flex-1 px-3 py-2 bg-yellow-500 text-white rounded-lg text-xs font-semibold text-center hover:bg-yellow-600 transition"
-                          >
-                            Edit
-                          </button>
-                        )}
-                      </div>
-                      <div className="flex gap-2 mt-2">
-                        <Link
-                          href={`/admin/matches/${match.id}`}
-                          className="flex-1 px-3 py-2 bg-purple-200 text-purple-800 rounded-lg text-xs font-semibold text-center hover:bg-purple-300 transition"
-                        >
-                          Details
-                        </Link>
-                        {matchType === 'team' && (
-                          <Link
-                            href={`/admin/matches/${match.id}/manage`}
-                            className="flex-1 px-3 py-2 bg-gray-200 text-gray-800 rounded-lg text-xs font-semibold text-center hover:bg-gray-300 transition"
-                          >
-                            Lineup
-                          </Link>
-                        )}
-                        {match.side1_label && (
-                          <button
-                            onClick={() => {
-                              setAssignMatch(match);
-                              setAssignPool(match.pool_id || '');
-                              setAssignSide1(match.team1_id || match.player1_id || '');
-                              setAssignSide2(match.team2_id || match.player2_id || '');
-                              setShowAssignDialog(true);
-                            }}
-                            className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 ml-1"
-                          >
-                            Assign Player/Team
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <MobileMatchCards
+                matches={filteredMobileMatches}
+                players={players}
+                teams={teams}
+                pools={pools}
+                categories={categories}
+                editingMatchId={editingMatchId}
+                editDate={editDate}
+                editTime={editTime}
+                editCourt={editCourt}
+                editMatchNo={editMatchNo}
+                onStartEdit={startEditMatch}
+                onSaveEdit={saveEditMatch}
+                onCancelEdit={cancelEditMatch}
+                onDateChange={setEditDate}
+                onTimeChange={setEditTime}
+                onCourtChange={setEditCourt}
+                onMatchNoChange={setEditMatchNo}
+                onAssignMatch={handleAssignMatch}
+              />
+              
               {/* Desktop: Table */}
-              <div className="hidden sm:block overflow-x-auto">
-                <table className="min-w-full bg-white border border-gray-200 rounded-xl shadow-sm text-sm">
-                  <thead className="bg-gray-50 sticky top-0 z-10 border-b border-gray-200">
-                    <tr>
-                      <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Match</th>
-                      <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Pool</th>
-                      <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Match No</th>
-                      <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Date</th>
-                      <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Time</th>
-                      <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Court</th>
-                      <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Status</th>
-                      <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Score</th>
-                      <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredMatches.map((match, idx) => {
-                      const matchCategory = match.category_id
-                        ? categories.find(c => c.id === match.category_id)
-                        : getCategoryForMatch(match);
-                      const matchType = matchCategory?.type;
-                      const isEditing = editingMatchId === match.id;
-                      // Helper to get participant names
-                      const getParticipantNames = () => {
-                        if (matchType === 'team') {
-                          return {
-                            participant1: getTeamName(match.team1_id || '') || match.side1_label || '-',
-                            participant2: getTeamName(match.team2_id || '') || match.side2_label || '-'
-                          };
-                        } else if (matchType === 'player' || (!match.pool_id && match.player1_id && match.player2_id)) {
-                          return {
-                            participant1: getPlayerName(match.player1_id ?? '') || match.side1_label || '-',
-                            participant2: getPlayerName(match.player2_id ?? '') || match.side2_label || '-'
-                          };
-                        } else if (matchType === 'pair') {
-                          const player1 = players.find(p => p.id === (match as any).player1_id);
-                          const player2 = players.find(p => p.id === (match as any).player2_id);
-                          const player1FirstName = player1 ? player1.name.split(' ')[0] : '';
-                          const player2FirstName = player2 ? player2.name.split(' ')[0] : '';
-                          const player1PartnerFirstName = player1?.partner_name ? player1.partner_name.split(' ')[0] : '';
-                          const player2PartnerFirstName = player2?.partner_name ? player2.partner_name.split(' ')[0] : '';
-                          if (!match.player1_id && match.side1_label) {
-                            // fallback to side1_label/side2_label if both player1_id and player2_id are missing
-                            return {
-                              participant1: match.side1_label || '-',
-                              participant2: match.side2_label || '-',
-                            };
-                          }
-                          return {
-                            participant1: player1PartnerFirstName ? `${player1FirstName} / ${player1PartnerFirstName}` : player1FirstName || match.side1_label || '-',
-                            participant2: player2PartnerFirstName ? `${player2FirstName} / ${player2PartnerFirstName}` : player2FirstName || match.side2_label || '-',
-                          };
-                        }
-                        return { participant1: '-', participant2: '-' };
-                      };
-                      const { participant1, participant2 } = getParticipantNames();
-                      const { date, time } = formatISTDateTime(match.scheduled_date);
-                      const poolName = match.pool_id
-                        ? pools.find(p => p.id === match.pool_id)?.name || '-'
-                        : matchCategory?.code
-                          ? matchCategory.code + (match.stage ? ` - ${match.stage}` : '')
-                          : (match.stage || 'N/A');
-                      return (
-                        <tr
-                          key={match.id}
-                          className={
-                            `${isEditing ? 'bg-yellow-100' : idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} ` +
-                            'hover:bg-blue-50 transition-colors duration-100'
-                          }
-                          style={{ borderRadius: isEditing ? '0.5rem' : undefined }}
-                        >
-                          <td className="px-3 py-2 whitespace-nowrap align-middle">
-                            <div className="text-sm font-medium text-gray-900">
-                              <div className="font-semibold">
-                                {participant1}
-                              </div>
-                              <div className="text-gray-500 text-xs">vs</div>
-                              <div className="font-semibold">
-                                {participant2}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 align-middle">{poolName}</td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 align-middle">
-                            {isEditing ? (
-                              <input
-                                type="text"
-                                value={editMatchNo}
-                                onChange={e => setEditMatchNo(e.target.value)}
-                                className="px-2 py-1 border rounded text-sm w-full"
-                                placeholder="Match No"
-                              />
-                            ) : (
-                              match.match_no || '-'
-                            )}
-                          </td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 align-middle">
-                            {isEditing ? (
-                              <input 
-                                type="date" 
-                                value={editDate} 
-                                onChange={e => setEditDate(e.target.value)} 
-                                className="px-2 py-1 border rounded text-sm w-full"
-                              />
-                            ) : (
-                              date
-                            )}
-                          </td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 align-middle">
-                            {isEditing ? (
-                              <input 
-                                type="time" 
-                                value={editTime} 
-                                onChange={e => setEditTime(e.target.value)} 
-                                className="px-2 py-1 border rounded text-sm w-full"
-                              />
-                            ) : (
-                              time
-                            )}
-                          </td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 align-middle">
-                            {isEditing ? (
-                              <select 
-                                value={editCourt} 
-                                onChange={e => setEditCourt(e.target.value)} 
-                                className="px-2 py-1 border rounded text-sm w-full"
-                              >
-                                <option value="">-</option>
-                                <option value="C">C</option>
-                                <option value="G">G</option>
-                              </select>
-                            ) : (
-                              match.court || '-'
-                            )}
-                          </td>
-                          <td className="px-3 py-2 whitespace-nowrap align-middle">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(match.status || 'scheduled')}`}>{getStatusIcon(match.status || 'scheduled')}</span>
-                          </td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 align-middle">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-blue-600">{match.team1_score ?? '-'}</span>
-                              <span className="text-gray-400">-</span>
-                              <span className="font-bold text-red-600">{match.team2_score ?? '-'}</span>
-                            </div>
-                          </td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm font-medium align-middle">
-                            <div className="flex gap-2">
-                              {isEditing ? (
-                                <>
-                                  <button 
-                                    onClick={() => saveEditMatch(match)} 
-                                    className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
-                                  >
-                                    Save
-                                  </button>
-                                  <button 
-                                    onClick={cancelEditMatch} 
-                                    className="px-2 py-1 bg-gray-400 text-white rounded text-xs hover:bg-gray-500"
-                                  >
-                                    Cancel
-                                  </button>
-                                </>
-                              ) : (
-                                <>
-                                  <button 
-                                    onClick={() => startEditMatch(match)} 
-                                    className="px-2 py-1 bg-yellow-500 text-white rounded text-xs hover:bg-yellow-600"
-                                  >
-                                    Edit
-                                  </button>
-                                  {match.side1_label && (
-                          <button
-                            onClick={() => {
-                              setAssignMatch(match);
-                              setAssignPool(match.pool_id || '');
-                              setAssignSide1(match.team1_id || match.player1_id || '');
-                              setAssignSide2(match.team2_id || match.player2_id || '');
-                              setShowAssignDialog(true);
-                            }}
-                            className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 ml-1"
-                          >
-                            Assign
-                          </button>
-                        )}
-                                  {matchType === 'team' && (
-                                    <a 
-                                      href={`/admin/matches/${match.id}/manage`} 
-                                      className="px-2 py-1 bg-gray-200 text-gray-800 rounded text-xs hover:bg-gray-300 text-center"
-                                      style={{ textDecoration: 'none' }}
-                                    >
-                                      Lineup
-                                    </a>
-                                  )}
-                                  <a 
-                                    href={`/admin/matches/${match.id}`} 
-                                    className="px-2 py-1 bg-purple-200 text-purple-800 rounded text-xs hover:bg-purple-300 text-center"
-                                    style={{ textDecoration: 'none' }}
-                                  >
-                                    Details
-                                  </a>
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <MatchTable
+                matches={filteredMatches}
+                players={players}
+                teams={teams}
+                pools={pools}
+                categories={categories}
+                editingMatchId={editingMatchId}
+                editDate={editDate}
+                editTime={editTime}
+                editCourt={editCourt}
+                editMatchNo={editMatchNo}
+                onStartEdit={startEditMatch}
+                onSaveEdit={saveEditMatch}
+                onCancelEdit={cancelEditMatch}
+                onDateChange={setEditDate}
+                onTimeChange={setEditTime}
+                onCourtChange={setEditCourt}
+                onMatchNoChange={setEditMatchNo}
+                onAssignMatch={handleAssignMatch}
+              />
             </>
           )}
         </div>
       </div>
 
       {/* Create Match Modal */}
-      {showCreateMatch && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Create New Match</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Pool *</label>
-                <select
-                  value={newMatchPool}
-                  onChange={(e) => {
-                    setNewMatchPool(e.target.value);
-                    setNewMatchTeam1(''); // Reset team selections when pool changes
-                    setNewMatchTeam2('');
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                >
-                  <option value="">Select Pool</option>
-                  {pools.map((pool) => (
-                    <option key={pool.id} value={pool.id}>
-                      {pool.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {isTeamCategory ? 'Team 1' : 'Player 1'} *
-                </label>
-                <select
-                  value={newMatchTeam1}
-                  onChange={(e) => setNewMatchTeam1(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                  disabled={!newMatchPool}
-                >
-                  <option value="">Select {isTeamCategory ? 'Team' : 'Player'} 1</option>
-                  {participantsInSelectedModalPool.map((participant) => (
-                    <option key={participant.id} value={participant.id}>
-                      {getParticipantDisplayName(participant)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {isTeamCategory ? 'Team 2' : 'Player 2'} *
-                </label>
-                <select
-                  value={newMatchTeam2}
-                  onChange={(e) => setNewMatchTeam2(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                  disabled={!newMatchPool}
-                >
-                  <option value="">Select {isTeamCategory ? 'Team' : 'Player'} 2</option>
-                  {participantsInSelectedModalPool.map((participant) => (
-                    <option key={participant.id} value={participant.id}>
-                      {getParticipantDisplayName(participant)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                  <input
-                    type="date"
-                    value={newMatchDate}
-                    onChange={(e) => setNewMatchDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
-                  <input
-                    type="time"
-                    value={newMatchTime}
-                    onChange={(e) => setNewMatchTime(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Court</label>
-                <select
-                  value={newMatchCourt}
-                  onChange={(e) => setNewMatchCourt(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                >
-                  <option value="">Select Court</option>
-                  <option value="C">C</option>
-                  <option value="G">G</option>
-                </select>
-              </div>
-            </div>
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={handleCreateMatch}
-                disabled={!newMatchTeam1 || !newMatchTeam2 || !newMatchPool}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Create Match
-              </button>
-              <button
-                onClick={() => setShowCreateMatch(false)}
-                className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-400"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <CreateMatchModal
+        isOpen={showCreateMatch}
+        onClose={() => setShowCreateMatch(false)}
+        onSubmit={handleCreateMatch}
+        pools={pools}
+        participantsInSelectedModalPool={participantsInSelectedModalPool}
+        isTeamCategory={isTeamCategory}
+        newMatchPool={newMatchPool}
+        newMatchTeam1={newMatchTeam1}
+        newMatchTeam2={newMatchTeam2}
+        newMatchDate={newMatchDate}
+        newMatchTime={newMatchTime}
+        newMatchCourt={newMatchCourt}
+        onPoolChange={setNewMatchPool}
+        onTeam1Change={setNewMatchTeam1}
+        onTeam2Change={setNewMatchTeam2}
+        onDateChange={setNewMatchDate}
+        onTimeChange={setNewMatchTime}
+        onCourtChange={setNewMatchCourt}
+        canSubmit={!!(newMatchTeam1 && newMatchTeam2 && newMatchPool)}
+      />
 
-      {/* Generate Matches Modal */}
-      {showGenerateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-lg">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Generate Matches</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                <select value={generateCategory} onChange={e => setGenerateCategory(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                  <option value="">Select Category</option>
-                  {categories.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.label}</option>
-                  ))}
-                </select>
-              </div>
-              {generateCategory && (
-                <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
-                  Will generate matches from all pools in: <strong>{categories.find(c => c.id === generateCategory)?.label}</strong>
-                  <br />
-                  Pools: {getPoolsForCategory(generateCategory).map(p => p.name).join(', ')}
-                </div>
-              )}
-              {generateCategory && (
-                <div className="mt-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Pools</label>
-                  <select
-                    multiple
-                    value={generatePools}
-                    onChange={e => {
-                      const options = Array.from(e.target.selectedOptions, option => option.value);
-                      setGeneratePools(options);
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg h-32"
-                  >
-                    {getPoolsForCategory(generateCategory).map(pool => (
-                      <option key={pool.id} value={pool.id}>{pool.name}</option>
-                    ))}
-                  </select>
-                  <div className="text-xs text-gray-500 mt-1">Hold Ctrl (Windows) or Cmd (Mac) to select multiple pools. Leave empty to select all pools.</div>
-                </div>
-              )}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-                <input type="date" value={generateDate} onChange={e => setGenerateDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
-                <input type="time" value={generateTime} onChange={e => setGenerateTime(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Duration per match (minutes)</label>
-                <input type="number" min={5} value={generateDuration} onChange={e => setGenerateDuration(Number(e.target.value))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-              </div>
-              {generateError && <div className="text-red-600 text-sm">{generateError}</div>}
-              <div className="flex gap-3">
-                <button onClick={handleAnalyzeGenerate} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">Analyze</button>
-                <button onClick={() => setShowGenerateModal(false)} className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-400">Cancel</button>
-              </div>
-            </div>
-            {generatePreview.length > 0 && (
-              <div className="mt-6">
-                <h4 className="text-md font-semibold mb-2">Preview Schedule ({generatePreview.length} matches)</h4>
-                <div className="max-h-64 overflow-y-auto border rounded-lg p-2 bg-gray-50">
-                  {generatePreview.map((m, idx) => (
-                    <div key={idx} className="flex items-center justify-between py-1 border-b last:border-b-0">
-                      <span className="text-sm text-gray-800">
-                        {m.team1_id && m.team2_id && (
-                          <>
-                            {getTeamName(m.team1_id)} vs {getTeamName(m.team2_id)}
-                          </>
-                        )}
-                        {m.player1_id && m.player2_id && (
-                          <>
-                            {getPlayerName(m.player1_id)} vs {getPlayerName(m.player2_id)}
-                          </>
-                        )}
-                      </span>
-                      <span className="text-xs text-gray-600">{formatISTDateTime(m.scheduled_date).date} {formatISTDateTime(m.scheduled_date).time}</span>
-                      <span className="text-xs text-gray-600">Court: {m.court}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex gap-3 mt-4">
-                  <button onClick={handleConfirmGenerate} disabled={generateLoading} className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:opacity-50">Confirm & Save</button>
-                  <button onClick={() => setGeneratePreview([])} className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-400">Edit</button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
+      {/* Score Sheet Modal */}
       {showScoreSheetModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-xs mx-auto flex flex-col items-center">
@@ -1789,7 +545,7 @@ export default function AdminMatchesPage() {
             />
             <div className="flex gap-3 w-full">
               <button
-                onClick={generateScoreSheetPDFForDate}
+                onClick={handleGenerateScoreSheetPDF}
                 className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700"
               >
                 Generate
@@ -1805,449 +561,101 @@ export default function AdminMatchesPage() {
         </div>
       )}
 
+      {/* Generate Matches Modal */}
+      <GenerateMatchesModal
+        isOpen={showGenerateModal}
+        onClose={() => setShowGenerateModal(false)}
+        onAnalyze={handleAnalyzeGenerate}
+        onConfirm={handleConfirmGenerate}
+        onEdit={() => setGeneratePreview([])}
+        categories={categories}
+        pools={pools}
+        generateCategory={generateCategory}
+        generatePools={generatePools}
+        generateDate={generateDate}
+        generateTime={generateTime}
+        generateDuration={generateDuration}
+        generatePreview={generatePreview}
+        generateLoading={generateLoading}
+        generateError={generateError}
+        onCategoryChange={setGenerateCategory}
+        onPoolsChange={setGeneratePools}
+        onDateChange={setGenerateDate}
+        onTimeChange={setGenerateTime}
+        onDurationChange={setGenerateDuration}
+        getTeamName={getTeamName}
+        getPlayerName={getPlayerName}
+        formatISTDateTime={formatISTDateTime}
+      />
+
       {/* Cross-Pool Match Modal */}
-      {showCrossPoolModal && (
-        <Dialog as="div" open={showCrossPoolModal} onClose={() => setShowCrossPoolModal(false)} className="relative z-50">
-          <div className="fixed inset-0 bg-black bg-opacity-40" aria-hidden="true" />
-          <div className="fixed inset-0 overflow-y-auto">
-            <div className="flex items-center justify-center min-h-screen px-4">
-              <Dialog.Panel className="relative bg-white rounded-2xl shadow-xl max-w-md w-full mx-auto p-6 z-10">
-                <Dialog.Title className="text-xl font-bold mb-4 text-gray-800 flex items-center gap-2">
-                  <span>🔀</span> Create Cross-Pool Match
-                </Dialog.Title>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Select Category</label>
-                  <select
-                    value={crossCategory}
-                    onChange={e => {
-                      setCrossCategory(e.target.value);
-                      setSide1Pool(''); setSide2Pool(''); setSide1Player(''); setSide2Player('');
-                      setScheduleDate(''); setCourt(''); setStage('');
-                      setUsePool(true); // reset switch
-                      setManualSide1(''); setManualSide2(''); setManualMatchCode('');
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 text-gray-900 bg-white"
-                  >
-                    <option value="">-- Select Category --</option>
-                    {categories.map((cat: any) => (
-                      <option key={cat.code} value={cat.code}>{cat.label || cat.code}</option>
-                    ))}
-                  </select>
-                  {crossCategory && (
-                    <div className="flex items-center mt-2">
-                      <input
-                        id="use-pool-switch"
-                        type="checkbox"
-                        checked={usePool}
-                        onChange={e => setUsePool(e.target.checked)}
-                        className="mr-2"
-                      />
-                      <label htmlFor="use-pool-switch" className="text-sm text-gray-700">Use Pool</label>
-                    </div>
-                  )}
-                </div>
-                {usePool ? (
-                  <div className="mb-4 flex flex-col gap-4">
-                    {/* Existing pool/team/player selectors */}
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Side 1: Select Pool</label>
-                      <select
-                        value={side1Pool}
-                        onChange={e => { setSide1Pool(e.target.value); setSide1Player(''); }}
-                        className="w-full px-2 py-1 border rounded text-gray-900 bg-white"
-                        disabled={!crossCategory}
-                      >
-                        <option value="">-- Select Pool --</option>
-                        {poolsForCategory.map(pool => (
-                          <option key={pool.id} value={pool.id}>{pool.name}</option>
-                        ))}
-                      </select>
-                      <label className="block text-xs font-medium text-gray-600 mt-2 mb-1">Select Team/Player</label>
-                      <select
-                        value={side1Player}
-                        onChange={e => setSide1Player(e.target.value)}
-                        className="w-full px-2 py-1 border rounded text-gray-900 bg-white"
-                        disabled={!side1Pool}
-                      >
-                        <option value="">-- Select --</option>
-                        {getOptionsForPool(side1Pool).map(opt => (
-                          <option key={opt.id} value={opt.id}>{opt.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Side 2: Select Pool</label>
-                      <select
-                        value={side2Pool}
-                        onChange={e => { setSide2Pool(e.target.value); setSide2Player(''); }}
-                        className="w-full px-2 py-1 border rounded text-gray-900 bg-white"
-                        disabled={!crossCategory}
-                      >
-                        <option value="">-- Select Pool --</option>
-                        {poolsForCategory.map(pool => (
-                          <option key={pool.id} value={pool.id}>{pool.name}</option>
-                        ))}
-                      </select>
-                      <label className="block text-xs font-medium text-gray-600 mt-2 mb-1">Select Team/Player</label>
-                      <select
-                        value={side2Player}
-                        onChange={e => setSide2Player(e.target.value)}
-                        className="w-full px-2 py-1 border rounded text-gray-900 bg-white"
-                        disabled={!side2Pool}
-                      >
-                        <option value="">-- Select --</option>
-                        {getOptionsForPool(side2Pool).map(opt => (
-                          <option key={opt.id} value={opt.id}>{opt.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mb-4 flex flex-col gap-4">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Side 1: Team/Player Name</label>
-                      <input
-                        type="text"
-                        value={manualSide1}
-                        onChange={e => setManualSide1(e.target.value)}
-                        className="w-full px-2 py-1 border rounded text-gray-900 bg-white"
-                        placeholder="e.g. Top Team Group A"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Side 2: Team/Player Name</label>
-                      <input
-                        type="text"
-                        value={manualSide2}
-                        onChange={e => setManualSide2(e.target.value)}
-                        className="w-full px-2 py-1 border rounded text-gray-900 bg-white"
-                        placeholder="e.g. 2nd Top Team Group D"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Match Code</label>
-                      <input
-                        type="text"
-                        value={manualMatchCode}
-                        onChange={e => setManualMatchCode(e.target.value)}
-                        className="w-full px-2 py-1 border rounded text-gray-900 bg-white"
-                        placeholder="e.g. FMXD-R16-M2"
-                      />
-                    </div>
-                  </div>
-                )}
-                <div className="mb-4">
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Schedule Date</label>
-                  <input
-                    type="date"
-                    value={scheduleDate}
-                    onChange={e => setScheduleDate(e.target.value)}
-                    className="w-full px-2 py-1 border rounded"
-                  />
-                </div>
-                <div className="mb-4">
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Court</label>
-                  <select
-                    value={court}
-                    onChange={e => setCourt(e.target.value)}
-                    className="w-full px-2 py-1 border rounded text-gray-900 bg-white"
-                  >
-                    <option value="">-- Select Court --</option>
-                    <option value="C">C</option>
-                    <option value="G">G</option>
-                  </select>
-                </div>
-                <div className="mb-4">
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Stage</label>
-                  <select
-                    value={stage}
-                    onChange={e => setStage(e.target.value)}
-                    className="w-full px-2 py-1 border rounded text-gray-900 bg-white"
-                  >
-                    <option value="">-- Select Stage --</option>
-                    <option value="Round 1">Round 1</option>
-                    <option value="R16">R16</option>
-                    <option value="QF">QF</option>
-                    <option value="SF">SF</option>
-                    <option value="F">F</option>
-                  </select>
-                </div>
-                <div className="flex justify-end gap-2 mt-6">
-                  <button
-                    onClick={() => setShowCrossPoolModal(false)}
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300"
-                    disabled={creating}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={async () => {
-                      setCreating(true);
-                      try {
-                        if (usePool) {
-                          // Existing pool-based logic
-                          const selectedCategoryObj = categories.find(cat => cat.code === crossCategory);
-                          const isTeamCategory = selectedCategoryObj?.type === 'team';
-                          const { error } = await supabase.from('matches').insert([
-                            {
-                              category_id: selectedCategoryObj?.id,
-                              ...(isTeamCategory
-                                ? { team1_id: side1Player, team2_id: side2Player }
-                                : { player1_id: side1Player, player2_id: side2Player }),
-                              scheduled_date: scheduleDate || null,
-                              court: court || null,
-                              stage: stage || null,
-                              status: 'scheduled',
-                            }
-                          ]);
-                          if (error) throw error;
-                        } else {
-                          // Manual entry logic
-                          if (!manualSide1 || !manualSide2 || !manualMatchCode || !crossCategory || !scheduleDate || !court || !stage) {
-                            alert('Please fill all fields');
-                            setCreating(false);
-                            return;
-                          }
-                          const selectedCategoryObj = categories.find(cat => cat.code === crossCategory);
-                          const payload = {
-                            category_id: selectedCategoryObj?.id,
-                            match_no: manualMatchCode,
-                            scheduled_date: scheduleDate || null,
-                            court: court || null,
-                            stage: stage || null,
-                            status: 'scheduled',
-                            side1_label: manualSide1,
-                            side2_label: manualSide2,
-                          };
-                          const { error } = await supabase.from('matches').insert([
-                            payload
-                          ]);
-                          if (error) throw error;
-                        }
-                        setShowCrossPoolModal(false);
-                        setCrossCategory('');
-                        setSide1Pool('');
-                        setSide2Pool('');
-                        setSide1Player('');
-                        setSide2Player('');
-                        setScheduleDate('');
-                        setCourt('');
-                        setStage('');
-                        setManualSide1('');
-                        setManualSide2('');
-                        setManualMatchCode('');
-                        if (typeof refreshData === 'function') refreshData();
-                      } catch (err) {
-                        if (err && typeof err === 'object' && 'message' in err) {
-                          alert('Error creating match: ' + (err as any).message);
-                        } else {
-                          alert('Error creating match.');
-                        }
-                      } finally {
-                        setCreating(false);
-                      }
-                    }}
-                    disabled={creating || !crossCategory || !scheduleDate || !court || !stage || (usePool ? (!side1Pool || !side2Pool || !side1Player || !side2Player) : (!manualSide1 || !manualSide2 || !manualMatchCode))}
-                    className={`px-4 py-2 bg-blue-600 text-white rounded-lg font-medium ${creating || !crossCategory || !scheduleDate || !court || !stage || (usePool ? (!side1Pool || !side2Pool || !side1Player || !side2Player) : (!manualSide1 || !manualSide2 || !manualMatchCode)) ? 'opacity-60 cursor-not-allowed' : ''}`}
-                  >
-                    {creating ? 'Creating...' : 'Create Match'}
-                  </button>
-                </div>
-              </Dialog.Panel>
-            </div>
-          </div>
-        </Dialog>
-      )}
+      <CrossPoolMatchModal
+        isOpen={showCrossPoolModal}
+        onClose={() => setShowCrossPoolModal(false)}
+        onSubmit={handleCreateCrossPoolMatch}
+        categories={categories}
+        pools={pools}
+        teams={teams}
+        players={players}
+        poolPlayers={poolPlayers}
+        crossCategory={crossCategory}
+        side1Pool={side1Pool}
+        side2Pool={side2Pool}
+        side1Player={side1Player}
+        side2Player={side2Player}
+        creating={creating}
+        scheduleDate={scheduleDate}
+        court={court}
+        stage={stage}
+        usePool={usePool}
+        manualSide1={manualSide1}
+        manualSide2={manualSide2}
+        manualMatchCode={manualMatchCode}
+        poolsForCategory={poolsForCategory}
+        onCategoryChange={setCrossCategory}
+        onSide1PoolChange={setSide1Pool}
+        onSide2PoolChange={setSide2Pool}
+        onSide1PlayerChange={setSide1Player}
+        onSide2PlayerChange={setSide2Player}
+        onDateChange={setScheduleDate}
+        onCourtChange={setCourt}
+        onStageChange={setStage}
+        onUsePoolChange={setUsePool}
+        onManualSide1Change={setManualSide1}
+        onManualSide2Change={setManualSide2}
+        onManualMatchCodeChange={setManualMatchCode}
+        getOptionsForPoolHelper={getOptionsForPoolHelper}
+      />
 
-      {showAssignDialog && assignMatch && (
-        <Dialog open={showAssignDialog} onClose={() => setShowAssignDialog(false)} className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="fixed inset-0 bg-black bg-opacity-40" aria-hidden="true" />
-          <Dialog.Panel className="relative bg-white rounded-2xl shadow-xl max-w-md w-full mx-auto p-6 z-10">
-            <Dialog.Title className="text-xl font-bold mb-4 text-gray-800">Assign Player/Team</Dialog.Title>
-            {(() => {
-              // Determine category and options
-              const matchCategory = assignMatch.category_id
-                ? categories.find(c => c.id === assignMatch.category_id)
-                : getCategoryForMatch(assignMatch);
-              const isTeamCategory = matchCategory?.type === 'team';
-              const isPlayerCategory = matchCategory?.type === 'player' || matchCategory?.type === 'pair';
-
-              // Pool options (for this category)
-              const poolOptions = pools.filter(p => matchCategory && p.category_id === matchCategory.id);
-
-              // Team options for each side
-              const teamOptions1: Team[] = isTeamCategory ? teams.filter(t => assignPool1 ? t.pool_id === assignPool1 : true) : [];
-              const teamOptions2: Team[] = isTeamCategory ? teams.filter(t => assignPool2 ? t.pool_id === assignPool2 : true) : [];
-
-              // Player options for each side
-              const playerOptions1: Player[] = isPlayerCategory ? players.filter(p => {
-                if (assignPool1) {
-                  return poolPlayers.some(pp => pp.pool_id === assignPool1 && pp.player_id === p.id);
-                } else if (matchCategory?.code) {
-                  return p.category === matchCategory.code;
-                }
-                return true;
-              }) : [];
-              const playerOptions2: Player[] = isPlayerCategory ? players.filter(p => {
-                if (assignPool2) {
-                  return poolPlayers.some(pp => pp.pool_id === assignPool2 && pp.player_id === p.id);
-                } else if (matchCategory?.code) {
-                  return p.category === matchCategory.code;
-                }
-                return true;
-              }) : [];
-
-
-
-              return (
-                <form
-                  onSubmit={async e => {
-                    e.preventDefault();
-                    setAssignLoading(true);
-                    try {
-                      const update: any = {};
-                      if (isTeamCategory) {
-                        update.team1_id = assignSide1 || null;
-                        update.team2_id = assignSide2 || null;
-                        update.side1_label = null;
-                        update.side2_label = null;
-                      } else if (isPlayerCategory) {
-                        update.player1_id = assignSide1 || null;
-                        update.player2_id = assignSide2 || null;
-                        update.side1_label = null;
-                        update.side2_label = null;
-                      }
-                      // Don't update pool_id - keep the existing pool assignment
-                      const { error } = await supabase
-                        .from('matches')
-                        .update(update)
-                        .eq('id', assignMatch.id);
-                      if (error) throw error;
-                      setShowAssignDialog(false);
-                      setAssignMatch(null);
-                      setAssignPool1('');
-                      setAssignPool2('');
-                      setAssignSide1('');
-                      setAssignSide2('');
-                      if (typeof refreshData === 'function') refreshData();
-                      showSuccess('Assignment updated!');
-                    } catch (err) {
-                      showError('Error updating assignment', err as string);
-                    } finally {
-                      setAssignLoading(false);
-                    }
-                  }}
-                  className="space-y-4"
-                >
-                  {/* Side 1: Pool and Player/Team */}
-                  {poolOptions.length > 1 && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Pool (Side 1)</label>
-                      <select
-                        value={assignPool1}
-                        onChange={e => {
-                          setAssignPool1(e.target.value);
-                          setAssignSide1('');
-                        }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                      >
-                        <option value="">Select Pool</option>
-                        {poolOptions.map(pool => (
-                          <option key={pool.id} value={pool.id}>{pool.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">{isTeamCategory ? 'Team 1' : 'Player 1'}</label>
-                    <select
-                      value={assignSide1}
-                      onChange={e => setAssignSide1(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                    >
-                      <option value="">Select {isTeamCategory ? 'Team' : 'Player'} 1</option>
-                      {isTeamCategory
-                        ? teamOptions1.map((opt: Team) => (
-                            <option key={opt.id} value={opt.id}>
-                              {opt.brand_name || opt.name}
-                            </option>
-                          ))
-                        : playerOptions1.map((opt: Player) => (
-                            <option key={opt.id} value={opt.id}>
-                              {opt.name + (opt.partner_name ? ` / ${opt.partner_name}` : '')}
-                            </option>
-                          ))}
-                    </select>
-                  </div>
-                  {/* Side 2: Pool and Player/Team */}
-                  {poolOptions.length > 1 && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Pool (Side 2)</label>
-                      <select
-                        value={assignPool2}
-                        onChange={e => {
-                          setAssignPool2(e.target.value);
-                          setAssignSide2('');
-                        }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                      >
-                        <option value="">Select Pool</option>
-                        {poolOptions.map(pool => (
-                          <option key={pool.id} value={pool.id}>{pool.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">{isTeamCategory ? 'Team 2' : 'Player 2'}</label>
-                    <select
-                      value={assignSide2}
-                      onChange={e => setAssignSide2(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                    >
-                      <option value="">Select {isTeamCategory ? 'Team' : 'Player'} 2</option>
-                      {isTeamCategory
-                        ? teamOptions2.map((opt: Team) => (
-                            <option key={opt.id} value={opt.id}>
-                              {opt.brand_name || opt.name}
-                            </option>
-                          ))
-                        : playerOptions2.map((opt: Player) => (
-                            <option key={opt.id} value={opt.id}>
-                              {opt.name + (opt.partner_name ? ` / ${opt.partner_name}` : '')}
-                            </option>
-                          ))}
-                    </select>
-                  </div>
-                  <div className="flex gap-2 mt-4">
-                    <button
-                      type="submit"
-                      disabled={assignLoading || !assignSide1 || !assignSide2}
-                      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50"
-                    >
-                      {assignLoading ? 'Saving...' : 'Save'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowAssignDialog(false);
-                        setAssignMatch(null);
-                        setAssignPool1('');
-                        setAssignPool2('');
-                        setAssignSide1('');
-                        setAssignSide2('');
-                      }}
-                      className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-400"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              );
-            })()}
-          </Dialog.Panel>
-        </Dialog>
-      )}
+      {/* Assign Dialog Modal */}
+      <AssignDialogModal
+        isOpen={showAssignDialog}
+        onClose={() => {
+          setShowAssignDialog(false);
+          setAssignMatch(null);
+          setAssignPool1('');
+          setAssignPool2('');
+          setAssignSide1('');
+          setAssignSide2('');
+        }}
+        onSubmit={handleAssignSubmit}
+        assignMatch={assignMatch}
+        assignPool1={assignPool1}
+        assignPool2={assignPool2}
+        assignSide1={assignSide1}
+        assignSide2={assignSide2}
+        assignLoading={assignLoading}
+        categories={categories}
+        pools={pools}
+        teams={teams}
+        players={players}
+        poolPlayers={poolPlayers}
+        onPool1Change={setAssignPool1}
+        onPool2Change={setAssignPool2}
+        onSide1Change={setAssignSide1}
+        onSide2Change={setAssignSide2}
+        getCategoryForMatchHelper={(match) => getCategoryForMatch(match, pools, categories)}
+      />
     </div>
   );
 } 
