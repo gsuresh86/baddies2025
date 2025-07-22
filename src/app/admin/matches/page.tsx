@@ -387,330 +387,327 @@ export default function AdminMatchesPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header Section */}
-      <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-              Match Management
-            </h1>
-            <p className="text-gray-600 text-lg">
-              Create and manage tournament matches, update scores, and track results
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center shadow-sm">
-              <span className="text-gray-700 text-xl">🏸</span>
-            </div>
+    <>
+      {/* Topbar */}
+      <div className="w-full bg-white border-b border-gray-200 shadow-sm px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Match Management</h1>
+          <p className="text-gray-600 text-base sm:text-lg">Create and manage tournament matches, update scores, and track results</p>
+        </div>
+        <div className="hidden sm:flex items-center gap-2">
+          <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center shadow-sm">
+            <span className="text-gray-700 text-xl">🏸</span>
           </div>
         </div>
       </div>
+      <div className="space-y-6">
+        {/* Stats Cards */}
+        <StatsCards matches={matches} />
 
-      {/* Stats Cards */}
-      <StatsCards matches={matches} />
+        {/* Filters and Actions */}
+        <MatchFilters
+          categories={categories}
+          pools={pools}
+          activeCategoryIds={activeCategoryIds}
+          selectedPool={selectedPool}
+          statusFilter={statusFilter}
+          dateFilter={dateFilter}
+          stageFilter={stage}
+          onCategoryChange={setActiveCategoryIds}
+          onPoolChange={setSelectedPool}
+          onStatusChange={setStatusFilter}
+          onDateChange={setDateFilter}
+          onClearDate={() => setDateFilter('')}
+          onCreateMatch={() => setShowCreateMatch(true)}
+          onGenerateMatches={() => setShowGenerateModal(true)}
+          onExportExcel={handleExportExcel}
+          onGenerateScoreSheets={handleGenerateScoreSheets}
+          onGenerateMensTeamSheets={handleGenerateMensTeamSheets}
+          onCreateCrossPoolMatch={() => setShowCrossPoolModal(true)}
+          onStageChange={setStage}
+        />
 
-      {/* Filters and Actions */}
-      <MatchFilters
-        categories={categories}
-        pools={pools}
-        activeCategoryIds={activeCategoryIds}
-        selectedPool={selectedPool}
-        statusFilter={statusFilter}
-        dateFilter={dateFilter}
-        onCategoryChange={setActiveCategoryIds}
-        onPoolChange={setSelectedPool}
-        onStatusChange={setStatusFilter}
-        onDateChange={setDateFilter}
-        onClearDate={() => setDateFilter('')}
-        onCreateMatch={() => setShowCreateMatch(true)}
-        onGenerateMatches={() => setShowGenerateModal(true)}
-        onExportExcel={handleExportExcel}
-        onGenerateScoreSheets={handleGenerateScoreSheets}
-        onGenerateMensTeamSheets={handleGenerateMensTeamSheets}
-        onCreateCrossPoolMatch={() => setShowCrossPoolModal(true)}
-      />
-
-      {/* Matches List */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="px-6 py-5 border-b border-gray-200 bg-gray-50">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Tournament Matches</h2>
-              <p className="text-gray-600 mt-1">
-                {selectedPool === 'all' 
-                  ? 'All matches' 
-                  : `Matches in ${pools.find(p => p.id === selectedPool)?.name || 'Unknown Pool'}`
-                }
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center">
-                <span className="text-white text-sm font-bold">
-                  {filteredMatches.length}
-                </span>
+        {/* Matches List */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          <div className="px-6 py-5 border-b border-gray-200 bg-gray-50">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Tournament Matches</h2>
+                <p className="text-gray-600 mt-1">
+                  {selectedPool === 'all' 
+                    ? 'All matches' 
+                    : `Matches in ${pools.find(p => p.id === selectedPool)?.name || 'Unknown Pool'}`
+                  }
+                </p>
               </div>
-              <span className="text-sm text-gray-600 font-medium">matches</span>
-            </div>
-          </div>
-        </div>
-        
-        <div className="p-4 sm:p-6">
-          {/* Mobile search box */}
-          <div className="mb-6 sm:hidden">
-            <div className="relative">
-              <input
-                type="text"
-                value={mobileSearch}
-                onChange={e => setMobileSearch(e.target.value)}
-                placeholder="Search by player name..."
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent text-gray-900 bg-white shadow-sm"
-              />
-              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center">
+                  <span className="text-white text-sm font-bold">
+                    {filteredMatches.length}
+                  </span>
+                </div>
+                <span className="text-sm text-gray-600 font-medium">matches</span>
               </div>
             </div>
           </div>
           
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="inline-flex items-center px-4 py-2 font-semibold leading-6 text-gray-600 shadow rounded-md">
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Loading matches...
+          <div className="p-4 sm:p-6">
+            {/* Mobile search box */}
+            <div className="mb-6 sm:hidden">
+              <div className="relative">
+                <input
+                  type="text"
+                  value={mobileSearch}
+                  onChange={e => setMobileSearch(e.target.value)}
+                  placeholder="Search by player name..."
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent text-gray-900 bg-white shadow-sm"
+                />
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
               </div>
             </div>
-          ) : filteredMatches.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="w-24 h-24 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
-                <span className="text-4xl">🏸</span>
+            
+            {loading ? (
+              <div className="text-center py-12">
+                <div className="inline-flex items-center px-4 py-2 font-semibold leading-6 text-gray-600 shadow rounded-md">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Loading matches...
+                </div>
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No matches found</h3>
-              <p className="text-gray-600 max-w-md mx-auto">
-                {selectedPool === 'all' 
-                  ? 'Create your first match to get started' 
-                  : 'Generate matches for this pool or create individual matches'
-                }
-              </p>
-              <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
-                <button
-                  onClick={() => setShowCreateMatch(true)}
-                  className="px-6 py-3 bg-gray-900 text-white font-semibold rounded-lg hover:bg-gray-800 transition-all duration-200 shadow-sm hover:shadow-md"
-                >
-                  Create Match
-                </button>
-                <button
-                  onClick={() => setShowGenerateModal(true)}
-                  className="px-6 py-3 bg-gray-700 text-white font-semibold rounded-lg hover:bg-gray-600 transition-all duration-200 shadow-sm hover:shadow-md"
-                >
-                  Generate Matches
-                </button>
+            ) : filteredMatches.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-24 h-24 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
+                  <span className="text-4xl">🏸</span>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">No matches found</h3>
+                <p className="text-gray-600 max-w-md mx-auto">
+                  {selectedPool === 'all' 
+                    ? 'Create your first match to get started' 
+                    : 'Generate matches for this pool or create individual matches'
+                  }
+                </p>
+                <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+                  <button
+                    onClick={() => setShowCreateMatch(true)}
+                    className="px-6 py-3 bg-gray-900 text-white font-semibold rounded-lg hover:bg-gray-800 transition-all duration-200 shadow-sm hover:shadow-md"
+                  >
+                    Create Match
+                  </button>
+                  <button
+                    onClick={() => setShowGenerateModal(true)}
+                    className="px-6 py-3 bg-gray-700 text-white font-semibold rounded-lg hover:bg-gray-600 transition-all duration-200 shadow-sm hover:shadow-md"
+                  >
+                    Generate Matches
+                  </button>
+                </div>
               </div>
-            </div>
-          ) : (
-            <>
-              {/* Mobile: Cards */}
-              <MobileMatchCards
-                matches={filteredMobileMatches}
-                players={players}
-                teams={teams}
-                pools={pools}
-                categories={categories}
-                editingMatchId={editingMatchId}
-                editDate={editDate}
-                editTime={editTime}
-                editCourt={editCourt}
-                editMatchNo={editMatchNo}
-                onStartEdit={startEditMatch}
-                onSaveEdit={saveEditMatch}
-                onCancelEdit={cancelEditMatch}
-                onDateChange={setEditDate}
-                onTimeChange={setEditTime}
-                onCourtChange={setEditCourt}
-                onMatchNoChange={setEditMatchNo}
-                onAssignMatch={handleAssignMatch}
-              />
-              
-              {/* Desktop: Table */}
-              <MatchTable
-                matches={filteredMatches}
-                players={players}
-                teams={teams}
-                pools={pools}
-                categories={categories}
-                editingMatchId={editingMatchId}
-                editDate={editDate}
-                editTime={editTime}
-                editCourt={editCourt}
-                editMatchNo={editMatchNo}
-                onStartEdit={startEditMatch}
-                onSaveEdit={saveEditMatch}
-                onCancelEdit={cancelEditMatch}
-                onDateChange={setEditDate}
-                onTimeChange={setEditTime}
-                onCourtChange={setEditCourt}
-                onMatchNoChange={setEditMatchNo}
-                onAssignMatch={handleAssignMatch}
-              />
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Create Match Modal */}
-      <CreateMatchModal
-        isOpen={showCreateMatch}
-        onClose={() => setShowCreateMatch(false)}
-        onSubmit={handleCreateMatch}
-        pools={pools}
-        participantsInSelectedModalPool={participantsInSelectedModalPool}
-        isTeamCategory={isTeamCategory}
-        newMatchPool={newMatchPool}
-        newMatchTeam1={newMatchTeam1}
-        newMatchTeam2={newMatchTeam2}
-        newMatchDate={newMatchDate}
-        newMatchTime={newMatchTime}
-        newMatchCourt={newMatchCourt}
-        onPoolChange={setNewMatchPool}
-        onTeam1Change={setNewMatchTeam1}
-        onTeam2Change={setNewMatchTeam2}
-        onDateChange={setNewMatchDate}
-        onTimeChange={setNewMatchTime}
-        onCourtChange={setNewMatchCourt}
-        canSubmit={!!(newMatchTeam1 && newMatchTeam2 && newMatchPool)}
-      />
-
-      {/* Score Sheet Modal */}
-      {showScoreSheetModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-sm mx-auto shadow-lg border border-gray-200">
-            <div className="text-center mb-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Generate Score Sheet</h3>
-              <p className="text-gray-600">Select a date to generate score sheets for all matches</p>
-            </div>
-            <input
-              type="date"
-              value={scoreSheetDate}
-              onChange={e => setScoreSheetDate(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent text-gray-900 bg-white mb-6"
-            />
-            <div className="flex gap-3">
-              <button
-                onClick={handleGenerateScoreSheetPDF}
-                className="flex-1 px-4 py-3 bg-gray-900 text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-200 shadow-sm hover:shadow-md"
-              >
-                Generate
-              </button>
-              <button
-                onClick={() => setShowScoreSheetModal(false)}
-                className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-all duration-200"
-              >
-                Cancel
-              </button>
-            </div>
+            ) : (
+              <>
+                {/* Mobile: Cards */}
+                <MobileMatchCards
+                  matches={filteredMobileMatches}
+                  players={players}
+                  teams={teams}
+                  pools={pools}
+                  categories={categories}
+                  editingMatchId={editingMatchId}
+                  editDate={editDate}
+                  editTime={editTime}
+                  editCourt={editCourt}
+                  editMatchNo={editMatchNo}
+                  onStartEdit={startEditMatch}
+                  onSaveEdit={saveEditMatch}
+                  onCancelEdit={cancelEditMatch}
+                  onDateChange={setEditDate}
+                  onTimeChange={setEditTime}
+                  onCourtChange={setEditCourt}
+                  onMatchNoChange={setEditMatchNo}
+                  onAssignMatch={handleAssignMatch}
+                />
+                
+                {/* Desktop: Table */}
+                <MatchTable
+                  matches={filteredMatches}
+                  players={players}
+                  teams={teams}
+                  pools={pools}
+                  categories={categories}
+                  editingMatchId={editingMatchId}
+                  editDate={editDate}
+                  editTime={editTime}
+                  editCourt={editCourt}
+                  editMatchNo={editMatchNo}
+                  onStartEdit={startEditMatch}
+                  onSaveEdit={saveEditMatch}
+                  onCancelEdit={cancelEditMatch}
+                  onDateChange={setEditDate}
+                  onTimeChange={setEditTime}
+                  onCourtChange={setEditCourt}
+                  onMatchNoChange={setEditMatchNo}
+                  onAssignMatch={handleAssignMatch}
+                />
+              </>
+            )}
           </div>
         </div>
-      )}
 
-      {/* Generate Matches Modal */}
-      <GenerateMatchesModal
-        isOpen={showGenerateModal}
-        onClose={() => setShowGenerateModal(false)}
-        onAnalyze={handleAnalyzeGenerate}
-        onConfirm={handleConfirmGenerate}
-        onEdit={() => setGeneratePreview([])}
-        categories={categories}
-        pools={pools}
-        generateCategory={generateCategory}
-        generatePools={generatePools}
-        generateDate={generateDate}
-        generateTime={generateTime}
-        generateDuration={generateDuration}
-        generatePreview={generatePreview}
-        generateLoading={generateLoading}
-        generateError={generateError}
-        onCategoryChange={setGenerateCategory}
-        onPoolsChange={setGeneratePools}
-        onDateChange={setGenerateDate}
-        onTimeChange={setGenerateTime}
-        onDurationChange={setGenerateDuration}
-        getTeamName={getTeamName}
-        getPlayerName={getPlayerName}
-        formatISTDateTime={formatISTDateTime}
-      />
+        {/* Create Match Modal */}
+        <CreateMatchModal
+          isOpen={showCreateMatch}
+          onClose={() => setShowCreateMatch(false)}
+          onSubmit={handleCreateMatch}
+          pools={pools}
+          participantsInSelectedModalPool={participantsInSelectedModalPool}
+          isTeamCategory={isTeamCategory}
+          newMatchPool={newMatchPool}
+          newMatchTeam1={newMatchTeam1}
+          newMatchTeam2={newMatchTeam2}
+          newMatchDate={newMatchDate}
+          newMatchTime={newMatchTime}
+          newMatchCourt={newMatchCourt}
+          onPoolChange={setNewMatchPool}
+          onTeam1Change={setNewMatchTeam1}
+          onTeam2Change={setNewMatchTeam2}
+          onDateChange={setNewMatchDate}
+          onTimeChange={setNewMatchTime}
+          onCourtChange={setNewMatchCourt}
+          canSubmit={!!(newMatchTeam1 && newMatchTeam2 && newMatchPool)}
+        />
 
-      {/* Cross-Pool Match Modal */}
-      <CrossPoolMatchModal
-        isOpen={showCrossPoolModal}
-        onClose={() => setShowCrossPoolModal(false)}
-        onSubmit={handleCreateCrossPoolMatch}
-        categories={categories}
-        pools={pools}
-        teams={teams}
-        players={players}
-        poolPlayers={poolPlayers}
-        crossCategory={crossCategory}
-        side1Pool={side1Pool}
-        side2Pool={side2Pool}
-        side1Player={side1Player}
-        side2Player={side2Player}
-        creating={creating}
-        scheduleDate={scheduleDate}
-        court={court}
-        stage={stage}
-        usePool={usePool}
-        manualSide1={manualSide1}
-        manualSide2={manualSide2}
-        manualMatchCode={manualMatchCode}
-        poolsForCategory={poolsForCategory}
-        onCategoryChange={setCrossCategory}
-        onSide1PoolChange={setSide1Pool}
-        onSide2PoolChange={setSide2Pool}
-        onSide1PlayerChange={setSide1Player}
-        onSide2PlayerChange={setSide2Player}
-        onDateChange={setScheduleDate}
-        onCourtChange={setCourt}
-        onStageChange={setStage}
-        onUsePoolChange={setUsePool}
-        onManualSide1Change={setManualSide1}
-        onManualSide2Change={setManualSide2}
-        onManualMatchCodeChange={setManualMatchCode}
-        getOptionsForPoolHelper={getOptionsForPoolHelper}
-      />
+        {/* Score Sheet Modal */}
+        {showScoreSheetModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg p-6 w-full max-w-sm mx-auto shadow-lg border border-gray-200">
+              <div className="text-center mb-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Generate Score Sheet</h3>
+                <p className="text-gray-600">Select a date to generate score sheets for all matches</p>
+              </div>
+              <input
+                type="date"
+                value={scoreSheetDate}
+                onChange={e => setScoreSheetDate(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent text-gray-900 bg-white mb-6"
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={handleGenerateScoreSheetPDF}
+                  className="flex-1 px-4 py-3 bg-gray-900 text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-200 shadow-sm hover:shadow-md"
+                >
+                  Generate
+                </button>
+                <button
+                  onClick={() => setShowScoreSheetModal(false)}
+                  className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-all duration-200"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
-      {/* Assign Dialog Modal */}
-      <AssignDialogModal
-        isOpen={showAssignDialog}
-        onClose={() => {
-          setShowAssignDialog(false);
-          setAssignMatch(null);
-          setAssignPool1('');
-          setAssignPool2('');
-          setAssignSide1('');
-          setAssignSide2('');
-        }}
-        onSubmit={handleAssignSubmit}
-        assignMatch={assignMatch}
-        assignPool1={assignPool1}
-        assignPool2={assignPool2}
-        assignSide1={assignSide1}
-        assignSide2={assignSide2}
-        assignLoading={assignLoading}
-        categories={categories}
-        pools={pools}
-        teams={teams}
-        players={players}
-        poolPlayers={poolPlayers}
-        onPool1Change={setAssignPool1}
-        onPool2Change={setAssignPool2}
-        onSide1Change={setAssignSide1}
-        onSide2Change={setAssignSide2}
-        getCategoryForMatchHelper={(match) => getCategoryForMatch(match, pools, categories)}
-      />
-    </div>
+        {/* Generate Matches Modal */}
+        <GenerateMatchesModal
+          isOpen={showGenerateModal}
+          onClose={() => setShowGenerateModal(false)}
+          onAnalyze={handleAnalyzeGenerate}
+          onConfirm={handleConfirmGenerate}
+          onEdit={() => setGeneratePreview([])}
+          categories={categories}
+          pools={pools}
+          generateCategory={generateCategory}
+          generatePools={generatePools}
+          generateDate={generateDate}
+          generateTime={generateTime}
+          generateDuration={generateDuration}
+          generatePreview={generatePreview}
+          generateLoading={generateLoading}
+          generateError={generateError}
+          onCategoryChange={setGenerateCategory}
+          onPoolsChange={setGeneratePools}
+          onDateChange={setGenerateDate}
+          onTimeChange={setGenerateTime}
+          onDurationChange={setGenerateDuration}
+          getTeamName={getTeamName}
+          getPlayerName={getPlayerName}
+          formatISTDateTime={formatISTDateTime}
+        />
+
+        {/* Cross-Pool Match Modal */}
+        <CrossPoolMatchModal
+          isOpen={showCrossPoolModal}
+          onClose={() => setShowCrossPoolModal(false)}
+          onSubmit={handleCreateCrossPoolMatch}
+          categories={categories}
+          pools={pools}
+          teams={teams}
+          players={players}
+          poolPlayers={poolPlayers}
+          crossCategory={crossCategory}
+          side1Pool={side1Pool}
+          side2Pool={side2Pool}
+          side1Player={side1Player}
+          side2Player={side2Player}
+          creating={creating}
+          scheduleDate={scheduleDate}
+          court={court}
+          stage={stage}
+          usePool={usePool}
+          manualSide1={manualSide1}
+          manualSide2={manualSide2}
+          manualMatchCode={manualMatchCode}
+          poolsForCategory={poolsForCategory}
+          onCategoryChange={setCrossCategory}
+          onSide1PoolChange={setSide1Pool}
+          onSide2PoolChange={setSide2Pool}
+          onSide1PlayerChange={setSide1Player}
+          onSide2PlayerChange={setSide2Player}
+          onDateChange={setScheduleDate}
+          onCourtChange={setCourt}
+          onStageChange={setStage}
+          onUsePoolChange={setUsePool}
+          onManualSide1Change={setManualSide1}
+          onManualSide2Change={setManualSide2}
+          onManualMatchCodeChange={setManualMatchCode}
+          getOptionsForPoolHelper={getOptionsForPoolHelper}
+        />
+
+        {/* Assign Dialog Modal */}
+        <AssignDialogModal
+          isOpen={showAssignDialog}
+          onClose={() => {
+            setShowAssignDialog(false);
+            setAssignMatch(null);
+            setAssignPool1('');
+            setAssignPool2('');
+            setAssignSide1('');
+            setAssignSide2('');
+          }}
+          onSubmit={handleAssignSubmit}
+          assignMatch={assignMatch}
+          assignPool1={assignPool1}
+          assignPool2={assignPool2}
+          assignSide1={assignSide1}
+          assignSide2={assignSide2}
+          assignLoading={assignLoading}
+          categories={categories}
+          pools={pools}
+          teams={teams}
+          players={players}
+          poolPlayers={poolPlayers}
+          onPool1Change={setAssignPool1}
+          onPool2Change={setAssignPool2}
+          onSide1Change={setAssignSide1}
+          onSide2Change={setAssignSide2}
+          getCategoryForMatchHelper={(match) => getCategoryForMatch(match, pools, categories)}
+        />
+      </div>
+    </>
   );
 } 

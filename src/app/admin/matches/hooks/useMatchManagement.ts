@@ -147,20 +147,20 @@ export const useMatchManagement = () => {
         return matchDateStr === dateFilter;
       });
     }
-    
-    if (activeCategoryIds.includes('all')) {
-      ms = ms.sort((a, b) => {
-        if (!a.scheduled_date && !b.scheduled_date) return 0;
-        if (!a.scheduled_date) return 1;
-        if (!b.scheduled_date) return -1;
-        const dateA = new Date(a.scheduled_date);
-        const dateB = new Date(b.scheduled_date);
-        return dateA.getTime() - dateB.getTime();
-      });
+    if (stage) {
+      ms = ms.filter(match => match.stage === stage);
     }
+    ms = ms.sort((a, b) => {
+      if (!a.scheduled_date && !b.scheduled_date) return 0;
+      if (!a.scheduled_date) return 1;
+      if (!b.scheduled_date) return -1;
+      const dateA = new Date(a.scheduled_date);
+      const dateB = new Date(b.scheduled_date);
+      return dateA.getTime() - dateB.getTime();
+    });
     
     return ms;
-  }, [matches, selectedPool, activeCategoryIds, statusFilter, dateFilter, pools, categories]);
+  }, [matches, selectedPool, activeCategoryIds, statusFilter, dateFilter, stage, pools, categories]);
   
   const filteredMobileMatches = useMemo(() => {
     if (!mobileSearch.trim()) return filteredMatches;

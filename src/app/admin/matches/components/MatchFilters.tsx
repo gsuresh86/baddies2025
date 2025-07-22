@@ -8,6 +8,7 @@ interface MatchFiltersProps {
   selectedPool: string;
   statusFilter: string;
   dateFilter: string;
+  stageFilter: string;
   onCategoryChange: (categoryIds: string[]) => void;
   onPoolChange: (poolId: string) => void;
   onStatusChange: (status: string) => void;
@@ -19,6 +20,7 @@ interface MatchFiltersProps {
   onGenerateScoreSheets: () => void;
   onGenerateMensTeamSheets: () => void;
   onCreateCrossPoolMatch: () => void;
+  onStageChange: (stage: string) => void;
 }
 
 export const MatchFilters: React.FC<MatchFiltersProps> = ({
@@ -28,6 +30,7 @@ export const MatchFilters: React.FC<MatchFiltersProps> = ({
   selectedPool,
   statusFilter,
   dateFilter,
+  stageFilter,
   onCategoryChange,
   onPoolChange,
   onStatusChange,
@@ -38,7 +41,8 @@ export const MatchFilters: React.FC<MatchFiltersProps> = ({
   onExportExcel,
   onGenerateScoreSheets,
   onGenerateMensTeamSheets,
-  onCreateCrossPoolMatch
+  onCreateCrossPoolMatch,
+  onStageChange
 }) => {
   const statusOptions = [
     { value: '', label: 'All Status', icon: '🏸' },
@@ -46,6 +50,14 @@ export const MatchFilters: React.FC<MatchFiltersProps> = ({
     { value: 'in_progress', label: 'In Progress', icon: '🔄' },
     { value: 'completed', label: 'Completed', icon: '✅' },
     { value: 'cancelled', label: 'Cancelled', icon: '❌' }
+  ];
+  const stageOptions = [
+    { value: '', label: 'All Stages' },
+    { value: 'Round 1', label: 'Round 1' },
+    { value: 'R16', label: 'R16' },
+    { value: 'QF', label: 'QF' },
+    { value: 'SF', label: 'SF' },
+    { value: 'F', label: 'F' }
   ];
 
   const actionButtons = [
@@ -107,14 +119,19 @@ export const MatchFilters: React.FC<MatchFiltersProps> = ({
             <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
             <select
               multiple
-              value={activeCategoryIds}
+              value={activeCategoryIds.length === categories.length ? ['all', ...categories.map(c => c.id)] : activeCategoryIds}
               onChange={(e) => {
                 const options = Array.from(e.target.selectedOptions, option => option.value);
-                onCategoryChange(options);
+                if (options.includes('all')) {
+                  onCategoryChange(categories.map(c => c.id));
+                } else {
+                  onCategoryChange(options);
+                }
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent text-gray-900 bg-white shadow-sm"
               size={4}
             >
+              <option value="all">All</option>
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.label || category.code}
@@ -155,6 +172,19 @@ export const MatchFilters: React.FC<MatchFiltersProps> = ({
                 <option key={option.value} value={option.value}>
                   {option.icon} {option.label}
                 </option>
+              ))}
+            </select>
+          </div>
+          {/* Stage Filter */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Stage</label>
+            <select
+              value={stageFilter}
+              onChange={(e) => onStageChange(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent text-gray-900 bg-white shadow-sm"
+            >
+              {stageOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
               ))}
             </select>
           </div>
