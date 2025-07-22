@@ -51,11 +51,23 @@ export const MobileMatchCards: React.FC<MobileMatchCardsProps> = ({
     const matchType = matchCategory?.type;
     
     if (matchType === 'team') {
+      if (!match.team1_id && match.side1_label) {
+        return {
+          participant1: match.side1_label || '-',
+          participant2: match.side2_label || '-',
+        };
+      }
       return {
         participant1: getTeamName(match.team1_id || '', teams) || match.side1_label || '-',
         participant2: getTeamName(match.team2_id || '', teams) || match.side2_label || '-'
       };
     } else if (matchType === 'player' || (!match.pool_id && match.player1_id && match.player2_id)) {
+      if (!match.player1_id && match.side1_label) {
+        return {
+          participant1: match.side1_label || '-',
+          participant2: match.side2_label || '-',
+        };
+      }
       return {
         participant1: getPlayerName(match.player1_id ?? '', players) || match.side1_label || '-',
         participant2: getPlayerName(match.player2_id ?? '', players) || match.side2_label || '-'
