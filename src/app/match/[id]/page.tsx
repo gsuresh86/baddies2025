@@ -165,7 +165,8 @@ export default function MatchDetailsPage() {
         <div className="bg-white/10 backdrop-blur-md rounded-3xl p-8 mb-8 border border-white/20">
           <div className="text-center mb-6">
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              {match.team1_id ? `${getTeamName(match.team1_id)} vs ${getTeamName(match.team2_id)}` : 
+              {match.side1_label && match.side2_label ? `${match.side1_label} vs ${match.side2_label}` :
+               match.team1_id ? `${getTeamName(match.team1_id)} vs ${getTeamName(match.team2_id)}` : 
                match.player1_id ? `${getPlayerName(match.player1_id)} vs ${getPlayerName(match.player2_id)}` : 
                'Match Details'}
             </h1>
@@ -194,7 +195,9 @@ export default function MatchDetailsPage() {
               <h3 className="font-semibold mb-2">Winner</h3>
               <p className="font-bold text-green-400">
                 {match.winner ? 
-                  (match.team1_id ? getTeamName(match[`${match.winner}_id`]) : 
+                  (match.side1_label && match.side2_label ? 
+                   (match.winner === 'team1' || match.winner === 'player1' ? match.side1_label : match.side2_label) :
+                   match.team1_id ? getTeamName(match[`${match.winner}_id`]) : 
                    getPlayerName(match[`${match.winner}_id`])) : 
                   'TBD'}
               </p>
@@ -230,7 +233,7 @@ export default function MatchDetailsPage() {
                 <span className={
                   team1GamesWon > team2GamesWon ? 'text-green-400' : 'text-white'
                 }>
-                  {getTeamName(match.team1_id)}
+                  {match.side1_label || getTeamName(match.team1_id)}
                   <span className="text-base text-white/70 ml-1">({team1TotalPoints})</span>
                   {team1GamesWon > team2GamesWon && <span title="Winner" className="ml-2">🏆</span>}
                 </span>
@@ -238,7 +241,7 @@ export default function MatchDetailsPage() {
                 <span className={
                   team2GamesWon > team1GamesWon ? 'text-green-400' : 'text-white'
                 }>
-                  {getTeamName(match.team2_id)}
+                  {match.side2_label || getTeamName(match.team2_id)}
                   <span className="text-base text-white/70 ml-1">({team2TotalPoints})</span>
                   {team2GamesWon > team1GamesWon && <span title="Winner" className="ml-2">🏆</span>}
                 </span>
@@ -260,11 +263,11 @@ export default function MatchDetailsPage() {
                         )}
                         <div className="flex gap-4 mt-1">
                           <div className={game.winner === 'team1' ? 'text-green-400 font-bold' : ''}>
-                            <span className="font-semibold">{getTeamName(match.team1_id)}:</span> {getGamePlayers(game).team1.join(', ') || 'N/A'}
+                            <span className="font-semibold">{match.side1_label || getTeamName(match.team1_id)}:</span> {getGamePlayers(game).team1.join(', ') || 'N/A'}
                             {game.winner === 'team1' && <span title="Winner" className="ml-1">🏆</span>}
                           </div>
                           <div className={game.winner === 'team2' ? 'text-green-400 font-bold' : ''}>
-                            <span className="font-semibold">{getTeamName(match.team2_id)}:</span> {getGamePlayers(game).team2.join(', ') || 'N/A'}
+                            <span className="font-semibold">{match.side2_label || getTeamName(match.team2_id)}:</span> {getGamePlayers(game).team2.join(', ') || 'N/A'}
                             {game.winner === 'team2' && <span title="Winner" className="ml-1">🏆</span>}
                           </div>
                         </div>

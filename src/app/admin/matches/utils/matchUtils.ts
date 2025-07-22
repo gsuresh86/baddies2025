@@ -83,7 +83,8 @@ export const getTeamName = (teamId: string, teams: Team[]) => {
   return displayName;
 };
 
-export const getPoolName = (poolId: string, pools: Pool[]) => {
+export const getPoolName = (poolId: string | undefined, pools: Pool[]) => {
+  if (!poolId) return 'Cross-Pool Match';
   return pools.find(pool => pool.id === poolId)?.name || 'Unknown Pool';
 };
 

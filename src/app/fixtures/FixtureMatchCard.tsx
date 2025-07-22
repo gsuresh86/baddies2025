@@ -35,10 +35,14 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({ match, categ
       return displayName;
     };
     
-    leftName = getTeamDisplayName(match.team1) || 'Team 1';
-    rightName = getTeamDisplayName(match.team2) || 'Team 2';
+    // Check for side labels first, then fall back to team data
+    leftName = match.side1_label || getTeamDisplayName(match.team1) || 'Team 1';
+    rightName = match.side2_label || getTeamDisplayName(match.team2) || 'Team 2';
   } else {
-    if (match.player1) {
+    // Check for side labels first, then fall back to player data
+    if (match.side1_label) {
+      leftName = match.side1_label;
+    } else if (match.player1) {
       leftName = getFirstName(match.player1.name);
       if (match.player1.partner_name) {
         leftName += `\n${getFirstName(match.player1.partner_name)}`;
@@ -46,7 +50,10 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({ match, categ
     } else {
       leftName = 'Player 1';
     }
-    if (match.player2) {
+    
+    if (match.side2_label) {
+      rightName = match.side2_label;
+    } else if (match.player2) {
       rightName = getFirstName(match.player2.name);
       if (match.player2.partner_name) {
         rightName += `\n${getFirstName(match.player2.partner_name)}`;

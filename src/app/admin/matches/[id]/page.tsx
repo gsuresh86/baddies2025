@@ -355,7 +355,8 @@ export default function AdminMatchDetailsPage() {
         <div className="bg-white rounded-xl p-8 mb-8 shadow-lg border border-gray-200">
           <div className="text-center mb-6">
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              {match.team1_id ? `${getTeamName(match.team1_id)} vs ${getTeamName(match.team2_id)}` : 
+              {match.side1_label && match.side2_label ? `${match.side1_label} vs ${match.side2_label}` :
+               match.team1_id ? `${getTeamName(match.team1_id)} vs ${getTeamName(match.team2_id)}` : 
                match.player1_id ? `${getPlayerName(match.player1_id)} vs ${getPlayerName(match.player2_id)}` : 
                'Match Details'}
             </h1>
@@ -385,6 +386,15 @@ export default function AdminMatchDetailsPage() {
               <p className="font-bold text-green-600">
                 {(() => {
                   if (!match.winner) return 'TBD';
+                  
+                  // Check for side labels first
+                  if (match.side1_label && match.side2_label) {
+                    if (match.winner === 'team1' || match.winner === 'player1') {
+                      return match.side1_label;
+                    } else if (match.winner === 'team2' || match.winner === 'player2') {
+                      return match.side2_label;
+                    }
+                  }
                   
                   // Get the winner name based on the winner field
                   if (match.winner === 'team1' && match.team1_id) {

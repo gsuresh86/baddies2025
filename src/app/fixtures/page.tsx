@@ -93,6 +93,14 @@ export default function FixturesPage() {
       if (match.pool_id) {
         const poolData = pools.find(p => p.id === match.pool_id);
         enrichedMatch.pool = poolData;
+      } else {
+        // For matches without pool_id, create a placeholder pool object
+        enrichedMatch.pool = {
+          id: 'cross-pool',
+          name: 'Cross-Pool Matches',
+          max_teams: 0,
+          category_id: match.category_id || null
+        };
       }
 
       enrichedMatches.push(enrichedMatch);
@@ -120,6 +128,12 @@ export default function FixturesPage() {
         
         // Debug: Check if all matches have valid pools and categories
         const validMatches = matchesData.filter(match => {
+          // Handle matches with null pool_id (cross-pool or knockout matches)
+          if (!match.pool_id) {
+            console.log(`✓ Match ${match.id} has no pool_id (cross-pool/knockout match)`);
+            return true;
+          }
+          
           const matchPool = pools.find(pool => pool.id === match.pool_id);
           if (!matchPool) {
             console.log(`❌ Match ${match.id} has invalid pool_id: ${match.pool_id}`);
@@ -141,23 +155,39 @@ export default function FixturesPage() {
         const categoryCounts: { [key: string]: number } = {};
         const categoryDetails: { [key: string]: any[] } = {};
         matchesData.forEach(match => {
-          const matchPool = pools.find(pool => pool.id === match.pool_id);
-          if (matchPool) {
-            const category = categories.find(c => c.id === matchPool.category_id);
-            const categoryCode = category?.code || 'Unknown';
-            categoryCounts[categoryCode] = (categoryCounts[categoryCode] || 0) + 1;
-            
-            if (!categoryDetails[categoryCode]) {
-              categoryDetails[categoryCode] = [];
+          let categoryCode = 'Unknown';
+          let categoryLabel = 'Unknown';
+          let poolName = 'Cross-Pool';
+          
+          if (match.pool_id) {
+            const matchPool = pools.find(pool => pool.id === match.pool_id);
+            if (matchPool) {
+              const category = categories.find(c => c.id === matchPool.category_id);
+              categoryCode = category?.code || 'Unknown';
+              categoryLabel = category?.label || 'Unknown';
+              poolName = matchPool.name;
             }
-            categoryDetails[categoryCode].push({
-              matchId: match.id,
-              poolName: matchPool.name,
-              categoryId: matchPool.category_id,
-              categoryCode: category?.code,
-              categoryLabel: category?.label
-            });
+          } else {
+            // For matches without pool_id, try to get category directly
+            if (match.category_id) {
+              const category = categories.find(c => c.id === match.category_id);
+              categoryCode = category?.code || 'Unknown';
+              categoryLabel = category?.label || 'Unknown';
+            }
           }
+          
+          categoryCounts[categoryCode] = (categoryCounts[categoryCode] || 0) + 1;
+          
+          if (!categoryDetails[categoryCode]) {
+            categoryDetails[categoryCode] = [];
+          }
+          categoryDetails[categoryCode].push({
+            matchId: match.id,
+            poolName: poolName,
+            categoryId: match.pool_id ? pools.find(p => p.id === match.pool_id)?.category_id : match.category_id,
+            categoryCode: categoryCode,
+            categoryLabel: categoryLabel
+          });
         });
         console.log('Category distribution:', categoryCounts);
         console.log('Category details:', categoryDetails);
@@ -180,6 +210,20 @@ export default function FixturesPage() {
 
         // Filter matches that belong to the selected category
         matchesData = cachedMatches.filter(match => {
+          // Handle matches with null pool_id (cross-pool or knockout matches)
+          if (!match.pool_id) {
+            // For matches without pool_id, check if they have a category_id directly
+            if (match.category_id) {
+              const matchCategory = categories.find(c => c.id === match.category_id);
+              if (matchCategory && matchCategory.code === selectedCategory.code) {
+                console.log(`✓ Match ${match.id} (no pool) matches category ${selectedCategory.code}`);
+                return true;
+              }
+            }
+            console.log(`Match ${match.id} has no pool_id and no matching category_id`);
+            return false;
+          }
+          
           // Find the pool for this match from cached pools data
           const matchPool = pools.find(pool => pool.id === match.pool_id);
           if (!matchPool) {
@@ -268,6 +312,24 @@ export default function FixturesPage() {
 
   // Function to get the correct category for a match
   const getMatchCategory = (match: Match) => {
+    // Handle matches with null pool_id (cross-pool or knockout matches)
+    if (!match.pool_id) {
+      // Try to get category directly from match
+      if (match.category_id) {
+        const category = categories.find(c => c.id === match.category_id);
+        if (category) {
+          return category;
+        }
+      }
+      // Fallback to first category
+      return categories[0] || { 
+        id: 'default', 
+        code: 'MT', 
+        label: 'Men\'s Team', 
+        type: 'team' 
+      };
+    }
+    
     // Find the pool for this match from cached pools data
     const matchPool = pools.find(pool => pool.id === match.pool_id);
     if (!matchPool) {
@@ -303,7 +365,15 @@ export default function FixturesPage() {
     const grouped: { [poolName: string]: Match[] } = {};
     
     matches.forEach(match => {
-      const poolName = match.pool?.name || 'Unknown Pool';
+      let poolName = 'Unknown Pool';
+      
+      // Handle matches with null pool_id
+      if (!match.pool_id) {
+        poolName = 'Cross-Pool Matches';
+      } else {
+        poolName = match.pool?.name || 'Unknown Pool';
+      }
+      
       console.log('Processing match:', match.id, 'pool:', poolName);
       if (!grouped[poolName]) {
         grouped[poolName] = [];
