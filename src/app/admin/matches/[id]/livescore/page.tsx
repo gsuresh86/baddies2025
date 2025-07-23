@@ -233,35 +233,50 @@ export default function LiveScorePage() {
   const handleSaveScore = async () => {
     if (!matchId) return;
     setSaving(true);
-    // Determine winner
-    let winner: 'team1' | 'team2' | 'player1' | 'player2' | null = null;
-    if (scores.team1_score > scores.team2_score) {
-      winner = isMensTeamCategory ? 'team1' : 'player1';
-    } else if (scores.team2_score > scores.team1_score) {
-      winner = isMensTeamCategory ? 'team2' : 'player2';
-    }
     try {
       if (isMensTeamCategory) {
-        if (winner === 'team1' || winner === 'team2') {
-          await tournamentStore.updateMatchResult(matchId, scores.team1_score, scores.team2_score, winner);
-        } else {
-          // fallback: if tie, just mark as completed without winner
-          await tournamentStore.updateMatchScore(matchId, {
+        // Find the current in-progress or first game
+        let currentGame = games.find(g => (g as any).status === 'in_progress');
+        if (!currentGame) {
+          // Fallback: find the first game that is not completed
+          currentGame = games.find(g => !(g as any).completed);
+        }
+        if (!currentGame) currentGame = games[0];
+        if (!currentGame) throw new Error('No game found to update');
+        // Update the game row in the games table
+        const { error } = await supabase
+          .from('games')
+          .update({
             team1_score: scores.team1_score,
             team2_score: scores.team2_score,
             status: 'completed',
-          });
-        }
+            completed: true
+          })
+          .eq('id', currentGame.id);
+        if (error) throw error;
+        showSuccess('Game score saved!');
+        // Optionally, refetch games
+        const { data: gamesData } = await supabase
+          .from('games')
+          .select('*')
+          .eq('match_id', matchId);
+        setGames(gamesData || []);
       } else {
-        // For non-men's team, winner is player1 or player2
+        // For non-men's team, update the match table as before
+        let winner: 'team1' | 'team2' | 'player1' | 'player2' | null = null;
+        if (scores.team1_score > scores.team2_score) {
+          winner = match?.team1_id ? 'team1' : 'player1';
+        } else if (scores.team2_score > scores.team1_score) {
+          winner = match?.team2_id ? 'team2' : 'player2';
+        }
         await tournamentStore.updateMatchScore(matchId, {
           team1_score: scores.team1_score,
           team2_score: scores.team2_score,
           status: 'completed',
-          winner: winner as 'player1' | 'player2' | undefined,
+          winner: winner as any,
         });
+        showSuccess('Score saved to database!');
       }
-      showSuccess('Score saved to database!');
     } catch (error: any) {
       showError('Error saving score', error?.message || (typeof error === 'string' ? error : 'Unknown error occurred'));
     } finally {
@@ -435,8 +450,8 @@ export default function LiveScorePage() {
                 <span className="text-sm sm:text-base">Reset</span>
               </button>
 
-              {/* Save Score Button */}
-              {(scores.team1_score === 30 || scores.team2_score === 30) ? (
+              {/* Save Score Button and Switch Sides Button logic */}
+              {scores.team1_score >= 16 || scores.team2_score >= 16 ? (
                 <button
                   onClick={handleSaveScore}
                   disabled={saving}

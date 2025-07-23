@@ -375,8 +375,8 @@ export default function AdminManageMatchPage() {
     return (
       <div className="text-center py-12">
         <p className="text-gray-500 text-lg">{error || "Match not found"}</p>
-        <Link href={`/admin/matches`} className="text-blue-600 hover:underline mt-4 inline-block">
-          Back to Matches
+        <Link href={`/admin/matches/${matchId}`} className="text-blue-600 hover:underline mt-4 inline-block">
+          Back to Match Details
         </Link>
       </div>
     );
@@ -387,8 +387,8 @@ export default function AdminManageMatchPage() {
 
   return (
     <div className="mx-auto py-8 space-y-8">
-      <Link href={`/admin/matches`} className="text-blue-700 hover:underline mb-4 inline-block text-base font-medium">
-        ← Back to Matches
+      <Link href={`/admin/matches/${matchId}`} className="text-blue-700 hover:underline mb-4 inline-block text-base font-medium">
+        ← Back to Match Details
       </Link>
       <h1 className="text-3xl font-bold text-gray-900 mb-6">Manage Match Lineup</h1>
       {/* Match Status Dropdown */}

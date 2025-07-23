@@ -350,6 +350,9 @@ export default function AdminMatchDetailsPage() {
         <Link href="/admin/matches" className="text-blue-700 hover:underline mb-6 inline-block text-base font-medium">
           ← Back to Matches
         </Link>
+        <Link href={`/admin/matches/${matchId}/manage`} className="ml-4 text-blue-700 hover:underline mb-6 inline-block text-base font-medium">
+          Manage Lineup
+        </Link>
         
         {/* Match Header */}
         <div className="bg-white rounded-xl p-8 mb-8 shadow-lg border border-gray-200">
