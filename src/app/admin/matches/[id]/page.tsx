@@ -12,7 +12,7 @@ import Image from 'next/image';
 
 export default function AdminMatchDetailsPage() {
   const { showSuccess, showError } = useToast();
-  const { matches: cachedMatches, teams, pools, players, refreshData } = useData();
+  const { matches: cachedMatches, teams, pools, players, categories, refreshData } = useData();
   const params = useParams();
   const matchId = params?.id as string;
 
@@ -344,15 +344,22 @@ export default function AdminMatchDetailsPage() {
     );
   }
 
+  // Determine if this is a men's team category match
+  const matchPool = pools.find(p => p.id === match.pool_id);
+  const categoryCode = matchPool ? categories.find(c => c.id === matchPool.category_id)?.code : undefined;
+  const isMensTeamCategory = categoryCode === 'MT';
+
   return (
     <AuthGuard>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Link href="/admin/matches" className="text-blue-700 hover:underline mb-6 inline-block text-base font-medium">
           ← Back to Matches
         </Link>
-        <Link href={`/admin/matches/${matchId}/manage`} className="ml-4 text-blue-700 hover:underline mb-6 inline-block text-base font-medium">
-          Manage Lineup
-        </Link>
+        {isMensTeamCategory && (
+          <Link href={`/admin/matches/${matchId}/manage`} className="ml-4 text-blue-700 hover:underline mb-6 inline-block text-base font-medium">
+            Manage Lineup
+          </Link>
+        )}
         
         {/* Match Header */}
         <div className="bg-white rounded-xl p-8 mb-8 shadow-lg border border-gray-200">

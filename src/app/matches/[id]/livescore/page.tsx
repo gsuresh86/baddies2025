@@ -323,6 +323,22 @@ export default function PublicLiveScorePage() {
     <div className="min-h-screen bg-black relative">
       {/* Celebration audio */}
       <audio ref={audioRef} src="/clap.wav" preload="auto" />
+      {/* Error/Disconnected Modal */}
+      {(connectionStatus === 'CHANNEL_ERROR' || connectionStatus === 'TIMED_OUT' || connectionStatus === 'CLOSED') && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center animate-scale-in">
+            <div className="text-4xl mb-4">😬</div>
+            <h2 className="text-2xl font-bold mb-2 text-gray-900">Oops!</h2>
+            <p className="mb-6 text-gray-700">Call Suresh to fix it<br/>or try refreshing below.</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold shadow hover:bg-blue-700 transition-all text-lg"
+            >
+              Refresh here
+            </button>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="bg-black shadow-sm border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

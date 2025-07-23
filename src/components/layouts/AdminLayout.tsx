@@ -187,18 +187,17 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
             </svg>
           </button>
           
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4 flex-1">
+            <div className="flex items-center gap-3 text-left w-full">
               <div className="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-sm">
                   {pageTitle.charAt(0)}
                 </span>
               </div>
               <div>
-                <span className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
+                <span className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight block text-left">
                   {pageTitle}
                 </span>
-                <div className="text-xs text-gray-500 font-medium">Administration</div>
               </div>
             </div>
           </div>

@@ -6,6 +6,7 @@ import { CreateMatchModal } from './components/CreateMatchModal';
 import { MatchTable } from './components/MatchTable';
 import { MobileMatchCards } from './components/MobileMatchCards';
 import { StatsCards } from './components/StatsCards';
+import { useState } from 'react';
 import { MatchFilters } from './components/MatchFilters';
 import { GenerateMatchesModal } from './components/GenerateMatchesModal';
 import { CrossPoolMatchModal } from './components/CrossPoolMatchModal';
@@ -144,6 +145,16 @@ export default function AdminMatchesPage() {
     poolPlayers,
     refreshData
   } = useMatchManagement();
+
+  const [gamesCount, setGamesCount] = useState(0);
+
+  useEffect(() => {
+    async function fetchGamesCount() {
+      const { count } = await supabase.from('games').select('*', { count: 'exact', head: true });
+      setGamesCount(count || 0);
+    }
+    fetchGamesCount();
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -388,21 +399,9 @@ export default function AdminMatchesPage() {
 
   return (
     <>
-      {/* Topbar */}
-      <div className="w-full bg-white border-b border-gray-200 shadow-sm px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Match Management</h1>
-          <p className="text-gray-600 text-base sm:text-lg">Create and manage tournament matches, update scores, and track results</p>
-        </div>
-        <div className="hidden sm:flex items-center gap-2">
-          <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center shadow-sm">
-            <span className="text-gray-700 text-xl">🏸</span>
-          </div>
-        </div>
-      </div>
       <div className="space-y-6">
         {/* Stats Cards */}
-        <StatsCards matches={matches} />
+        <StatsCards matches={matches} gamesCount={gamesCount} categories={categories} />
 
         {/* Filters and Actions */}
         <MatchFilters

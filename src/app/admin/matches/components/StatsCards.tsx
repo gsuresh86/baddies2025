@@ -1,11 +1,20 @@
 import React from 'react';
 import { Match } from '@/types';
+import { Category } from '@/types';
 
 interface StatsCardsProps {
   matches: Match[];
+  gamesCount: number;
+  categories: Category[];
 }
 
-export const StatsCards: React.FC<StatsCardsProps> = ({ matches }) => {
+export const StatsCards: React.FC<StatsCardsProps> = ({ matches, gamesCount, categories }) => {
+  // Count men's team matches (category code 'MT')
+  const mensTeamMatches = matches.filter(m => {
+    const cat = categories.find(c => c.id === m.category_id);
+    return cat?.code === 'MT';
+  }).length;
+  const totalGames = gamesCount + (matches.length - mensTeamMatches);
   const stats = [
     {
       label: 'Total Matches',
@@ -46,6 +55,14 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ matches }) => {
       bgColor: 'bg-red-50',
       borderColor: 'border-red-200',
       textColor: 'text-red-700'
+    },
+    {
+      label: 'Total Games',
+      value: totalGames,
+      icon: '🎮',
+      bgColor: 'bg-purple-50',
+      borderColor: 'border-purple-200',
+      textColor: 'text-purple-700'
     }
   ];
 
@@ -69,16 +86,18 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ matches }) => {
           <div className="text-sm sm:text-base font-semibold text-gray-700">
             {stat.label}
           </div>
-          <div className="mt-2">
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div 
-                className={`h-2 ${stat.textColor.replace('text-', 'bg-')} rounded-full transition-all duration-500`}
-                style={{ 
-                  width: `${matches.length > 0 ? (stat.value / matches.length) * 100 : 0}%` 
-                }}
-              ></div>
+          {stat.label !== 'Total Games' && (
+            <div className="mt-2">
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className={`h-2 ${stat.textColor.replace('text-', 'bg-')} rounded-full transition-all duration-500`}
+                  style={{ 
+                    width: `${matches.length > 0 ? (stat.value / matches.length) * 100 : 0}%` 
+                  }}
+                ></div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       ))}
     </div>

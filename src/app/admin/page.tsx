@@ -75,15 +75,7 @@ export default function AdminDashboard() {
   return (
     <AuthGuard>
       <div className="mx-auto">
-        <div className="mb-6 sm:mb-8">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Admin Dashboard</h1>
-              <p className="text-gray-600 text-sm sm:text-base">Manage your badminton tournament from here</p>
-            </div>
-          </div>
-        </div>
-
+        
         {/* Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <div className="bg-white rounded-xl p-4 sm:p-6 shadow-lg border border-gray-200">

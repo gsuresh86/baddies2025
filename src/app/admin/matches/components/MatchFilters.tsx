@@ -103,14 +103,9 @@ export const MatchFilters: React.FC<MatchFiltersProps> = ({
     <div className="space-y-6">
       {/* Filters Section */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <h3 className="text-lg sm:text-xl font-bold text-gray-900">Filters & Actions</h3>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-              <span className="text-gray-700 text-sm font-bold">⚙️</span>
-            </div>
-          </div>
-        </div>
+         </div>
 
         {/* Filter Controls */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
