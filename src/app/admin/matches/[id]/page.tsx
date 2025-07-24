@@ -73,24 +73,16 @@ export default function AdminMatchDetailsPage() {
 
         // Fetch media, history, and highlights
         try {
-          const [mediaData, historyData, highlightsData] = await Promise.all([
+          const [mediaData, matchData] = await Promise.all([
             tournamentStore.getMatchMedia(matchId).catch(err => {
               console.error('Error fetching media:', err);
               return [];
             }),
-            tournamentStore.getMatchHistory(matchId).catch(err => {
-              console.error('Error fetching history:', err);
-              return [];
-            }),
-            tournamentStore.getMatchHighlights(matchId).catch(err => {
-              console.error('Error fetching highlights:', err);
-              return [];
-            })
+            tournamentStore.getMatchById(matchId)
           ]);
 
           setMedia(mediaData);
-          setHistory(historyData);
-          setHighlights(highlightsData);
+          setMatch(matchData);
         } catch (error) {
           console.error('Error fetching match data:', error);
           // Continue with empty arrays instead of failing completely

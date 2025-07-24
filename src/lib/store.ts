@@ -1,4 +1,4 @@
-import { Pool, Team, Player, Match, Category, MatchMedia, MatchHistory, MatchHighlight } from '@/types';
+import { Pool, Team, Player, Match, Category, MatchMedia } from '@/types';
 import { createClient } from '@supabase/supabase-js';
 
 // TODO: Replace with your actual Supabase URL and anon key
@@ -987,7 +987,7 @@ class TournamentStore {
     return data as Match;
   }
 
-  async updateMatchScore(matchId: string, scoreData: { team1_score: number; team2_score: number; status: string; winner?: 'team1' | 'team2' | 'player1' | 'player2' | null }): Promise<void> {
+  async updateMatchScore(matchId: string, scoreData: { team1_score: number; team2_score: number; status: string; winner?: 'team1' | 'team2' | 'player1' | 'player2' | null; match_referee?: string }): Promise<void> {
     console.log('Updating match score:', { matchId, scoreData });
     const { error } = await supabase
       .from('matches')
@@ -1255,93 +1255,6 @@ class TournamentStore {
     }
 
     console.log('Media deleted successfully');
-  }
-
-  // Match history management
-  async addMatchHistory(matchId: string, gameNumber: number, team1Score: number, team2Score: number, winner: 'team1' | 'team2' | 'draw', gameNotes?: string): Promise<MatchHistory> {
-    console.log('Adding match history:', { matchId, gameNumber, team1Score, team2Score, winner });
-    
-    const { data, error } = await supabase
-      .from('match_history')
-      .insert([{
-        match_id: matchId,
-        game_number: gameNumber,
-        team1_score: team1Score,
-        team2_score: team2Score,
-        winner,
-        game_notes: gameNotes
-      }])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error adding match history:', error);
-      throw error;
-    }
-
-    console.log('Match history added:', data);
-    return data as MatchHistory;
-  }
-
-  async getMatchHistory(matchId: string): Promise<MatchHistory[]> {
-    console.log('Fetching match history for:', matchId);
-    
-    const { data, error } = await supabase
-      .from('match_history')
-      .select('*')
-      .eq('match_id', matchId)
-      .order('game_number', { ascending: true });
-
-    if (error) {
-      console.error('Error fetching match history:', error);
-      throw error;
-    }
-
-    console.log('Match history fetched:', data);
-    return data as MatchHistory[];
-  }
-
-  // Match highlights management
-  async addMatchHighlight(matchId: string, highlightType: string, description?: string, timestamp?: number, mediaId?: string): Promise<MatchHighlight> {
-    console.log('Adding match highlight:', { matchId, highlightType, description });
-    
-    const { data, error } = await supabase
-      .from('match_highlights')
-      .insert([{
-        match_id: matchId,
-        highlight_type: highlightType,
-        description,
-        timestamp,
-        media_id: mediaId
-      }])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error adding match highlight:', error);
-      throw error;
-    }
-
-    console.log('Match highlight added:', data);
-    return data as MatchHighlight;
-  }
-
-  async getMatchHighlights(matchId: string): Promise<MatchHighlight[]> {
-    console.log('Fetching match highlights for:', matchId);
-    
-    const { data, error } = await supabase
-      .from('match_highlights')
-      .select('*, media:match_media(*)')
-      .eq('match_id', matchId)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching match highlights:', error);
-      throw error;
-    }
-
-    console.log('Match highlights fetched:', data);
-    return data as MatchHighlight[];
   }
 }
 

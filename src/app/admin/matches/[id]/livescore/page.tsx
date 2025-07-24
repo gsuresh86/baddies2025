@@ -11,6 +11,7 @@ import AuthGuard from '@/components/AuthGuard';
 import { ArrowLeft, Plus, Minus, RotateCcw } from 'lucide-react';
 import Image from 'next/image';
 import { tournamentStore } from '@/lib/store';
+import CompleteConfirmation from '../../components/CompleteConfirmation';
 
 export default function LiveScorePage() {
   const { showSuccess, showError } = useToast();
@@ -28,13 +29,33 @@ export default function LiveScorePage() {
   const [broadcastChannel, setBroadcastChannel] = useState<any>(null);
   const [games, setGames] = useState<GameBase[]>([]);
   const [saving, setSaving] = useState(false);
+  const [selectedReferee, setSelectedReferee] = useState<string>('');
+  const [selectedStatus, setSelectedStatus] = useState<string>('completed');
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
+
+  // Helper: Get list of referees (for now, all players)
+  const refereeOptions = [
+    { id: 'Surya', name: 'Surya' },
+    { id: 'Kshitij', name: 'Kshitij' },
+    { id: 'Sraveen', name: 'Sraveen' },
+    { id: 'Kambe Gowda', name: 'Kambe Gowda' },
+    { id: 'Shreya', name: 'Shreya' },
+    { id: 'Vamsi', name: 'Vamsi' },
+    { id: 'Rahul', name: 'Rahul' },
+  ];
+  const statusOptions = [
+    { value: 'completed', label: 'Completed' },
+    { value: 'walkover', label: 'Walkover' },
+    { value: 'in_progress', label: 'In Progress' },
+    { value: 'not_started', label: 'Not Started' },
+  ];
 
   useEffect(() => {
     async function fetchData() {
       if (!matchId) return;
       setLoading(true);
       try {
-        const matchData = cachedMatches.find(m => m.id === matchId);
+        const matchData = await tournamentStore.getMatchById(matchId)
         if (!matchData) {
           return;
         }
@@ -265,8 +286,8 @@ export default function LiveScorePage() {
     }
   };
 
-  // New: Complete button handler
-  const handleComplete = async () => {
+  // New: Complete button handler (now called after modal confirm)
+  const handleComplete = async (refereeId?: string, statusOverride?: string) => {
     if (!matchId) return;
     setSaving(true);
     try {
@@ -305,8 +326,9 @@ export default function LiveScorePage() {
         await tournamentStore.updateMatchScore(matchId, {
           team1_score: scores.team1_score,
           team2_score: scores.team2_score,
-          status: 'completed',
-          winner: winner as any
+          status: statusOverride || 'completed',
+          winner: winner as any,
+          match_referee: refereeId || '',
         });
         showSuccess('Match marked as completed!');
       }
@@ -314,6 +336,7 @@ export default function LiveScorePage() {
       showError('Error completing', error?.message || (typeof error === 'string' ? error : 'Unknown error occurred'));
     } finally {
       setSaving(false);
+      setShowCompleteModal(false); // Close modal on completion
     }
   };
 
@@ -359,6 +382,16 @@ export default function LiveScorePage() {
         : (match?.player2_id ? getPlayerName(match.player2_id) : getTeamName(match?.team2_id));
     }
   };
+
+  // Determine winner for modal
+  let winnerName = '';
+  if (scores.team1_score > scores.team2_score) {
+    winnerName = getCardName('team1');
+  } else if (scores.team2_score > scores.team1_score) {
+    winnerName = getCardName('team2');
+  } else {
+    winnerName = 'Draw';
+  }
 
   if (loading || !playerNameDataReady) {
     return (
@@ -509,7 +542,7 @@ export default function LiveScorePage() {
 
               {/* Complete Button - always visible */}
               <button
-                onClick={handleComplete}
+                onClick={() => setShowCompleteModal(true)}
                 disabled={saving}
                 className="flex items-center justify-center px-4 sm:px-8 py-3 sm:py-4 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 active:bg-blue-800 transition-all duration-200 transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -555,6 +588,26 @@ export default function LiveScorePage() {
           <div className="h-20 sm:h-0"></div>
         </div>
       </div>
+      {showCompleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <CompleteConfirmation
+            team1={getCardName('team1')}
+            team2={getCardName('team2')}
+            team1_score={scores.team1_score}
+            team2_score={scores.team2_score}
+            winnerName={winnerName}
+            refereeOptions={refereeOptions}
+            statusOptions={statusOptions}
+            selectedReferee={selectedReferee}
+            setSelectedReferee={setSelectedReferee}
+            selectedStatus={selectedStatus}
+            setSelectedStatus={setSelectedStatus}
+            loading={saving}
+            onCancel={() => setShowCompleteModal(false)}
+            onConfirm={() => handleComplete(selectedReferee, selectedStatus)}
+          />
+        </div>
+      )}
     </AuthGuard>
   );
 }
