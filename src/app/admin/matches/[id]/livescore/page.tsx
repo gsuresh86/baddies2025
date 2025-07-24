@@ -193,31 +193,22 @@ export default function LiveScorePage() {
     }
   };
 
-  // Add a handler to swap the scores
+  // Fix: Only toggle sidesSwitched, do not swap scores
   const handleSwitchSides = () => {
     // Haptic feedback
     if ('vibrate' in navigator) {
       navigator.vibrate(15);
     }
-    
-    const newScores = {
-      team1_score: scores.team2_score,
-      team2_score: scores.team1_score
-    };
     const newSidesSwitched = !sidesSwitched;
-    
-    // Update local state
-    setScores(newScores);
     setSidesSwitched(newSidesSwitched);
-    
-    // Broadcast the switch
+    // Broadcast the switch (scores remain the same)
     if (broadcastChannel) {
       console.log('📤 Admin: Broadcasting side switch');
       broadcastChannel.send({
         type: 'broadcast',
         event: 'score-update',
         payload: {
-          scores: newScores,
+          scores, // scores are not swapped
           sidesSwitched: newSidesSwitched,
           matchId,
           timestamp: new Date().toISOString()
@@ -225,11 +216,10 @@ export default function LiveScorePage() {
       });
       console.log('✅ Admin: Side switch broadcast sent');
     }
-    
-    showSuccess('Scores switched successfully!');
+    showSuccess('Sides switched successfully!');
   };
 
-  // Add a handler to save the score to the backend
+  // Refactored: Save Score only updates the score
   const handleSaveScore = async () => {
     if (!matchId) return;
     setSaving(true);
@@ -243,14 +233,12 @@ export default function LiveScorePage() {
         }
         if (!currentGame) currentGame = games[0];
         if (!currentGame) throw new Error('No game found to update');
-        // Update the game row in the games table
+        // Only update the score fields, not status/completed
         const { error } = await supabase
           .from('games')
           .update({
             team1_score: scores.team1_score,
-            team2_score: scores.team2_score,
-            status: 'completed',
-            completed: true
+            team2_score: scores.team2_score
           })
           .eq('id', currentGame.id);
         if (error) throw error;
@@ -262,7 +250,52 @@ export default function LiveScorePage() {
           .eq('match_id', matchId);
         setGames(gamesData || []);
       } else {
-        // For non-men's team, update the match table as before
+        // For non-men's team, update only the score fields
+        await tournamentStore.updateMatchScore(matchId, {
+          team1_score: scores.team1_score,
+          team2_score: scores.team2_score,
+          status: match?.status || 'in_progress',
+        });
+        showSuccess('Score saved to database!');
+      }
+    } catch (error: any) {
+      showError('Error saving score', error?.message || (typeof error === 'string' ? error : 'Unknown error occurred'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // New: Complete button handler
+  const handleComplete = async () => {
+    if (!matchId) return;
+    setSaving(true);
+    try {
+      if (isMensTeamCategory) {
+        // Find the current in-progress or first game
+        let currentGame = games.find(g => (g as any).status === 'in_progress');
+        if (!currentGame) {
+          currentGame = games.find(g => !(g as any).completed);
+        }
+        if (!currentGame) currentGame = games[0];
+        if (!currentGame) throw new Error('No game found to update');
+        // Mark the game as completed
+        const { error } = await supabase
+          .from('games')
+          .update({
+            status: 'completed',
+            completed: true
+          })
+          .eq('id', currentGame.id);
+        if (error) throw error;
+        showSuccess('Game marked as completed!');
+        // Optionally, refetch games
+        const { data: gamesData } = await supabase
+          .from('games')
+          .select('*')
+          .eq('match_id', matchId);
+        setGames(gamesData || []);
+      } else {
+        // For non-men's team, update match status and winner
         let winner: 'team1' | 'team2' | 'player1' | 'player2' | null = null;
         if (scores.team1_score > scores.team2_score) {
           winner = match?.team1_id ? 'team1' : 'player1';
@@ -273,12 +306,12 @@ export default function LiveScorePage() {
           team1_score: scores.team1_score,
           team2_score: scores.team2_score,
           status: 'completed',
-          winner: winner as any,
+          winner: winner as any
         });
-        showSuccess('Score saved to database!');
+        showSuccess('Match marked as completed!');
       }
     } catch (error: any) {
-      showError('Error saving score', error?.message || (typeof error === 'string' ? error : 'Unknown error occurred'));
+      showError('Error completing', error?.message || (typeof error === 'string' ? error : 'Unknown error occurred'));
     } finally {
       setSaving(false);
     }
@@ -383,25 +416,29 @@ export default function LiveScorePage() {
             
             {/* Score Cards - Stacked on mobile, side by side on desktop */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8 flex-1">
-              {/* Team 1/Player 1 Score */}
+              {/* Left Side Score Card */}
               <div className="text-center">
-                <div className="bg-blue-500 rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-xl">
-                  <div className="text-xl sm:text-3xl lg:text-4xl font-bold text-blue-100 mb-2 sm:mb-4 truncate px-2">
+                <div className={`rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-xl ${
+                  sidesSwitched ? 'bg-green-500' : 'bg-blue-500'
+                }`}>
+                  <div className={`text-xl sm:text-3xl lg:text-4xl font-bold mb-2 sm:mb-4 truncate px-2 ${
+                    sidesSwitched ? 'text-green-100' : 'text-blue-100'
+                  }`}>
                     {sidesSwitched ? getCardName('team2') : getCardName('team1')}
                   </div>
                   <div className="text-7xl sm:text-8xl lg:text-[12rem] font-bold text-white mb-4 sm:mb-6">
-                    {scores.team1_score}
+                    {sidesSwitched ? scores.team2_score : scores.team1_score}
                   </div>
                   <div className="flex justify-center gap-4 sm:gap-6">
                     <button
-                      onClick={() => handleScoreChange('team1', 'decrease')}
+                      onClick={() => handleScoreChange(sidesSwitched ? 'team2' : 'team1', 'decrease')}
                       className="bg-red-500 hover:bg-red-600 active:bg-red-700 text-white rounded-full p-4 sm:p-3 transition-all duration-200 transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                      disabled={scores.team1_score <= 0}
+                      disabled={(sidesSwitched ? scores.team2_score : scores.team1_score) <= 0}
                     >
                       <Minus className="w-8 h-8 sm:w-6 sm:h-6" />
                     </button>
                     <button
-                      onClick={() => handleScoreChange('team1', 'increase')}
+                      onClick={() => handleScoreChange(sidesSwitched ? 'team2' : 'team1', 'increase')}
                       className="bg-green-500 hover:bg-green-600 active:bg-green-700 text-white rounded-full p-4 sm:p-3 transition-all duration-200 transform active:scale-95"
                     >
                       <Plus className="w-8 h-8 sm:w-6 sm:h-6" />
@@ -410,25 +447,29 @@ export default function LiveScorePage() {
                 </div>
               </div>
               
-              {/* Team 2/Player 2 Score */}
+              {/* Right Side Score Card */}
               <div className="text-center">
-                <div className="bg-green-500 rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-xl">
-                  <div className="text-xl sm:text-3xl lg:text-4xl font-bold text-green-100 mb-2 sm:mb-4 truncate px-2">
+                <div className={`rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-xl ${
+                  sidesSwitched ? 'bg-blue-500' : 'bg-green-500'
+                }`}>
+                  <div className={`text-xl sm:text-3xl lg:text-4xl font-bold mb-2 sm:mb-4 truncate px-2 ${
+                    sidesSwitched ? 'text-blue-100' : 'text-green-100'
+                  }`}>
                     {sidesSwitched ? getCardName('team1') : getCardName('team2')}
                   </div>
                   <div className="text-7xl sm:text-8xl lg:text-[12rem] font-bold text-white mb-4 sm:mb-6">
-                    {scores.team2_score}
+                    {sidesSwitched ? scores.team1_score : scores.team2_score}
                   </div>
                   <div className="flex justify-center gap-4 sm:gap-6">
                     <button
-                      onClick={() => handleScoreChange('team2', 'decrease')}
+                      onClick={() => handleScoreChange(sidesSwitched ? 'team1' : 'team2', 'decrease')}
                       className="bg-red-500 hover:bg-red-600 active:bg-red-700 text-white rounded-full p-4 sm:p-3 transition-all duration-200 transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                      disabled={scores.team2_score <= 0}
+                      disabled={(sidesSwitched ? scores.team1_score : scores.team2_score) <= 0}
                     >
                       <Minus className="w-8 h-8 sm:w-6 sm:h-6" />
                     </button>
                     <button
-                      onClick={() => handleScoreChange('team2', 'increase')}
+                      onClick={() => handleScoreChange(sidesSwitched ? 'team1' : 'team2', 'increase')}
                       className="bg-green-500 hover:bg-green-600 active:bg-green-700 text-white rounded-full p-4 sm:p-3 transition-all duration-200 transform active:scale-95"
                     >
                       <Plus className="w-8 h-8 sm:w-6 sm:h-6" />
@@ -450,32 +491,46 @@ export default function LiveScorePage() {
                 <span className="text-sm sm:text-base">Reset</span>
               </button>
 
-              {/* Save Score Button and Switch Sides Button logic */}
-              {scores.team1_score >= 16 || scores.team2_score >= 16 ? (
-                <button
-                  onClick={handleSaveScore}
-                  disabled={saving}
-                  className="flex items-center justify-center px-4 sm:px-8 py-3 sm:py-4 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 active:bg-green-800 transition-all duration-200 transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {saving ? (
-                    <span>Saving...</span>
-                  ) : (
-                    <>
-                      <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                      <span className="text-sm sm:text-base">Save Score</span>
-                    </>
-                  )}
-                </button>
-              ) : (
-                <button
-                  onClick={handleSwitchSides}
-                  className={`flex items-center justify-center px-4 sm:px-8 py-3 sm:py-4 text-white rounded-lg font-semibold transition-all duration-200 transform active:scale-95 ${
-                    sidesSwitched ? 'bg-orange-600 hover:bg-orange-700 active:bg-orange-800' : 'bg-yellow-600 hover:bg-yellow-700 active:bg-yellow-800'
-                  }`}
-                >
-                  <span className="text-sm sm:text-base">{sidesSwitched ? 'Switched' : 'Switch'}</span>
-                </button>
-              )}
+              {/* Save Score Button - always visible */}
+              <button
+                onClick={handleSaveScore}
+                disabled={saving}
+                className="flex items-center justify-center px-4 sm:px-8 py-3 sm:py-4 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 active:bg-green-800 transition-all duration-200 transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? (
+                  <span>Saving...</span>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                    <span className="text-sm sm:text-base">Save Score</span>
+                  </>
+                )}
+              </button>
+
+              {/* Complete Button - always visible */}
+              <button
+                onClick={handleComplete}
+                disabled={saving}
+                className="flex items-center justify-center px-4 sm:px-8 py-3 sm:py-4 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 active:bg-blue-800 transition-all duration-200 transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? (
+                  <span>Completing...</span>
+                ) : (
+                  <>
+                    <span className="text-sm sm:text-base">Complete</span>
+                  </>
+                )}
+              </button>
+
+              {/* Switch Sides Button - always visible */}
+              <button
+                onClick={handleSwitchSides}
+                className={`flex items-center justify-center px-4 sm:px-8 py-3 sm:py-4 text-white rounded-lg font-semibold transition-all duration-200 transform active:scale-95 ${
+                  sidesSwitched ? 'bg-orange-600 hover:bg-orange-700 active:bg-orange-800' : 'bg-yellow-600 hover:bg-yellow-700 active:bg-yellow-800'
+                }`}
+              >
+                <span className="text-sm sm:text-base">{sidesSwitched ? 'Switched' : 'Switch'}</span>
+              </button>
 
               <Link
                 href={`/admin/matches/${matchId}`}

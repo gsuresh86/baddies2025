@@ -17,14 +17,16 @@ function getMatchDisplay(match: Match, players: Player[], teams: Team[], pools: 
   // Determine if team or player based
   const pool = match.pool_id ? pools.find(p => p.id === match.pool_id) : undefined;
   const category = pool?.category || categories.find(c => c.id === match.category_id);
+  const isCompleted = match.status === 'completed' || match.winner;
   if (category?.type === 'team') {
     const team1 = teams.find(t => t.id === match.team1_id);
     const team2 = teams.find(t => t.id === match.team2_id);
+    const winnerId = match.winner === 'team1' ? team1?.id : match.winner === 'team2' ? team2?.id : undefined;
     return (
       <div key={match.id} className="bg-white/10 rounded-lg p-2 mb-4 flex flex-col items-center border border-white/20 min-w-[120px]">
-        <div className="font-semibold text-white text-xs mb-1">{team1?.brand_name || team1?.name || 'TBD'}</div>
+        <div className={`font-semibold text-xs mb-1 ${isCompleted && winnerId === team1?.id ? 'text-yellow-300 font-extrabold' : 'text-white'}`}>{team1?.brand_name || team1?.name || 'TBD'}</div>
         <div className="text-white/80 text-xs mb-1">vs</div>
-        <div className="font-semibold text-white text-xs mb-1">{team2?.brand_name || team2?.name || 'TBD'}</div>
+        <div className={`font-semibold text-xs mb-1 ${isCompleted && winnerId === team2?.id ? 'text-yellow-300 font-extrabold' : 'text-white'}`}>{team2?.brand_name || team2?.name || 'TBD'}</div>
         <div className="text-yellow-300 text-xs mt-1">
           {match.team1_score ?? '-'} : {match.team2_score ?? '-'}
         </div>
@@ -33,11 +35,14 @@ function getMatchDisplay(match: Match, players: Player[], teams: Team[], pools: 
   } else {
     const player1 = players.find(p => p.id === match.player1_id);
     const player2 = players.find(p => p.id === match.player2_id);
+    let winnerId: string | undefined = undefined;
+    if (match.winner === 'player1') winnerId = player1?.id;
+    else if (match.winner === 'player2') winnerId = player2?.id;
     return (
       <div key={match.id} className="bg-white/10 rounded-lg p-2 mb-4 flex flex-col items-center border border-white/20 min-w-[120px]">
-        <div className="font-semibold text-white text-xs mb-1">{player1?.name || 'TBD'}</div>
+        <div className={`font-semibold text-xs mb-1 ${isCompleted && winnerId === player1?.id ? 'text-yellow-300 font-extrabold' : 'text-white'}`}>{player1?.name || 'TBD'}</div>
         <div className="text-white/80 text-xs mb-1">vs</div>
-        <div className="font-semibold text-white text-xs mb-1">{player2?.name || 'TBD'}</div>
+        <div className={`font-semibold text-xs mb-1 ${isCompleted && winnerId === player2?.id ? 'text-yellow-300 font-extrabold' : 'text-white'}`}>{player2?.name || 'TBD'}</div>
         <div className="text-yellow-300 text-xs mt-1">
           {match.team1_score ?? '-'} : {match.team2_score ?? '-'}
         </div>
