@@ -8,6 +8,7 @@ import ActivityLogSection from './ActivityLogSection';
 import { useData } from '@/contexts/DataContext';
 import { getUniquePlayersByName } from '@/lib/utils';
 import { Match } from '@/types';
+import { StatsCards } from './matches/components/StatsCards';
 import {
   ResponsiveContainer,
   LineChart,
@@ -34,16 +35,18 @@ function getMatchesByDate(matches: Match[]): [string, number][] {
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ pools: 0, teams: 0, players: 0, categories: 0 });
   const [loading, setLoading] = useState(true);
-  const { matches, players } = useData();
+  const [gamesCount, setGamesCount] = useState(0);
+  const { matches, players, categories } = useData();
   
   useEffect(() => {
     async function fetchStats() {
       setLoading(true);
-      const [{ count: pools }, { count: teams }, { count: players }, { count: categories }] = await Promise.all([
+      const [{ count: pools }, { count: teams }, { count: players }, { count: categories }, { count: games }] = await Promise.all([
         supabase.from('pools').select('*', { count: 'exact', head: true }),
         supabase.from('teams').select('*', { count: 'exact', head: true }),
         supabase.from('t_players').select('*', { count: 'exact', head: true }),
-        supabase.from('categories').select('*', { count: 'exact', head: true })
+        supabase.from('categories').select('*', { count: 'exact', head: true }),
+        supabase.from('games').select('*', { count: 'exact', head: true })
       ]);
       setStats({
         pools: typeof pools === 'number' ? pools : 0,
@@ -51,6 +54,7 @@ export default function AdminDashboard() {
         players: typeof players === 'number' ? players : 0,
         categories: typeof categories === 'number' ? categories : 0,
       });
+      setGamesCount(typeof games === 'number' ? games : 0);
       setLoading(false);
     }
     fetchStats();
@@ -134,6 +138,13 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
+        
+        {/* Match Statistics Cards */}
+        <div className="mb-6 sm:mb-8">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">Match Statistics</h2>
+          <StatsCards matches={matches} gamesCount={gamesCount} categories={categories} />
+        </div>
+        
         {(allReferees.length > 0 || matchesByDateData.length > 0) && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 sm:mb-8">
             {/* Matches by Referee Card */}
