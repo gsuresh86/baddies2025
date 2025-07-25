@@ -51,11 +51,27 @@ function useTopPlayersByPool(
 }
 
 export default function FormatsPage() {
-  const { pools, players, matches, poolPlayers } = useData();
+  const { pools, players, matches, poolPlayers, teams } = useData();
   const gu13TopPlayers = useTopPlayersByPool('GU13', pools, players, matches as MatchType[], poolPlayers);
   const bu18TopPlayers = useTopPlayersByPool('BU18', pools, players, matches as MatchType[], poolPlayers);
   const searchParams = useSearchParams();
   const initialCategory = searchParams.get('category') || undefined;
+
+  // Helper: Map team number (e.g., 'Team 1') to brand name
+  const teamNumberToBrand: Record<string, string> = {};
+  if (teams && Array.isArray(teams)) {
+    teams.forEach(team => {
+      const match = team.name && team.name.match(/^Team (\d+)$/);
+      if (match) {
+        teamNumberToBrand[`Team ${match[1]}`] = team.brand_name?.trim() ? team.brand_name : team.name;
+      }
+    });
+  }
+
+  // Helper: For MEN'S TEAM, replace team numbers in description with brand names
+  function replaceTeamNumbersWithBrandNames(desc: string): string {
+    return desc.replace(/Team \d+/g, (teamNum) => teamNumberToBrand[teamNum] || teamNum);
+  }
 
   const tournamentFormats: FormatData[] = [
     {
@@ -529,12 +545,19 @@ export default function FormatsPage() {
                             {match.description && (
                               <div className="mt-2">
                                 <ul className="text-sm text-white/80 text-left space-y-1">
-                                  {match.description.split(', ').map((player, index) => (
-                                    <li key={index} className="flex items-center">
-                                      <span className="w-2 h-2 bg-blue-400 rounded-full mr-2 flex-shrink-0"></span>
-                                      {player.trim()}
-                                    </li>
-                                  ))}
+                                  {selectedFormat.category === "MEN'S TEAM"
+                                    ? replaceTeamNumbersWithBrandNames(match.description).split(', ').map((team, index) => (
+                                        <li key={index} className="flex items-center">
+                                          <span className="w-2 h-2 bg-blue-400 rounded-full mr-2 flex-shrink-0"></span>
+                                          {team.trim()}
+                                        </li>
+                                      ))
+                                    : match.description.split(', ').map((player, index) => (
+                                        <li key={index} className="flex items-center">
+                                          <span className="w-2 h-2 bg-blue-400 rounded-full mr-2 flex-shrink-0"></span>
+                                          {player.trim()}
+                                        </li>
+                                      ))}
                                 </ul>
                               </div>
                             )}

@@ -4,62 +4,6 @@ import { useEffect, useState } from 'react';
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Image from 'next/image';
 
-// Countdown component for tournament start
-function CountdownToTournament() {
-  const tournamentDate = new Date('2025-07-12T00:00:00');
-  const [timeLeft, setTimeLeft] = useState(getTimeLeft());
-
-  function getTimeLeft() {
-    const now = new Date();
-    const diff = tournamentDate.getTime() - now.getTime();
-    if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-    const minutes = Math.floor((diff / (1000 * 60)) % 60);
-    const seconds = Math.floor((diff / 1000) % 60);
-    return { days, hours, minutes, seconds };
-  }
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft(getTimeLeft());
-    }, 1000);
-    return () => clearInterval(timer);
-  });
-
-  return (
-    <div className="mb-8 flex flex-col items-center justify-center">
-      <div className="bg-gradient-to-r from-blue-700/80 to-green-600/80 rounded-3xl shadow-2xl p-10 text-center border border-white/20 animate-fade-in-scale max-w-2xl w-full">
-        <div className="text-5xl mb-4 animate-float">⏳</div>
-        <h2 className="text-3xl font-extrabold text-white text-glow-white mb-2 font-heading">Tournament Countdown</h2>
-        <p className="text-lg text-white/80 mb-6">The tournament begins soon! Get ready for the action.</p>
-        <div className="flex justify-center gap-6 text-white text-2xl font-bold mb-2">
-          <div className="flex flex-col items-center">
-            <span className="text-4xl">{timeLeft.days}</span>
-            <span className="text-base font-medium text-white/70">Days</span>
-          </div>
-          <span className="text-4xl font-bold">:</span>
-          <div className="flex flex-col items-center">
-            <span className="text-4xl">{timeLeft.hours}</span>
-            <span className="text-base font-medium text-white/70">Hours</span>
-          </div>
-          <span className="text-4xl font-bold">:</span>
-          <div className="flex flex-col items-center">
-            <span className="text-4xl">{timeLeft.minutes}</span>
-            <span className="text-base font-medium text-white/70">Minutes</span>
-          </div>
-          <span className="text-4xl font-bold">:</span>
-          <div className="flex flex-col items-center">
-            <span className="text-4xl">{timeLeft.seconds}</span>
-            <span className="text-base font-medium text-white/70">Seconds</span>
-          </div>
-        </div>
-        <div className="mt-4 text-white/80 text-lg">Starts on <span className="font-bold">July 12, 2025</span></div>
-      </div>
-    </div>
-  );
-}
-
 export default function LandingPage() {
   // Tab configuration
   const tabs = [
@@ -166,11 +110,6 @@ export default function LandingPage() {
               <div>12th Jul - 10th Aug 2025<br/><span className='text-white/60 text-sm'>(Weekend matches)</span></div>
             </div>
           </div>
-        </div>
-
-        {/* Countdown to Tournament Start Section */}
-        <div id="countdown" className="scroll-mt-24">
-          <CountdownToTournament />
         </div>
 
         {/* Fixtures & Standings CTA Section */}
