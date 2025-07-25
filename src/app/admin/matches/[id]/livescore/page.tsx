@@ -12,6 +12,7 @@ import { ArrowLeft, Plus, Minus, RotateCcw } from 'lucide-react';
 import Image from 'next/image';
 import { tournamentStore } from '@/lib/store';
 import CompleteConfirmation from '../../components/CompleteConfirmation';
+import NextMatchesModal from '../../components/NextMatchesModal';
 
 export default function LiveScorePage() {
   const { showSuccess, showError } = useToast();
@@ -32,6 +33,8 @@ export default function LiveScorePage() {
   const [selectedReferee, setSelectedReferee] = useState<string>('');
   const [selectedStatus, setSelectedStatus] = useState<string>('completed');
   const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [showNextMatchesModal, setShowNextMatchesModal] = useState(false);
+  const [nextMatches, setNextMatches] = useState<Match[]>([]);
 
   // Helper: Get list of referees (for now, all players)
   const refereeOptions = [
@@ -286,6 +289,28 @@ export default function LiveScorePage() {
     }
   };
 
+  // New: Show next 5 scheduled matches after completion
+  const fetchNextScheduledMatches = async () => {
+    try {
+      const allMatches = await tournamentStore.getMatches();
+      // Only show matches that are not in_progress or completed
+      const filtered = allMatches.filter(
+        m => m.status === 'scheduled'
+      );
+      // Sort by scheduled_date ascending
+      filtered.sort((a, b) => {
+        if (!a.scheduled_date && !b.scheduled_date) return 0;
+        if (!a.scheduled_date) return 1;
+        if (!b.scheduled_date) return -1;
+        return new Date(a.scheduled_date!).getTime() - new Date(b.scheduled_date!).getTime();
+      });
+      setNextMatches(filtered.slice(0, 5));
+    } catch (err) {
+      console.error('Error fetching next matches:', err);
+      showError('Failed to fetch next matches');
+    }
+  };
+
   // New: Complete button handler (now called after modal confirm)
   const handleComplete = async (refereeId?: string, statusOverride?: string) => {
     if (!matchId) return;
@@ -337,6 +362,23 @@ export default function LiveScorePage() {
     } finally {
       setSaving(false);
       setShowCompleteModal(false); // Close modal on completion
+      await fetchNextScheduledMatches();
+      setShowNextMatchesModal(true);
+    }
+  };
+
+  // New: Set match as in_progress
+  const handleSetInProgress = async (matchId: string) => {
+    try {
+      await tournamentStore.updateMatchScore(matchId, { status: 'in_progress', team1_score: 0, team2_score: 0 });
+      showSuccess('Match set to In Progress');
+      // Optionally, open live score page
+      window.open(`/admin/matches/${matchId}/livescore`, '_blank');
+      // Refresh next matches
+      fetchNextScheduledMatches();
+    } catch (err) {
+      console.error('Error setting match in progress:', err);
+      showError('Failed to set match in progress');
     }
   };
 
@@ -605,6 +647,19 @@ export default function LiveScorePage() {
             loading={saving}
             onCancel={() => setShowCompleteModal(false)}
             onConfirm={() => handleComplete(selectedReferee, selectedStatus)}
+          />
+        </div>
+      )}
+      {showNextMatchesModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <NextMatchesModal
+            matches={nextMatches}
+            teams={teams}
+            players={players}
+            pools={pools}
+            categories={categories}
+            onClose={() => setShowNextMatchesModal(false)}
+            onSetInProgress={handleSetInProgress}
           />
         </div>
       )}
