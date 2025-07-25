@@ -268,6 +268,7 @@ export default function StandingsPage() {
               expandedTeams={expandedTeams}
               onToggleTeamExpansion={toggleTeamExpansion}
               categoryCode={pool.category?.code}
+              poolName={pool.name}
               qualifiedPlayerIds={pool.category?.code === 'BU13' ? qualifiedPlayerIds : undefined}
             />
           </div>

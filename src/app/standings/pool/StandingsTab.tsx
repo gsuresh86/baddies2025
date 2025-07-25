@@ -18,6 +18,7 @@ interface StandingsTabProps {
   onToggleTeamExpansion?: (teamId: string) => void;
   categoryCode?: string;
   qualifiedPlayerIds?: Set<string>;
+  poolName?: string;
 }
 
 export default function StandingsTab({ 
@@ -27,7 +28,8 @@ export default function StandingsTab({
   expandedTeams = new Set(), 
   onToggleTeamExpansion,
   categoryCode,
-  qualifiedPlayerIds
+  qualifiedPlayerIds,
+  poolName
 }: StandingsTabProps) {
   const [pdPopoverTeamId, setPdPopoverTeamId] = React.useState<string | null>(null);
   // Dynamically set stat labels based on category
@@ -85,7 +87,11 @@ export default function StandingsTab({
               const hasPlayers = team?.players && team.players.length > 0;
               const isQualified = qualifiedPlayerIds
                 ? qualifiedPlayerIds.has(standing.teamId)
-                : ((categoryCode === 'BU18' && (idx === 0 || idx === 1)) || (categoryCode === 'GU13' && (idx === 0 || idx === 1)));
+                : ((categoryCode === 'BU18' && (idx === 0 || idx === 1)) || 
+                   (categoryCode === 'GU13' && (idx === 0 || idx === 1)) ||
+                   (categoryCode === 'WD' && (idx === 0 || idx === 1)) ||
+                   (categoryCode === 'WS' && (idx === 0 || idx === 1) && ['WS - Group A', 'WS - Group B', 'WS - Group C'].includes(poolName || '')) ||
+                   (categoryCode === 'FM' && (idx === 0 || idx === 1) && poolName !== 'FM - Group C'));
 
               return (
                 <React.Fragment key={standing.teamId}>
