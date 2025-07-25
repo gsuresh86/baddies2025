@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { tournamentStore, supabase } from '@/lib/store';
-import { Match, MatchMedia, MatchHistory, MatchHighlight, Game } from '@/types';
+import { Match, MatchMedia, Game } from '@/types';
 import { useData } from '@/contexts/DataContext';
 import { useToast } from '@/contexts/ToastContext';
 import Link from 'next/link';
@@ -17,8 +17,6 @@ export default function MatchDetailsPage() {
 
   const [match, setMatch] = useState<Match | null>(null);
   const [media, setMedia] = useState<MatchMedia[]>([]);
-  const [history, setHistory] = useState<MatchHistory[]>([]);
-  const [highlights, setHighlights] = useState<MatchHighlight[]>([]);
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMedia, setSelectedMedia] = useState<MatchMedia | null>(null);
@@ -60,14 +58,10 @@ export default function MatchDetailsPage() {
         }
 
         // Fetch media, history, and highlights
-        const [mediaData, historyData, highlightsData] = await Promise.all([
-          tournamentStore.getMatchMedia(matchId),
-          tournamentStore.getMatchHistory(matchId),
-          tournamentStore.getMatchHighlights(matchId)
+        const [mediaData] = await Promise.all([
+          tournamentStore.getMatchMedia(matchId)
         ]);
         setMedia(mediaData);
-        setHistory(historyData);
-        setHighlights(highlightsData);
       } catch (e) {
         console.log(e);
         showError('Error loading match');
@@ -284,99 +278,6 @@ export default function MatchDetailsPage() {
             </div>
           );
         })()}
-
-        {/* Match History */}
-        {history.length > 0 && (
-          <div className="bg-white/10 backdrop-blur-md rounded-3xl p-8 mb-8 border border-white/20">
-            <h2 className="text-2xl font-bold text-white mb-6">Match History</h2>
-            <div className="space-y-4">
-              {history.map((game) => (
-                <div key={game.id} className="bg-white/5 rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-white">Game {game.game_number}</h3>
-                    <span className="text-lg font-bold text-white">
-                      {game.team1_score} - {game.team2_score}
-                    </span>
-                  </div>
-                  {/* Show player details for Men's Team matches */}
-                  {(() => {
-                    // Try to get category code from match, fallback to pool
-                    let categoryCode = (match as any).category_code;
-                    if (!categoryCode && match.pool_id) {
-                      const pool = pools.find(p => p.id === match.pool_id);
-                      categoryCode = pool?.category?.code;
-                    }
-                    if (categoryCode === 'MT') {
-                      return (
-                        <div className="mt-2 text-white/80 text-sm">
-                          {(game as any).type && (
-                            <div><span className="font-semibold">Type:</span> {(game as any).type}</div>
-                          )}
-                          <div className="flex gap-4 mt-1">
-                            <div>
-                              <span className="font-semibold">{getTeamName(match.team1_id)}:</span> {getGamePlayers(game).team1.join(', ') || 'N/A'}
-                            </div>
-                            <div>
-                              <span className="font-semibold">{getTeamName(match.team2_id)}:</span> {getGamePlayers(game).team2.join(', ') || 'N/A'}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
-                  {game.winner && game.winner !== 'draw' && (
-                    <p className="text-green-400 text-sm mt-1">
-                      Winner: {getTeamName(match[`${game.winner}_id`])}
-                    </p>
-                  )}
-                  {game.game_notes && (
-                    <p className="text-white/70 text-sm mt-2">{game.game_notes}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Match Highlights */}
-        {highlights.length > 0 && (
-          <div className="bg-white/10 backdrop-blur-md rounded-3xl p-8 mb-8 border border-white/20">
-            <h2 className="text-2xl font-bold text-white mb-6">Match Highlights</h2>
-            <div className="grid md:grid-cols-2 gap-4">
-              {highlights.map((highlight) => (
-                <div key={highlight.id} className="bg-white/5 rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-yellow-400">⭐</span>
-                    <h3 className="font-semibold text-white">{highlight.highlight_type}</h3>
-                  </div>
-                  {highlight.description && (
-                    <p className="text-white/80 text-sm">{highlight.description}</p>
-                  )}
-                  {highlight.media && (
-                    <div className="mt-3">
-                      {highlight.media.media_type === 'photo' ? (
-                        <Image
-                          src={highlight.media.file_url}
-                          alt={highlight.media.description || highlight.media.file_name}
-                          width={600}
-                          height={300}
-                          className="w-full h-32 object-cover rounded"
-                        />
-                      ) : (
-                        <video
-                          src={highlight.media.file_url}
-                          controls
-                          className="w-full h-32 object-cover rounded"
-                        />
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Media Gallery */}
         {media.length > 0 && (
