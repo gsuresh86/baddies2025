@@ -498,6 +498,8 @@ export default function FixturesPage() {
         const d = new Date(`${year}-${month}-${day}T00:00:00+05:30`);
         return d instanceof Date && !isNaN(d.getTime());
       });
+
+      filteredDateKeys = filteredDateKeys.slice(0, 7);
   }
 
   // --- useEffect to update selectedDate if not in filteredDateKeys ---
