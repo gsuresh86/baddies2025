@@ -78,6 +78,7 @@ export interface Match {
   side2_label?: string;
   // Stage for knockout/future matches
   stage?: string;
+
 }
 
 export interface Pool {

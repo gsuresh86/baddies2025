@@ -67,9 +67,12 @@ export default function LiveScorePage() {
           team1_score: matchData.team1_score || 0,
           team2_score: matchData.team2_score || 0
         });
+        
         // Resolve pool and category code from cache
         const matchPool = pools.find(p => p.id === matchData.pool_id);
         const categoryCode = matchPool ? categories.find(c => c.id === matchPool.category_id)?.code : undefined;
+        
+        // Note: sides_switched state is not persisted to database, only handled via WebSocket
         // If men's team category, fetch games for the match
         if (categoryCode === 'MT') {
           const { data: gamesData } = await supabase
@@ -78,13 +81,7 @@ export default function LiveScorePage() {
             .eq('match_id', matchId);
           setGames(gamesData || []);
           
-          // Find the current in-progress game and load its sides_switched state
-          const currentGame = gamesData?.find(g => (g as any).status === 'in_progress') || 
-                             gamesData?.find(g => !(g as any).completed) || 
-                             gamesData?.[0];
-          if (currentGame) {
-            setSidesSwitched(currentGame.sides_switched || false);
-          }
+          // Note: sides_switched state is not persisted to database, only handled via WebSocket
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -265,13 +262,12 @@ export default function LiveScorePage() {
         }
         if (!currentGame) currentGame = games[0];
         if (!currentGame) throw new Error('No game found to update');
-        // Update the score fields and sides_switched state
+        // Update only the score fields (sides_switched is handled via WebSocket)
         const { error } = await supabase
           .from('games')
           .update({
             team1_score: scores.team1_score,
-            team2_score: scores.team2_score,
-            sides_switched: sidesSwitched
+            team2_score: scores.team2_score
           })
           .eq('id', currentGame.id);
         if (error) throw error;
@@ -283,11 +279,11 @@ export default function LiveScorePage() {
           .eq('match_id', matchId);
         setGames(gamesData || []);
       } else {
-        // For non-men's team, update only the score fields
+        // For non-men's team, update only the score fields (sides_switched is handled via WebSocket)
         await tournamentStore.updateMatchScore(matchId, {
           team1_score: scores.team1_score,
           team2_score: scores.team2_score,
-          status: match?.status || 'in_progress',
+          status: match?.status || 'in_progress'
         });
         showSuccess('Score saved to database!');
       }

@@ -236,6 +236,8 @@ export default function PublicLiveScorePage() {
             team1_score: matchData.team1_score || 0,
             team2_score: matchData.team2_score || 0
           });
+          
+          // Note: sides_switched state is not persisted to database, only handled via WebSocket
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -311,19 +313,11 @@ export default function PublicLiveScorePage() {
         if (!error && data) {
           setGames(data);
           
-          // For men's team categories, load the sides_switched state from the current game
-          if (isMensTeamCategory) {
-            const currentGame = data.find(g => (g as any)['status'] === 'in_progress') || 
-                               data.find(g => !(g as any)['completed']) || 
-                               data[0];
-            if (currentGame) {
-              setSidesSwitched(currentGame.sides_switched || false);
-            }
-          }
+          // Note: sides_switched state is not persisted to database, only handled via WebSocket
         }
         setGamesLoading(false);
       });
-  }, [matchId, isMensTeamCategory]);
+  }, [matchId, isMensTeamCategory, pools, categories]);
 
   // Subscribe to game live score updates
   
