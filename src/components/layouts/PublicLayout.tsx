@@ -12,6 +12,10 @@ interface PublicLayoutProps {
 export default function PublicLayout({ children }: PublicLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+  
+  // Check if current page is the livescore page
+  const isLivescorePage = pathname.includes('/matches/') && pathname.includes('/livescore');
+  
   const menu = [
     { href: '/fixtures', label: '🏸 Fixtures' },
     { href: '/standings', label: '🏆 Standings' },
@@ -42,8 +46,9 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
         <div className="absolute bottom-32 left-32 w-20 h-20 bg-green-400/20 rounded-full animate-float pointer-events-none" style={{zIndex:3, animationDelay: '2s'}}></div>
       </div>
       
-      {/* Topbar with logo and navigation */}
-      <div className="w-full flex flex-row items-center justify-between px-4 md:px-10 py-2 z-20 relative bg-black/80 border-b border-gray-800 shadow-lg animate-fade-in-scale">
+      {/* Topbar with logo and navigation - Hidden for livescore page */}
+      {!isLivescorePage && (
+        <div className="w-full flex flex-row items-center justify-between px-4 md:px-10 py-2 z-20 relative bg-black/80 border-b border-gray-800 shadow-lg animate-fade-in-scale">
         {/* Logo - Always on the left */}
         <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
           <div className="w-14 h-14 md:w-20 md:h-20 relative animate-float">
@@ -123,6 +128,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
           </>
         )}
       </div>
+      )}
   
       
       <main className="flex-1 relative z-10 w-full flex flex-col items-center justify-center animate-fade-in-scale pb-28" style={{animationDelay: '0.6s'}}>

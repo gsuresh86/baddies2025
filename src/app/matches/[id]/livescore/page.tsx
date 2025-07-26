@@ -34,9 +34,7 @@ function GameCard({ game, getPlayerName, scores, showCongrats1, showCongrats2, s
   return (
     <div className="flex flex-col md:flex-row items-center justify-between h-auto md:h-[60vh] gap-4">
       {/* PCBT Logo on Left - Inside layout (hide on mobile) */}
-      <div className="hidden md:flex flex-shrink-0 items-center h-full">
-        <Image src="/pcbt.png" alt="PCBT" width={200} height={100} className="object-contain w-[120px] h-[60px] md:w-[200px] md:h-[100px]" />
-      </div>
+      
       {/* Score Cards Grid */}
       <div className="flex flex-col md:grid md:grid-cols-2 gap-4 md:gap-8 flex-1 w-full">
         {/* Left Side (Team 1 when not switched, Team 2 when switched) */}
@@ -122,10 +120,7 @@ function GameCard({ game, getPlayerName, scores, showCongrats1, showCongrats2, s
           </div>
         </div>
       </div>
-      {/* PCBT Logo on Right - Inside layout (hide on mobile) */}
-      <div className="hidden md:flex flex-shrink-0 items-center h-full">
-        <Image src="/pcbt.png" alt="PCBT" width={200} height={100} className="object-contain w-[120px] h-[60px] md:w-[200px] md:h-[100px]" />
-      </div>
+     
     </div>
   );
 }
@@ -445,9 +440,7 @@ export default function PublicLiveScorePage() {
           />
         ) : (
           <div className="flex flex-col md:flex-row items-center justify-between h-auto md:h-[60vh] gap-4">
-            <div className="hidden md:flex flex-shrink-0 items-center h-full">
-              <Image src="/pcbt.png" alt="PCBT" width={200} height={100} className="object-contain w-[120px] h-[60px] md:w-[200px] md:h-[100px]" />
-            </div>
+            
             <div className="flex flex-col md:grid md:grid-cols-2 gap-4 md:gap-8 flex-1 w-full">
               {/* Left Side (Team 1 when not switched, Team 2 when switched) */}
               <div className="text-center flex flex-col justify-center">
@@ -484,11 +477,32 @@ export default function PublicLiveScorePage() {
                 </div>
               </div>
             </div>
-            <div className="hidden md:flex flex-shrink-0 items-center h-full">
-              <Image src="/pcbt.png" alt="PCBT" width={200} height={100} className="object-contain w-[120px] h-[60px] md:w-[200px] md:h-[100px]" />
-            </div>
+            
           </div>
         )}
+
+        {/* Sponsor Logos - Animated Marquee */}
+        <div className="relative w-full overflow-x-hidden mb-4">
+          <div className="flex items-center animate-marquee whitespace-nowrap gap-12 py-2">
+            {/* First set of logos */}
+            <Image src="/baddies.png" alt="Baddies" width={120} height={60} className="object-contain w-[70px] h-[35px] md:w-[200px] md:h-[100px]" />
+            <Image src="/pcbt.png" alt="Planet Green" width={156} height={78} className="object-contain w-[90px] h-[45px] md:w-[260px] md:h-[130px]" />
+            <Image src="/baddies.png" alt="Baddies" width={120} height={60}  className="object-contain w-[90px] h-[45px] md:w-[260px] md:h-[130px]" />
+            <Image src="/pcbt.png" alt="Trice" width={108} height={54} className="object-contain w-[60px] h-[30px] md:w-[180px] md:h-[90px]" />
+            <Image src="/baddies.png" alt="Baddies" width={120} height={60}  className="object-contain w-[90px] h-[45px] md:w-[260px] md:h-[130px]" />
+            {/* Repeat logos for seamless loop */}
+            <Image src="/pcbt.png" alt="Trice" width={120} height={60} className="object-contain w-[90px] h-[45px] md:w-[260px] md:h-[130px]" />
+            <Image src="/baddies.png" alt="Baddies" width={120} height={60} className="object-contain w-[70px] h-[35px] md:w-[200px] md:h-[100px]" />
+            <Image src="/pcbt.png" alt="Trice" width={120} height={60} className="object-contain w-[90px] h-[45px] md:w-[260px] md:h-[130px]" />
+            <Image src="/baddies.png" alt="Baddies" width={120} height={60} className="object-contain w-[90px] h-[45px] md:w-[260px] md:h-[130px]" />
+            <Image src="/pcbt.png" alt="Trice" width={120} height={60} className="object-contain w-[60px] h-[30px] md:w-[180px] md:h-[90px]" />
+            <Image src="/baddies.png" alt="Baddies" width={120} height={60}  className="object-contain w-[90px] h-[45px] md:w-[260px] md:h-[130px]" />
+            <Image src="/pcbt.png" alt="Trice" width={120} height={60} className="object-contain w-[90px] h-[45px] md:w-[260px] md:h-[130px]" />
+            <Image src="/baddies.png" alt="Baddies" width={120} height={60} className="object-contain w-[90px] h-[45px] md:w-[260px] md:h-[130px]" />
+            <Image src="/pcbt.png" alt="Trice" width={120} height={60} className="object-contain w-[60px] h-[30px] md:w-[180px] md:h-[90px]" />
+            <Image src="/baddies.png" alt="Baddies" width={120} height={60}  className="object-contain w-[90px] h-[45px] md:w-[260px] md:h-[130px]" />
+          </div>
+        </div>
       </div>
     </div>
   );

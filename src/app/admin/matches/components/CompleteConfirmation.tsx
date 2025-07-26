@@ -53,6 +53,21 @@ const CompleteConfirmation: React.FC<CompleteConfirmationProps> = ({
           <span className="text-black">{team2_score}</span> {team2}
         </div>
         <div className="mb-2 text-gray-700 font-semibold">Winner: <span className="text-green-600 font-bold">{winnerName}</span></div>
+        
+        {/* Enhanced score display */}
+        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+          <div className="text-sm text-gray-600 mb-2">Score Details:</div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="text-center">
+              <div className="text-lg font-bold text-blue-600">{team1}</div>
+              <div className="text-2xl font-extrabold text-blue-800">{team1_score}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-green-600">{team2}</div>
+              <div className="text-2xl font-extrabold text-green-800">{team2_score}</div>
+            </div>
+          </div>
+        </div>
       </div>
       <div className="mb-4">
         <label className="block mb-1 font-semibold text-gray-700">Referee</label>

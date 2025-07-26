@@ -329,12 +329,14 @@ export default function LiveScorePage() {
         }
         if (!currentGame) currentGame = games[0];
         if (!currentGame) throw new Error('No game found to update');
-        // Mark the game as completed
+        // Mark the game as completed and update the scores
         const { error } = await supabase
           .from('games')
           .update({
             status: 'completed',
-            completed: true
+            completed: true,
+            team1_score: scores.team1_score,
+            team2_score: scores.team2_score
           })
           .eq('id', currentGame.id);
         if (error) throw error;
