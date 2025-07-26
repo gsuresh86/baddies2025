@@ -77,6 +77,14 @@ export default function LiveScorePage() {
             .select('*')
             .eq('match_id', matchId);
           setGames(gamesData || []);
+          
+          // Find the current in-progress game and load its sides_switched state
+          const currentGame = gamesData?.find(g => (g as any).status === 'in_progress') || 
+                             gamesData?.find(g => !(g as any).completed) || 
+                             gamesData?.[0];
+          if (currentGame) {
+            setSidesSwitched(currentGame.sides_switched || false);
+          }
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -257,12 +265,13 @@ export default function LiveScorePage() {
         }
         if (!currentGame) currentGame = games[0];
         if (!currentGame) throw new Error('No game found to update');
-        // Only update the score fields, not status/completed
+        // Update the score fields and sides_switched state
         const { error } = await supabase
           .from('games')
           .update({
             team1_score: scores.team1_score,
-            team2_score: scores.team2_score
+            team2_score: scores.team2_score,
+            sides_switched: sidesSwitched
           })
           .eq('id', currentGame.id);
         if (error) throw error;

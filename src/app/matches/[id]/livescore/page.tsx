@@ -39,51 +39,85 @@ function GameCard({ game, getPlayerName, scores, showCongrats1, showCongrats2, s
       </div>
       {/* Score Cards Grid */}
       <div className="flex flex-col md:grid md:grid-cols-2 gap-4 md:gap-8 flex-1 w-full">
-        {/* Team 1/Player 1 Score */}
+        {/* Left Side (Team 1 when not switched, Team 2 when switched) */}
         <div className="text-center flex flex-col justify-center">
-          <div className="bg-blue-500 rounded-3xl p-4 md:p-8 shadow-2xl hover-lift h-full flex flex-col justify-center relative">
-            {showCongrats1 && (
+          <div className={`rounded-3xl p-4 md:p-8 shadow-2xl hover-lift h-full flex flex-col justify-center relative ${
+            sidesSwitched ? 'bg-green-500' : 'bg-blue-500'
+          }`}>
+            {showCongrats1 && !sidesSwitched && (
               <div className="mb-2 flex flex-col items-center">
                 <span className="block text-2xl md:text-4xl font-bold text-yellow-300 drop-shadow-lg animate-bounce">Congratulations!</span>
               </div>
             )}
-            {showCongrats2 && (
+            {showCongrats2 && sidesSwitched && (
+              <div className="mb-2 flex flex-col items-center">
+                <span className="block text-2xl md:text-4xl font-bold text-yellow-300 drop-shadow-lg animate-bounce">Congratulations!</span>
+              </div>
+            )}
+            {showCongrats2 && !sidesSwitched && (
               <div className="mb-2 flex flex-col items-center">
                 <span className="block text-2xl md:text-4xl font-semibold text-white/80 animate-fade-in">Good effort!</span>
               </div>
             )}
-            <div className="text-2xl md:text-4xl font-bold text-blue-100 mb-2 md:mb-4">
+            {showCongrats1 && sidesSwitched && (
+              <div className="mb-2 flex flex-col items-center">
+                <span className="block text-2xl md:text-4xl font-semibold text-white/80 animate-fade-in">Good effort!</span>
+              </div>
+            )}
+            <div className={`text-2xl md:text-4xl font-bold mb-2 md:mb-4 ${
+              sidesSwitched ? 'text-green-100' : 'text-blue-100'
+            }`}>
               {sidesSwitched ? getCardName('team2') : getCardName('team1')}
             </div>
-            {showCongrats1 && (
+            {showCongrats1 && !sidesSwitched && (
+              <span className="absolute left-1/2 top-24 md:top-40 -translate-x-1/2 z-10 text-5xl md:text-8xl animate-bounce pointer-events-none select-none">🏆</span>
+            )}
+            {showCongrats2 && sidesSwitched && (
               <span className="absolute left-1/2 top-24 md:top-40 -translate-x-1/2 z-10 text-5xl md:text-8xl animate-bounce pointer-events-none select-none">🏆</span>
             )}
             <div className="text-[7rem] md:text-[20rem] font-bold text-white mb-2 animate-scale-in">
-              {scores.team1_score}
+              {sidesSwitched ? scores.team2_score : scores.team1_score}
             </div>
           </div>
         </div>
-        {/* Team 2/Player 2 Score */}
+        {/* Right Side (Team 2 when not switched, Team 1 when switched) */}
         <div className="text-center flex flex-col justify-center">
-          <div className="bg-green-500 rounded-3xl p-4 md:p-8 shadow-2xl hover-lift h-full flex flex-col justify-center relative">
-            {showCongrats2 && (
+          <div className={`rounded-3xl p-4 md:p-8 shadow-2xl hover-lift h-full flex flex-col justify-center relative ${
+            sidesSwitched ? 'bg-blue-500' : 'bg-green-500'
+          }`}>
+            {showCongrats2 && !sidesSwitched && (
               <div className="mb-2 flex flex-col items-center">
                 <span className="block text-2xl md:text-4xl font-bold text-yellow-300 drop-shadow-lg animate-bounce">Congratulations!</span>
               </div>
             )}
-            {showCongrats1 && (
+            {showCongrats1 && sidesSwitched && (
+              <div className="mb-2 flex flex-col items-center">
+                <span className="block text-2xl md:text-4xl font-bold text-yellow-300 drop-shadow-lg animate-bounce">Congratulations!</span>
+              </div>
+            )}
+            {showCongrats1 && !sidesSwitched && (
               <div className="mb-2 flex flex-col items-center">
                 <span className="block text-2xl md:text-4xl font-semibold text-white/80 animate-fade-in">Good effort!</span>
               </div>
             )}
-            <div className="text-2xl md:text-4xl font-bold text-green-100 mb-2 md:mb-4">
+            {showCongrats2 && sidesSwitched && (
+              <div className="mb-2 flex flex-col items-center">
+                <span className="block text-2xl md:text-4xl font-semibold text-white/80 animate-fade-in">Good effort!</span>
+              </div>
+            )}
+            <div className={`text-2xl md:text-4xl font-bold mb-2 md:mb-4 ${
+              sidesSwitched ? 'text-blue-100' : 'text-green-100'
+            }`}>
               {sidesSwitched ? getCardName('team1') : getCardName('team2')}
             </div>
-            {showCongrats2 && (
+            {showCongrats2 && !sidesSwitched && (
+              <span className="absolute left-1/2 top-24 md:top-40 -translate-x-1/2 z-10 text-5xl md:text-8xl animate-bounce pointer-events-none select-none">🏆</span>
+            )}
+            {showCongrats1 && sidesSwitched && (
               <span className="absolute left-1/2 top-24 md:top-40 -translate-x-1/2 z-10 text-5xl md:text-8xl animate-bounce pointer-events-none select-none">🏆</span>
             )}
             <div className="text-[7rem] md:text-[20rem] font-bold text-white mb-2 animate-scale-in">
-              {scores.team2_score}
+              {sidesSwitched ? scores.team1_score : scores.team2_score}
             </div>
           </div>
         </div>
@@ -141,6 +175,11 @@ export default function PublicLiveScorePage() {
   const showCongrats1 = scores.team1_score === 30;
   const showCongrats2 = scores.team2_score === 30;
   const showCongrats = showCongrats1 || showCongrats2;
+  
+  // Determine if this is a men's team category match (moved up to avoid linter error)
+  const matchPool = pools.find(p => p.id === match?.pool_id);
+  const categoryCode = matchPool ? categories.find(c => c.id === matchPool.category_id)?.code : undefined;
+  const isMensTeamCategory = categoryCode === 'MT';
   
   // Find the game by ?game=GAME_ID if present, else in_progress, else first
   let currentGame = undefined;
@@ -269,10 +308,22 @@ export default function PublicLiveScorePage() {
       .select('*')
       .eq('match_id', matchId)
       .then(({ data, error }) => {
-        if (!error && data) setGames(data);
+        if (!error && data) {
+          setGames(data);
+          
+          // For men's team categories, load the sides_switched state from the current game
+          if (isMensTeamCategory) {
+            const currentGame = data.find(g => (g as any)['status'] === 'in_progress') || 
+                               data.find(g => !(g as any)['completed']) || 
+                               data[0];
+            if (currentGame) {
+              setSidesSwitched(currentGame.sides_switched || false);
+            }
+          }
+        }
         setGamesLoading(false);
       });
-  }, [matchId]);
+  }, [matchId, isMensTeamCategory]);
 
   // Subscribe to game live score updates
   
@@ -314,10 +365,7 @@ export default function PublicLiveScorePage() {
     );
   }
 
-  // Determine if this is a men's team category match
-  const matchPool = pools.find(p => p.id === match?.pool_id);
-  const categoryCode = matchPool ? categories.find(c => c.id === matchPool.category_id)?.code : undefined;
-  const isMensTeamCategory = categoryCode === 'MT';
+
 
   return (
     <div className="min-h-screen bg-black relative">
