@@ -56,6 +56,12 @@ export default function StandingsTab({
     { key: 'gameDiff', label: 'PD' }
   ];
   const dynamicStatLabels = isMensTeam ? mensTeamStatLabels : defaultStatLabels;
+  function isQualifiedByDefault(categoryCode: string | undefined, poolName: string | undefined, idx: number) {
+    // Default qualification logic based on position
+    // Top 2 teams from each pool qualify by default
+    return idx < 2;
+  }
+
   return (
     <div className="w-full overflow-x-auto">
       <table className="w-full text-xs sm:text-sm min-w-max">
@@ -87,11 +93,7 @@ export default function StandingsTab({
               const hasPlayers = team?.players && team.players.length > 0;
               const isQualified = qualifiedPlayerIds
                 ? qualifiedPlayerIds.has(standing.teamId)
-                : ((categoryCode === 'BU18' && (idx === 0 || idx === 1)) || 
-                   (categoryCode === 'GU13' && (idx === 0 || idx === 1)) ||
-                   (categoryCode === 'WD' && (idx === 0 || idx === 1)) ||
-                   (categoryCode === 'WS' && (idx === 0 || idx === 1) && ['WS - Group A', 'WS - Group B', 'WS - Group C'].includes(poolName || '')) ||
-                   (categoryCode === 'FM' && (idx === 0 || idx === 1) && poolName !== 'FM - Group C'));
+                : isQualifiedByDefault(categoryCode, poolName, idx)
 
               return (
                 <React.Fragment key={standing.teamId}>
