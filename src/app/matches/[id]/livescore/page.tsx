@@ -407,29 +407,37 @@ export default function PublicLiveScorePage() {
               <Image src="/pcbt.png" alt="PCBT" width={200} height={100} className="object-contain w-[120px] h-[60px] md:w-[200px] md:h-[100px]" />
             </div>
             <div className="flex flex-col md:grid md:grid-cols-2 gap-4 md:gap-8 flex-1 w-full">
-              {/* Team 1 */}
+              {/* Left Side (Team 1 when not switched, Team 2 when switched) */}
               <div className="text-center flex flex-col justify-center">
-                <div className="bg-blue-500 rounded-3xl p-4 md:p-8 shadow-2xl hover-lift h-full flex flex-col justify-center relative">
-                  <div className="text-2xl md:text-4xl font-bold text-blue-100 mb-2 md:mb-4">
+                <div className={`rounded-3xl p-4 md:p-8 shadow-2xl hover-lift h-full flex flex-col justify-center relative ${
+                  sidesSwitched ? 'bg-green-500' : 'bg-blue-500'
+                }`}>
+                  <div className={`text-2xl md:text-4xl font-bold mb-2 md:mb-4 ${
+                    sidesSwitched ? 'text-green-100' : 'text-blue-100'
+                  }`}>
                     {sidesSwitched
                       ? (match?.player2_id ? getPlayerName(match.player2_id) : getTeamName(match?.team2_id))
                       : (match?.player1_id ? getPlayerName(match.player1_id) : getTeamName(match?.team1_id))}
                   </div>
                   <div className="text-[7rem] md:text-[20rem] font-bold text-white mb-2 animate-scale-in">
-                    {scores.team1_score ?? 0}
+                    {sidesSwitched ? (scores.team2_score ?? 0) : (scores.team1_score ?? 0)}
                   </div>
                 </div>
               </div>
-              {/* Team 2 */}
+              {/* Right Side (Team 2 when not switched, Team 1 when switched) */}
               <div className="text-center flex flex-col justify-center">
-                <div className="bg-green-500 rounded-3xl p-4 md:p-8 shadow-2xl hover-lift h-full flex flex-col justify-center relative">
-                  <div className="text-2xl md:text-4xl font-bold text-green-100 mb-2 md:mb-4">
+                <div className={`rounded-3xl p-4 md:p-8 shadow-2xl hover-lift h-full flex flex-col justify-center relative ${
+                  sidesSwitched ? 'bg-blue-500' : 'bg-green-500'
+                }`}>
+                  <div className={`text-2xl md:text-4xl font-bold mb-2 md:mb-4 ${
+                    sidesSwitched ? 'text-blue-100' : 'text-green-100'
+                  }`}>
                     {sidesSwitched
                       ? (match?.player1_id ? getPlayerName(match.player1_id) : getTeamName(match?.team1_id))
                       : (match?.player2_id ? getPlayerName(match.player2_id) : getTeamName(match?.team2_id))}
                   </div>
                   <div className="text-[7rem] md:text-[20rem] font-bold text-white mb-2 animate-scale-in">
-                    {scores.team2_score ?? 0}
+                    {sidesSwitched ? (scores.team1_score ?? 0) : (scores.team2_score ?? 0)}
                   </div>
                 </div>
               </div>
