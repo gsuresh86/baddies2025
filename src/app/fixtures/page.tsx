@@ -499,7 +499,7 @@ export default function FixturesPage() {
         return d instanceof Date && !isNaN(d.getTime());
       });
 
-      filteredDateKeys = filteredDateKeys.slice(0, 7);
+     //  filteredDateKeys = filteredDateKeys
   }
 
   // --- useEffect to update selectedDate if not in filteredDateKeys ---
