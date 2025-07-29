@@ -64,7 +64,7 @@ export default function StandingsTab({
       (categoryCode === 'WD' && (idx === 0 || idx === 1)) ||
       (categoryCode === 'WS' && (idx === 0 || idx === 1) && ['WS - Group A', 'WS - Group B', 'WS - Group C'].includes(poolName || '')) ||
       (categoryCode === 'FM' && (idx === 0 || idx === 1) && poolName !== 'FM - Group C') ||
-      (categoryCode === 'MT' && (idx === 0 || idx === 1) && ['MT - Group A', 'MT - Group B'].includes(poolName || ''))
+      (categoryCode === 'MT' && (idx === 0 || idx === 1))
     ) {
       return true;
     }
