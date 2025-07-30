@@ -48,6 +48,10 @@ export const MatchTable: React.FC<MatchTableProps> = ({
       ? categories.find(c => c.id === match.category_id)
       : getCategoryForMatch(match, pools, categories);
     const matchType = matchCategory?.type;
+
+    if(match.id === 'ae0e2c5c9688'){
+      debugger;
+    }
     
     if (matchType === 'team') {
       // For team categories, prioritize team IDs over side labels
@@ -58,7 +62,7 @@ export const MatchTable: React.FC<MatchTableProps> = ({
         participant1: team1Name || match.side1_label || '-',
         participant2: team2Name || match.side2_label || '-'
       };
-    } else if (matchType === 'player' || (!match.pool_id && match.player1_id && match.player2_id)) {
+    } else if (matchType === 'player') {
       // For player categories, prioritize player IDs over side labels
       const player1Name = match.player1_id ? getPlayerName(match.player1_id, players) : '';
       const player2Name = match.player2_id ? getPlayerName(match.player2_id, players) : '';
@@ -68,6 +72,15 @@ export const MatchTable: React.FC<MatchTableProps> = ({
         participant2: player2Name || match.side2_label || '-'
       };
     } else if (matchType === 'pair') {
+      // Debug logging for pair category detection
+      console.log('Pair match detected:', {
+        matchId: match.id,
+        categoryId: match.category_id,
+        categoryType: matchType,
+        player1Id: match.player1_id,
+        player2Id: match.player2_id
+      });
+      
       const player1 = players.find(p => p.id === (match as any).player1_id);
       const player2 = players.find(p => p.id === (match as any).player2_id);
       
@@ -76,6 +89,17 @@ export const MatchTable: React.FC<MatchTableProps> = ({
         if (!player) return '';
         const firstName = player.name.split(' ')[0];
         const partnerFirstName = player.partner_name ? player.partner_name.split(' ')[0] : '';
+        
+        // Debug logging for pair games
+        console.log('Pair game player display:', {
+          playerId: player.id,
+          playerName: player.name,
+          partnerName: player.partner_name,
+          firstName,
+          partnerFirstName,
+          result: partnerFirstName ? `${firstName} / ${partnerFirstName}` : firstName
+        });
+        
         return partnerFirstName ? `${firstName} / ${partnerFirstName}` : firstName;
       };
       

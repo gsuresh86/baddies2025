@@ -69,6 +69,15 @@ export const MobileMatchCards: React.FC<MobileMatchCardsProps> = ({
         participant2: player2Name || match.side2_label || '-'
       };
     } else if (matchType === 'pair') {
+      // Debug logging for pair category detection
+      console.log('Mobile - Pair match detected:', {
+        matchId: match.id,
+        categoryId: match.category_id,
+        categoryType: matchType,
+        player1Id: match.player1_id,
+        player2Id: match.player2_id
+      });
+      
       const player1 = players.find(p => p.id === (match as any).player1_id);
       const player2 = players.find(p => p.id === (match as any).player2_id);
       
@@ -77,6 +86,17 @@ export const MobileMatchCards: React.FC<MobileMatchCardsProps> = ({
         if (!player) return '';
         const firstName = player.name.split(' ')[0];
         const partnerFirstName = player.partner_name ? player.partner_name.split(' ')[0] : '';
+        
+        // Debug logging for pair games
+        console.log('Mobile - Pair game player display:', {
+          playerId: player.id,
+          playerName: player.name,
+          partnerName: player.partner_name,
+          firstName,
+          partnerFirstName,
+          result: partnerFirstName ? `${firstName} / ${partnerFirstName}` : firstName
+        });
+        
         return partnerFirstName ? `${firstName} / ${partnerFirstName}` : firstName;
       };
       
