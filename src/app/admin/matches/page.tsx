@@ -119,7 +119,6 @@ export default function AdminMatchesPage() {
     setManualSide2,
     setManualMatchCode,
     setAssignMatch,
-    setAssignPool,
     setAssignSide1,
     setAssignSide2,
     setAssignLoading,
@@ -199,8 +198,53 @@ export default function AdminMatchesPage() {
   };
 
   const handleAssignMatch = (match: any) => {
+    console.log('Assigning match:', match);
+    console.log('Current assignments:', {
+      team1_id: match.team1_id,
+      team2_id: match.team2_id,
+      player1_id: match.player1_id,
+      player2_id: match.player2_id,
+      pool_id: match.pool_id
+    });
+
+    // Find pool IDs from player assignments
+    let pool1Id = match.pool_id || '';
+    let pool2Id = match.pool_id || '';
+
+    if (match.player1_id) {
+      const player1Pool = poolPlayers.find(pp => pp.player_id === match.player1_id);
+      if (player1Pool) {
+        pool1Id = player1Pool.pool_id;
+      }
+    }
+
+    if (match.player2_id) {
+      const player2Pool = poolPlayers.find(pp => pp.player_id === match.player2_id);
+      if (player2Pool) {
+        pool2Id = player2Pool.pool_id;
+      }
+    }
+
+    // For team categories, find pool from team assignment
+    if (match.team1_id) {
+      const team1 = teams.find(t => t.id === match.team1_id);
+      if (team1) {
+        pool1Id = team1.pool_id;
+      }
+    }
+
+    if (match.team2_id) {
+      const team2 = teams.find(t => t.id === match.team2_id);
+      if (team2) {
+        pool2Id = team2.pool_id;
+      }
+    }
+
+    console.log('Found pool IDs:', { pool1Id, pool2Id });
+
     setAssignMatch(match);
-    setAssignPool(match.pool_id || '');
+    setAssignPool1(pool1Id);
+    setAssignPool2(pool2Id);
     setAssignSide1(match.team1_id || match.player1_id || '');
     setAssignSide2(match.team2_id || match.player2_id || '');
     setShowAssignDialog(true);
@@ -367,13 +411,11 @@ export default function AdminMatchesPage() {
       if (isTeamCategory) {
         update.team1_id = assignSide1 || null;
         update.team2_id = assignSide2 || null;
-        update.side1_label = null;
-        update.side2_label = null;
+        // Preserve side labels - don't remove them
       } else if (isPlayerCategory) {
         update.player1_id = assignSide1 || null;
         update.player2_id = assignSide2 || null;
-        update.side1_label = null;
-        update.side2_label = null;
+        // Preserve side labels - don't remove them
       }
 
       const { error } = await supabase

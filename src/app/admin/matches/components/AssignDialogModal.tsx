@@ -79,11 +79,15 @@ export const AssignDialogModal: React.FC<AssignDialogModalProps> = ({
     return true;
   }) : [];
 
+
+
   return (
     <Dialog open={isOpen} onClose={onClose} className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="fixed inset-0 bg-black bg-opacity-40" aria-hidden="true" />
       <Dialog.Panel className="relative bg-white rounded-2xl shadow-xl max-w-md w-full mx-auto p-6 z-10">
         <Dialog.Title className="text-xl font-bold mb-4 text-gray-800">Assign Player/Team</Dialog.Title>
+        
+
         
         <form onSubmit={onSubmit} className="space-y-4">
           {/* Side 1: Pool and Player/Team */}
@@ -96,7 +100,7 @@ export const AssignDialogModal: React.FC<AssignDialogModalProps> = ({
                   onPool1Change(e.target.value);
                   onSide1Change('');
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white"
               >
                 <option value="">Select Pool</option>
                 {poolOptions.map(pool => (
@@ -108,23 +112,23 @@ export const AssignDialogModal: React.FC<AssignDialogModalProps> = ({
           
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {isTeamCategory ? 'Team 1' : 'Player 1'}
+              Side 1
             </label>
             <select
               value={assignSide1}
               onChange={e => onSide1Change(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white"
             >
-              <option value="">Select {isTeamCategory ? 'Team' : 'Player'} 1</option>
+              <option value="">Select Side 1</option>
               {isTeamCategory
                 ? teamOptions1.map((opt: Team) => (
                     <option key={opt.id} value={opt.id}>
-                      {opt.brand_name || opt.name}
+                      {opt.brand_name || opt.name || assignMatch.side1_label || 'Side 1'}
                     </option>
                   ))
                 : playerOptions1.map((opt: Player) => (
                     <option key={opt.id} value={opt.id}>
-                      {opt.name + (opt.partner_name ? ` / ${opt.partner_name}` : '')}
+                      {opt.name + (opt.partner_name ? ` / ${opt.partner_name}` : '') || assignMatch.side1_label || 'Side 1'}
                     </option>
                   ))}
             </select>
@@ -140,7 +144,7 @@ export const AssignDialogModal: React.FC<AssignDialogModalProps> = ({
                   onPool2Change(e.target.value);
                   onSide2Change('');
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white"
               >
                 <option value="">Select Pool</option>
                 {poolOptions.map(pool => (
@@ -152,23 +156,23 @@ export const AssignDialogModal: React.FC<AssignDialogModalProps> = ({
           
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {isTeamCategory ? 'Team 2' : 'Player 2'}
+              Side 2
             </label>
             <select
               value={assignSide2}
               onChange={e => onSide2Change(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white"
             >
-              <option value="">Select {isTeamCategory ? 'Team' : 'Player'} 2</option>
+              <option value="">Select Side 2</option>
               {isTeamCategory
                 ? teamOptions2.map((opt: Team) => (
                     <option key={opt.id} value={opt.id}>
-                      {opt.brand_name || opt.name}
+                      {opt.brand_name || opt.name || assignMatch.side2_label || 'Side 2'}
                     </option>
                   ))
                 : playerOptions2.map((opt: Player) => (
                     <option key={opt.id} value={opt.id}>
-                      {opt.name + (opt.partner_name ? ` / ${opt.partner_name}` : '')}
+                      {opt.name + (opt.partner_name ? ` / ${opt.partner_name}` : '') || assignMatch.side2_label || 'Side 2'}
                     </option>
                   ))}
             </select>
@@ -177,7 +181,7 @@ export const AssignDialogModal: React.FC<AssignDialogModalProps> = ({
           <div className="flex gap-2 mt-4">
             <button
               type="submit"
-              disabled={assignLoading || !assignSide1 || !assignSide2}
+              disabled={assignLoading || (!assignSide1 && !assignSide2)}
               className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50"
             >
               {assignLoading ? 'Saving...' : 'Save'}

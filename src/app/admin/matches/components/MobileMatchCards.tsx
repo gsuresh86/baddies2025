@@ -62,32 +62,29 @@ export const MobileMatchCards: React.FC<MobileMatchCardsProps> = ({
         participant2: getTeamName(match.team2_id || '', teams) || match.side2_label || '-'
       };
     } else if (matchType === 'player' || (!match.pool_id && match.player1_id && match.player2_id)) {
-      if (!match.player1_id && match.side1_label) {
-        return {
-          participant1: match.side1_label || '-',
-          participant2: match.side2_label || '-',
-        };
-      }
+      // For player categories, prioritize player IDs over side labels
+      const player1Name = match.player1_id ? getPlayerName(match.player1_id, players) : '';
+      const player2Name = match.player2_id ? getPlayerName(match.player2_id, players) : '';
+      
       return {
-        participant1: getPlayerName(match.player1_id ?? '', players) || match.side1_label || '-',
-        participant2: getPlayerName(match.player2_id ?? '', players) || match.side2_label || '-'
+        participant1: player1Name || match.side1_label || '-',
+        participant2: player2Name || match.side2_label || '-'
       };
     } else if (matchType === 'pair') {
       const player1 = players.find(p => p.id === (match as any).player1_id);
       const player2 = players.find(p => p.id === (match as any).player2_id);
-      const player1FirstName = player1 ? player1.name.split(' ')[0] : '';
-      const player2FirstName = player2 ? player2.name.split(' ')[0] : '';
-      const player1PartnerFirstName = player1?.partner_name ? player1.partner_name.split(' ')[0] : '';
-      const player2PartnerFirstName = player2?.partner_name ? player2.partner_name.split(' ')[0] : '';
-      if (!match.player1_id && match.side1_label) {
-        return {
-          participant1: match.side1_label || '-',
-          participant2: match.side2_label || '-',
-        };
-      }
+      
+      // For pair games, show first names with partner first names
+      const getPlayerDisplayName = (player: Player | undefined) => {
+        if (!player) return '';
+        const firstName = player.name.split(' ')[0];
+        const partnerFirstName = player.partner_name ? player.partner_name.split(' ')[0] : '';
+        return partnerFirstName ? `${firstName} / ${partnerFirstName}` : firstName;
+      };
+      
       return {
-        participant1: player1PartnerFirstName ? `${player1FirstName} / ${player1PartnerFirstName}` : player1FirstName || match.side1_label || '-',
-        participant2: player2PartnerFirstName ? `${player2FirstName} / ${player2PartnerFirstName}` : player2FirstName || match.side2_label || '-',
+        participant1: getPlayerDisplayName(player1) || match.side1_label || '-',
+        participant2: getPlayerDisplayName(player2) || match.side2_label || '-',
       };
     }
     return { participant1: '-', participant2: '-' };
