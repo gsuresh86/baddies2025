@@ -50,15 +50,13 @@ export const MatchTable: React.FC<MatchTableProps> = ({
     const matchType = matchCategory?.type;
     
     if (matchType === 'team') {
-      if (!match.team1_id && match.side1_label) {
-        return {
-          participant1: match.side1_label || '-',
-          participant2: match.side2_label || '-',
-        };
-      }
+      // For team categories, prioritize team IDs over side labels
+      const team1Name = match.team1_id ? getTeamName(match.team1_id, teams) : '';
+      const team2Name = match.team2_id ? getTeamName(match.team2_id, teams) : '';
+      
       return {
-        participant1: getTeamName(match.team1_id || '', teams) || match.side1_label || '-',
-        participant2: getTeamName(match.team2_id || '', teams) || match.side2_label || '-'
+        participant1: team1Name || match.side1_label || '-',
+        participant2: team2Name || match.side2_label || '-'
       };
     } else if (matchType === 'player' || (!match.pool_id && match.player1_id && match.player2_id)) {
       // For player categories, prioritize player IDs over side labels

@@ -283,7 +283,37 @@ export default function AdminMatchDetailsPage() {
   const getPlayerName = (playerId?: string) => {
     if (!playerId) return 'Unknown';
     const player = players.find(p => p.id === playerId);
+    
+    // Debug logging
+    console.log('Player name lookup:', {
+      playerId,
+      playerFound: !!player,
+      playerName: player?.name || 'Not found'
+    });
+    
     return player?.name || 'Unknown';
+  };
+
+  const getPlayerDisplayName = (playerId?: string) => {
+    if (!playerId) return 'Unknown';
+    const player = players.find(p => p.id === playerId);
+    if (!player) return 'Unknown';
+    
+    // For pair games, show first name with partner first name
+    const firstName = player.name.split(' ')[0];
+    const partnerFirstName = player.partner_name ? player.partner_name.split(' ')[0] : '';
+    
+    // Debug logging
+    console.log('Player display name:', {
+      playerId,
+      playerName: player.name,
+      partnerName: player.partner_name,
+      firstName,
+      partnerFirstName,
+      result: partnerFirstName ? `${firstName} / ${partnerFirstName}` : firstName
+    });
+    
+    return partnerFirstName ? `${firstName} / ${partnerFirstName}` : firstName;
   };
 
   const getPoolName = (poolId?: string) => {
@@ -336,10 +366,21 @@ export default function AdminMatchDetailsPage() {
     );
   }
 
-  // Determine if this is a men's team category match
-  const matchPool = pools.find(p => p.id === match.pool_id);
-  const categoryCode = matchPool ? categories.find(c => c.id === matchPool.category_id)?.code : undefined;
+  // Determine match category and type
+  const matchCategory = match.category_id ? categories.find(c => c.id === match.category_id) : undefined;
+  const categoryCode = matchCategory?.code;
   const isMensTeamCategory = categoryCode === 'MT';
+  const isPairCategory = matchCategory?.type === 'pair';
+  
+  // Debug logging
+  console.log('Match category detection:', {
+    matchCategoryId: match.category_id,
+    matchCategory: matchCategory,
+    categoryType: matchCategory?.type,
+    isPairCategory,
+    player1Id: match.player1_id,
+    player2Id: match.player2_id
+  });
 
   return (
     <AuthGuard>
@@ -357,10 +398,30 @@ export default function AdminMatchDetailsPage() {
         <div className="bg-white rounded-xl p-8 mb-8 shadow-lg border border-gray-200">
           <div className="text-center mb-6">
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              {match.side1_label && match.side2_label ? `${match.side1_label} vs ${match.side2_label}` :
-               match.team1_id ? `${getTeamName(match.team1_id)} vs ${getTeamName(match.team2_id)}` : 
-               match.player1_id ? `${getPlayerName(match.player1_id)} vs ${getPlayerName(match.player2_id)}` : 
-               'Match Details'}
+              {(() => {
+                // Debug logging for match header
+                console.log('Match header logic:', {
+                  team1Id: match.team1_id,
+                  team2Id: match.team2_id,
+                  player1Id: match.player1_id,
+                  player2Id: match.player2_id,
+                  side1Label: match.side1_label,
+                  side2Label: match.side2_label,
+                  isPairCategory
+                });
+                
+                if (match.team1_id) {
+                  return `${getTeamName(match.team1_id)} vs ${getTeamName(match.team2_id)}`;
+                } else if (match.player1_id || match.player2_id) {
+                  const player1Name = match.player1_id ? (isPairCategory ? getPlayerDisplayName(match.player1_id) : getPlayerName(match.player1_id)) : (match.side1_label || 'TBD');
+                  const player2Name = match.player2_id ? (isPairCategory ? getPlayerDisplayName(match.player2_id) : getPlayerName(match.player2_id)) : (match.side2_label || 'TBD');
+                  return `${player1Name} vs ${player2Name}`;
+                } else if (match.side1_label && match.side2_label) {
+                  return `${match.side1_label} vs ${match.side2_label}`;
+                } else {
+                  return 'Match Details';
+                }
+              })()}
             </h1>
             <div className="flex items-center justify-center gap-4 text-gray-600">
               <span className="text-lg">{getPoolName(match.pool_id)}</span>
@@ -389,24 +450,24 @@ export default function AdminMatchDetailsPage() {
                 {(() => {
                   if (!match.winner) return 'TBD';
                   
-                  // Check for side labels first
+                  // Get the winner name based on the winner field - prioritize assigned IDs over side labels
+                  if (match.winner === 'team1' && match.team1_id) {
+                    return getTeamName(match.team1_id);
+                  } else if (match.winner === 'team2' && match.team2_id) {
+                    return getTeamName(match.team2_id);
+                  } else if (match.winner === 'player1' && match.player1_id) {
+                    return isPairCategory ? getPlayerDisplayName(match.player1_id) : getPlayerName(match.player1_id);
+                  } else if (match.winner === 'player2' && match.player2_id) {
+                    return isPairCategory ? getPlayerDisplayName(match.player2_id) : getPlayerName(match.player2_id);
+                  }
+                  
+                  // Fallback to side labels if no IDs are assigned
                   if (match.side1_label && match.side2_label) {
                     if (match.winner === 'team1' || match.winner === 'player1') {
                       return match.side1_label;
                     } else if (match.winner === 'team2' || match.winner === 'player2') {
                       return match.side2_label;
                     }
-                  }
-                  
-                  // Get the winner name based on the winner field
-                  if (match.winner === 'team1' && match.team1_id) {
-                    return getTeamName(match.team1_id);
-                  } else if (match.winner === 'team2' && match.team2_id) {
-                    return getTeamName(match.team2_id);
-                  } else if (match.winner === 'player1' && match.player1_id) {
-                    return getPlayerName(match.player1_id);
-                  } else if (match.winner === 'player2' && match.player2_id) {
-                    return getPlayerName(match.player2_id);
                   }
                   
                   return 'Unknown';
@@ -483,7 +544,7 @@ export default function AdminMatchDetailsPage() {
             <div className="grid md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {match.team1_id ? getTeamName(match.team1_id) : getPlayerName(match.player1_id)} Score
+                  {match.team1_id ? getTeamName(match.team1_id) : (match.player1_id ? (isPairCategory ? getPlayerDisplayName(match.player1_id) : getPlayerName(match.player1_id)) : (match.side1_label || 'Side 1'))} Score
                 </label>
                 <input
                   type="text"
@@ -495,7 +556,7 @@ export default function AdminMatchDetailsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {match.team2_id ? getTeamName(match.team2_id) : getPlayerName(match.player2_id)} Score
+                  {match.team2_id ? getTeamName(match.team2_id) : (match.player2_id ? (isPairCategory ? getPlayerDisplayName(match.player2_id) : getPlayerName(match.player2_id)) : (match.side2_label || 'Side 2'))} Score
                 </label>
                 <input
                   type="text"
@@ -559,8 +620,8 @@ export default function AdminMatchDetailsPage() {
                   ) : match.player1_id && match.player2_id ? (
                     // Player match options
                     <>
-                      <option value="player1">{getPlayerName(match.player1_id)}</option>
-                      <option value="player2">{getPlayerName(match.player2_id)}</option>
+                      <option value="player1">{isPairCategory ? getPlayerDisplayName(match.player1_id) : getPlayerName(match.player1_id)}</option>
+                      <option value="player2">{isPairCategory ? getPlayerDisplayName(match.player2_id) : getPlayerName(match.player2_id)}</option>
                     </>
                   ) : null}
                   <option value="draw">Draw</option>
