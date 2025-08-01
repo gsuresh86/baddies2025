@@ -19,6 +19,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
   const menu = [
     { href: '/fixtures', label: '🏸 Fixtures' },
     { href: '/standings', label: '🏆 Standings' },
+    { href: '/gallery', label: '👥 Gallery' },
     { href: '/teams', label: '👥 Teams' },
     { href: '/players', label: '🧑‍🎾 Players' },
     { href: '/formats', label: '📊 Formats' },

@@ -3,14 +3,15 @@
 import { useEffect, useState } from 'react';
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Image from 'next/image';
+import YouTubeGallery from '@/components/YouTubeGallery';
 
 export default function LandingPage() {
   // Tab configuration
   const tabs = [
     { label: 'Info', id: 'tournament-info' },
-    { label: 'Countdown', id: 'countdown' },
     { label: 'Format', id: 'format' },
     { label: 'Highlights', id: 'enhanced-info' },
+    { label: 'Videos', id: 'videos' },
     { label: 'Sponsors', id: 'sponsors' },
     { label: 'Stats', id: 'quick-stats' },
   ];
@@ -108,6 +109,95 @@ export default function LandingPage() {
               <div className="text-2xl mb-2">📅</div>
               <div className="font-bold mb-1 font-heading">Tournament Dates</div>
               <div>12th Jul - 10th Aug 2025<br/><span className='text-white/60 text-sm'>(Weekend matches)</span></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Sponsors Section */}
+        <div id="sponsors" className="mb-8 scroll-mt-24">
+          <div className="bg-gradient-to-r from-white/10 to-white/5 rounded-3xl p-8 backdrop-blur-md border border-white/20 shadow-2xl animate-fade-in-scale">
+            <div className="text-center mb-8">
+              <div className="text-4xl mb-4">🌟</div>
+              <h2 className="text-3xl font-bold text-white text-glow-white mb-2 font-heading">Our Sponsors</h2>
+              <p className="text-white/80 text-lg">Proudly supported by leading organizations</p>
+            </div>
+
+            {/* Sponsors Layout: Planet Green on first row, others on second row */}
+            <div className="flex flex-col gap-8 mb-12">
+              {/* First row: Presenting Sponsor */}
+              <div className="flex flex-col md:flex-row justify-center items-center gap-8">
+                <div className="bg-gradient-to-br from-green-700/30 to-emerald-900/30 rounded-2xl p-8 border-2 border-green-300/30 shadow-xl hover:scale-105 hover:shadow-2xl transition-all duration-300 flex flex-col items-center min-w-[260px]">
+                  <a href="https://planetgreen.co.in/" target="_blank" rel="noopener noreferrer">
+                    <Image
+                      src="/planet-green-logo.png"
+                      alt="Planet Green Logo"
+                      width={220}
+                      height={90}
+                      className="h-24 mb-2 w-auto drop-shadow-lg"
+                      style={{ maxWidth: '220px' }}
+                    />
+                  </a>
+                </div>
+              </div>
+              {/* Second row: Co-Powered By and Associate Sponsor */}
+              <div className="flex flex-col md:flex-row justify-center items-center gap-8">
+                {/* Co-Powered By (bigger logos) */}
+                <div className="bg-gradient-to-br from-blue-700/30 to-blue-900/30 rounded-2xl p-8 border-2 border-blue-300/30 shadow-xl hover:scale-105 hover:shadow-2xl transition-all duration-300 flex flex-col items-center min-w-[260px]">
+                  <div className="flex flex-row items-center justify-center gap-12 mb-2">
+                    <a href="https://www.google.com/maps/place/Creekside+farm+resort/@17.2993898,77.8837473,17z/data=!4m6!3m5!1s0x3bc95fee12007f13:0x3746949870bb2f44!8m2!3d17.2990669!4d77.8842862!16s%2Fg%2F11vdb1v34z?entry=ttu&g_ep=EgoyMDI1MDcwOC4wIKXMDSoASAFQAw%3D%3D" target="_blank" rel="noopener noreferrer">
+                      <Image
+                        src="/creekside-logo.png"
+                        alt="Creekside Resort Logo"
+                        width={200}
+                        height={90}
+                        className="h-24 w-auto drop-shadow-lg bg-white rounded-xl p-2"
+                        style={{ maxWidth: '200px' }}
+                      />
+                    </a>
+                    <a href="https://www.tricecommunity.com/" target="_blank" rel="noopener noreferrer">
+                      <Image
+                        src="/trice-logo.png"
+                        alt="Ask Trice Logo"
+                        width={170}
+                        height={90}
+                        className="h-24 w-auto drop-shadow-lg bg-white rounded-xl p-2"
+                        style={{ maxWidth: '170px' }}
+                      />
+                    </a>
+                  </div>
+                </div>
+                
+                {/* Associate Sponsor */}
+                <div className="bg-gradient-to-br from-purple-700/30 to-purple-900/30 rounded-2xl p-8 border-2 border-purple-300/30 shadow-xl hover:scale-105 hover:shadow-2xl transition-all duration-300 flex flex-col items-center min-w-[260px]">
+                  <a href="https://www.gamepointindia.com/badminton-bandlagudajagir/" target="_blank" rel="noopener noreferrer">
+                    <Image
+                      src="/gamepoint-logo.png"
+                      alt="GamePoint Logo"
+                      width={200}
+                      height={90}
+                      className="h-24 w-auto drop-shadow-lg bg-white rounded-xl p-2"
+                      style={{ maxWidth: '200px' }}
+                    />
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* Conducted by Baddies Committee */}
+            <div className="flex flex-col items-center justify-center mt-10 pt-8 border-t border-white/10">
+              <span className="text-xs uppercase tracking-widest text-white/80 mb-2 font-bold drop-shadow">Organised by</span>
+              <div className="flex flex-col items-center">
+                <a href="https://www.google.com/maps/place/Creekside+farm+resort/@17.2993898,77.8837473,17z/data=!4m6!3m5!1s0x3bc95fee12007f13:0x3746949870bb2f44!8m2!3d17.2990669!4d77.8842862!16s%2Fg%2F11vdb1v34z?entry=ttu&g_ep=EgoyMDI1MDcwOC4wIKXMDSoASAFQAw%3D%3D" target="_blank" rel="noopener noreferrer">
+                  <Image
+                    src="/baddies.png"
+                    alt="Baddies Committee Logo"
+                    width={320}
+                    height={160}
+                    className="h-40 w-auto mb-2 drop-shadow-lg"
+                    style={{ maxWidth: '320px' }}
+                  />
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -279,94 +369,15 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Sponsors Section */}
-        <div id="sponsors" className="mt-8 scroll-mt-24">
-          <div className="bg-gradient-to-r from-white/10 to-white/5 rounded-3xl p-8 backdrop-blur-md border border-white/20 shadow-2xl animate-fade-in-scale">
-            <div className="text-center mb-8">
-              <div className="text-4xl mb-4">🌟</div>
-              <h2 className="text-3xl font-bold text-white text-glow-white mb-2 font-heading">Our Sponsors</h2>
-              <p className="text-white/80 text-lg">Proudly supported by leading organizations</p>
-            </div>
-
-            {/* Sponsors Layout: Planet Green on first row, others on second row */}
-            <div className="flex flex-col gap-8 mb-12">
-              {/* First row: Presenting Sponsor */}
-              <div className="flex flex-col md:flex-row justify-center items-center gap-8">
-                <div className="bg-gradient-to-br from-green-700/30 to-emerald-900/30 rounded-2xl p-8 border-2 border-green-300/30 shadow-xl hover:scale-105 hover:shadow-2xl transition-all duration-300 flex flex-col items-center min-w-[260px]">
-                  <a href="https://planetgreen.co.in/" target="_blank" rel="noopener noreferrer">
-                    <Image
-                      src="/planet-green-logo.png"
-                      alt="Planet Green Logo"
-                      width={220}
-                      height={90}
-                      className="h-24 mb-2 w-auto drop-shadow-lg"
-                      style={{ maxWidth: '220px' }}
-                    />
-                  </a>
-                </div>
-              </div>
-              {/* Second row: Co-Powered By and Associate Sponsor */}
-              <div className="flex flex-col md:flex-row justify-center items-center gap-8">
-                {/* Co-Powered By (bigger logos) */}
-                <div className="bg-gradient-to-br from-blue-700/30 to-blue-900/30 rounded-2xl p-8 border-2 border-blue-300/30 shadow-xl hover:scale-105 hover:shadow-2xl transition-all duration-300 flex flex-col items-center min-w-[260px]">
-                  <div className="flex flex-row items-center justify-center gap-12 mb-2">
-                    <a href="https://www.google.com/maps/place/Creekside+farm+resort/@17.2993898,77.8837473,17z/data=!4m6!3m5!1s0x3bc95fee12007f13:0x3746949870bb2f44!8m2!3d17.2990669!4d77.8842862!16s%2Fg%2F11vdb1v34z?entry=ttu&g_ep=EgoyMDI1MDcwOC4wIKXMDSoASAFQAw%3D%3D" target="_blank" rel="noopener noreferrer">
-                      <Image
-                        src="/creekside-logo.png"
-                        alt="Creekside Resort Logo"
-                        width={200}
-                        height={90}
-                        className="h-24 w-auto drop-shadow-lg bg-white rounded-xl p-2"
-                        style={{ maxWidth: '200px' }}
-                      />
-                    </a>
-                    <a href="https://www.tricecommunity.com/" target="_blank" rel="noopener noreferrer">
-                      <Image
-                        src="/trice-logo.png"
-                        alt="Ask Trice Logo"
-                        width={170}
-                        height={90}
-                        className="h-24 w-auto drop-shadow-lg bg-white rounded-xl p-2"
-                        style={{ maxWidth: '170px' }}
-                      />
-                    </a>
-                  </div>
-                </div>
-                
-                {/* Associate Sponsor */}
-                <div className="bg-gradient-to-br from-purple-700/30 to-purple-900/30 rounded-2xl p-8 border-2 border-purple-300/30 shadow-xl hover:scale-105 hover:shadow-2xl transition-all duration-300 flex flex-col items-center min-w-[260px]">
-                  <a href="https://www.gamepointindia.com/badminton-bandlagudajagir/" target="_blank" rel="noopener noreferrer">
-                    <Image
-                      src="/gamepoint-logo.png"
-                      alt="GamePoint Logo"
-                      width={200}
-                      height={90}
-                      className="h-24 w-auto drop-shadow-lg bg-white rounded-xl p-2"
-                      style={{ maxWidth: '200px' }}
-                    />
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            {/* Conducted by Baddies Committee */}
-            <div className="flex flex-col items-center justify-center mt-10 pt-8 border-t border-white/10">
-              <span className="text-xs uppercase tracking-widest text-white/80 mb-2 font-bold drop-shadow">Organised by</span>
-              <div className="flex flex-col items-center">
-                <a href="https://www.google.com/maps/place/Creekside+farm+resort/@17.2993898,77.8837473,17z/data=!4m6!3m5!1s0x3bc95fee12007f13:0x3746949870bb2f44!8m2!3d17.2990669!4d77.8842862!16s%2Fg%2F11vdb1v34z?entry=ttu&g_ep=EgoyMDI1MDcwOC4wIKXMDSoASAFQAw%3D%3D" target="_blank" rel="noopener noreferrer">
-                  <Image
-                    src="/baddies.png"
-                    alt="Baddies Committee Logo"
-                    width={320}
-                    height={160}
-                    className="h-40 w-auto mb-2 drop-shadow-lg"
-                    style={{ maxWidth: '320px' }}
-                  />
-                </a>
-              </div>
-            </div>
-          </div>
+        {/* YouTube Videos Section */}
+        <div id="videos" className="mt-8 scroll-mt-24">
+          <YouTubeGallery 
+            maxVideos={40}
+            title="Tournament Videos & Highlights"
+          />
         </div>
+
+
 
         {/* Quick Stats Bar */}
         <div id="quick-stats" className="mt-8 mb-24 bg-black/80 rounded-2xl p-4 sm:p-6 border border-gray-800 animate-fade-in-scale scroll-mt-24" style={{animationDelay: '0.6s'}}>
