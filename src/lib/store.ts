@@ -19,10 +19,7 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
 
 // Debug WebSocket connection
 if (typeof window !== 'undefined') {
-  console.log('🔧 Supabase client initialized with:');
-  console.log('📍 URL:', supabaseUrl);
-  console.log('🔑 Key:', supabaseKey.substring(0, 20) + '...');
-  console.log('🌐 Environment:', process.env.NODE_ENV);
+  // Debug logs removed for production
 }
 
 // --- Supabase Auth Helpers ---
@@ -42,7 +39,6 @@ export async function getUser() {
 class TournamentStore {
   // Player management
   async getPlayers(): Promise<Player[]> {
-    console.log('Fetching players...');
     const { data, error } = await supabase
       .from('t_players')
       .select('*')
@@ -51,7 +47,6 @@ class TournamentStore {
       console.error('Error fetching players:', error);
       throw error;
     }
-    console.log('Players fetched:', data);
     return data as Player[];
   }
 
@@ -106,8 +101,6 @@ class TournamentStore {
 
   // Team management
   async getTeams(): Promise<Team[]> {
-    console.log('Fetching teams...');
-    
     // First, get basic team data
     const { data: teamsData, error: teamsError } = await supabase
       .from('teams')
@@ -119,10 +112,7 @@ class TournamentStore {
       throw teamsError;
     }
     
-    console.log('Basic teams fetched:', teamsData);
-    
     if (!teamsData || teamsData.length === 0) {
-      console.log('No teams found');
       return [];
     }
     
@@ -373,6 +363,33 @@ class TournamentStore {
       .single();
     if (error) throw error;
     return data as Team;
+  }
+
+  async updateTeamBrandNames(): Promise<void> {
+    console.log('Updating team brand names...');
+    
+    // Get all teams
+    const { data: teams, error } = await supabase
+      .from('teams')
+      .select('*')
+      .order('name');
+    
+    if (error) throw error;
+    
+    // Update each team with a brand name based on their number
+    for (const team of teams || []) {
+      const teamNumberMatch = team.name.match(/(\d+)/);
+      const teamNumber = teamNumberMatch ? teamNumberMatch[1] : null;
+      
+      if (teamNumber && !team.brand_name) {
+        const brandName = `Team ${teamNumber}`;
+        console.log(`Updating team ${team.name} with brand name: ${brandName}`);
+        
+        await this.updateTeam(team.id, { brand_name: brandName });
+      }
+    }
+    
+    console.log('Team brand names updated successfully');
   }
 
   async deleteTeam(id: string): Promise<void> {

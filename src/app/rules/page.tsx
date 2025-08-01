@@ -2,20 +2,10 @@ const RulesPage = () => {
   return (
     <>
       <main className="max-w-6xl mx-auto py-12 px-4">
-        {/* Sticky Hash Link Menu */}
-        <nav className="sticky top-0 z-30 bg-black/80 rounded-xl py-2 px-4 border border-white/10 shadow-lg backdrop-blur-md mb-8 flex flex-wrap justify-center gap-2 sm:gap-4">
-          <a href="#categories" className="text-white font-bold hover:text-green-300 transition text-sm sm:text-base">Categories</a>
-          <a href="#mens-team" className="text-white font-bold hover:text-green-300 transition text-sm sm:text-base">Men&apos;s Team</a>
-          <a href="#tournament-info" className="text-white font-bold hover:text-green-300 transition text-sm sm:text-base">Info</a>
-          <a href="#registration" className="text-white font-bold hover:text-green-300 transition text-sm sm:text-base">Registration</a>
-          <a href="#safety" className="text-white font-bold hover:text-green-300 transition text-sm sm:text-base">Safety</a>
-          <a href="#additional" className="text-white font-bold hover:text-green-300 transition text-sm sm:text-base">Additional</a>
-          <a href="#help" className="text-white font-bold hover:text-green-300 transition text-sm sm:text-base">Help</a>
-        </nav>
         {/* Enhanced Header */}
         <div className="text-center mb-12 animate-slide-in-up">
           <div className="text-5xl mb-4 animate-float">📋</div>
-          <h1 className="text-4xl md:text-5xl font-bold text-white text-glow-white mb-4">
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
             Tournament Rules & Regulations
           </h1>
           <p className="text-white/80 text-xl max-w-3xl mx-auto">
@@ -28,7 +18,7 @@ const RulesPage = () => {
           <div id="categories" className="bg-gradient-to-r from-white/10 to-white/5 rounded-3xl p-8 backdrop-blur-md border border-white/20 shadow-2xl animate-fade-in-scale">
             <div className="flex items-center mb-6">
               <div className="text-3xl mr-4">🏆</div>
-              <h2 className="text-2xl font-bold text-white text-glow-white">Available Categories</h2>
+              <h2 className="text-2xl font-bold text-white">Available Categories</h2>
             </div>
             <div className="grid md:grid-cols-2 gap-6">
               <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-2xl p-6 border border-blue-200/30">
@@ -70,7 +60,7 @@ const RulesPage = () => {
           <div id="mens-team" className="bg-gradient-to-r from-white/10 to-white/5 rounded-3xl p-8 backdrop-blur-md border border-white/20 shadow-2xl animate-fade-in-scale" style={{animationDelay: '0.1s'}}>
             <div className="flex items-center mb-6">
               <div className="text-3xl mr-4">👥</div>
-              <h2 className="text-2xl font-bold text-white text-glow-white">Important Rules and Info for Men’s Team Category</h2>
+              <h2 className="text-2xl font-bold text-white">Important Rules and Info for Men’s Team Category</h2>
             </div>
             <div className="space-y-4 text-white/90">
               <ul className="list-disc pl-6 space-y-2">
@@ -148,7 +138,7 @@ const RulesPage = () => {
           <div id="registration" className="bg-gradient-to-r from-white/10 to-white/5 rounded-3xl p-8 backdrop-blur-md border border-white/20 shadow-2xl animate-fade-in-scale" style={{animationDelay: '0.5s'}}>
             <div className="flex items-center mb-6">
               <div className="text-3xl mr-4">📝</div>
-              <h2 className="text-2xl font-bold text-white text-glow-white">How to Register</h2>
+              <h2 className="text-2xl font-bold text-white">How to Register</h2>
             </div>
             <div className="space-y-4 text-white/90">
               <div className="flex items-center">
@@ -171,7 +161,7 @@ const RulesPage = () => {
           <div id="safety" className="bg-gradient-to-r from-white/10 to-white/5 rounded-3xl p-8 backdrop-blur-md border border-white/20 shadow-2xl animate-fade-in-scale" style={{animationDelay: '0.6s'}}>
             <div className="flex items-center mb-6">
               <div className="text-3xl mr-4">🛡️</div>
-              <h2 className="text-2xl font-bold text-white text-glow-white">Safety Guidelines</h2>
+              <h2 className="text-2xl font-bold text-white">Safety Guidelines</h2>
             </div>
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-3 text-white/90">
@@ -215,7 +205,9 @@ const RulesPage = () => {
               <div className="space-y-4">
                 <div>
                   <h3 className="text-lg font-bold text-white mb-2">🎾 Draws & Format</h3>
-                  <p className="text-white/80">Draws will be random. First round: 1 set to 30 points (no deuce). Later rounds: BWF format.</p>
+                  <p className="text-white/80">Draws will be randomized.</p>
+                  <p className="text-white/80">Rounds 1, 2 (Round of 16), and Quarterfinals: Single set to <strong>30</strong> points, no deuce.</p>
+                  <p className="text-white/80">From Semifinals onwards: Matches will follow BWF format — best of <strong>3</strong> sets, each set to <strong>21</strong> points.</p>
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-white mb-2">🏓 Service Rule</h3>
@@ -257,7 +249,7 @@ const RulesPage = () => {
           {/* Communication & Help */}
           <div id="help" className="bg-gradient-to-r from-white/10 to-white/5 rounded-3xl p-8 backdrop-blur-md border border-white/20 shadow-2xl animate-fade-in-scale" style={{animationDelay: '0.9s'}}>
             <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold text-white text-glow-white mb-2">Get Involved</h2>
+              <h2 className="text-2xl font-bold text-white mb-2">Get Involved</h2>
               <p className="text-white/80">Join our community and help make this tournament a success!</p>
             </div>
             <div className="grid md:grid-cols-3 gap-6">
