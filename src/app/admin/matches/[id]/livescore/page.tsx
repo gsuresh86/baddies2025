@@ -68,9 +68,7 @@ export default function LiveScorePage() {
           team2_score: matchData.team2_score || 0
         });
         
-        // Resolve pool and category code from cache
-        const matchPool = pools.find(p => p.id === matchData.pool_id);
-        const categoryCode = matchPool ? categories.find(c => c.id === matchPool.category_id)?.code : undefined;
+        const categoryCode = categories.find(c => c.id === matchData?.category_id)?.code;
         
         // Note: sides_switched state is not persisted to database, only handled via WebSocket
         // If men's team category, fetch games for the match
@@ -391,7 +389,13 @@ export default function LiveScorePage() {
 
   // Determine if this is a men's team category match
   const matchPool = pools.find(p => p.id === match?.pool_id);
-  const categoryCode = matchPool ? categories.find(c => c.id === matchPool.category_id)?.code : undefined;
+  let categoryCode = undefined;
+  if (matchPool) {
+    categoryCode = categories.find(c => c.id === matchPool.category_id)?.code;
+  } else if (match) {
+    categoryCode = categories.find(c => c.id === match?.category_id)?.code;
+  }
+
   const isMensTeamCategory = categoryCode === 'MT';
 
   // For men's team category, use the in-progress game (or first game) for player names
@@ -401,7 +405,7 @@ export default function LiveScorePage() {
   }
 
   // Only show main content once player name data is resolved
-  const playerNameDataReady = isMensTeamCategory ? !!currentGame : !!match;
+  const playerNameDataReady = isMensTeamCategory ? (!!currentGame || games.length === 0) : !!match;
 
   // Define getCardName at the top level of the component, outside of any event handler
   const getCardName = (side: 'team1' | 'team2') => {
@@ -426,9 +430,21 @@ export default function LiveScorePage() {
         }
       }
     } else {
-      return side === 'team1'
-        ? (match?.player1_id ? getPlayerName(match.player1_id) : getTeamName(match?.team1_id))
-        : (match?.player2_id ? getPlayerName(match.player2_id) : getTeamName(match?.team2_id));
+      // For non-men's team categories or when no games are available for men's team
+      const teamName = side === 'team1' ? getTeamName(match?.team1_id) : getTeamName(match?.team2_id);
+      const playerName = side === 'team1' 
+        ? (match?.player1_id ? getPlayerName(match.player1_id) : '')
+        : (match?.player2_id ? getPlayerName(match.player2_id) : '');
+      
+      if (playerName && teamName) {
+        return `${playerName} (${teamName})`;
+      } else if (playerName) {
+        return playerName;
+      } else if (teamName) {
+        return teamName;
+      } else {
+        return 'Unknown';
+      }
     }
   };
 

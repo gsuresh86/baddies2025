@@ -166,14 +166,8 @@ export default function PublicLiveScorePage() {
     return player.name || 'Unknown Player';
   };
 
-  // These must be above the useEffect that uses them
-  const showCongrats1 = scores.team1_score === 30;
-  const showCongrats2 = scores.team2_score === 30;
-  const showCongrats = showCongrats1 || showCongrats2;
-  
   // Determine if this is a men's team category match (moved up to avoid linter error)
-  const matchPool = pools.find(p => p.id === match?.pool_id);
-  const categoryCode = matchPool ? categories.find(c => c.id === matchPool.category_id)?.code : undefined;
+  const categoryCode = categories.find(c => c.id === match?.category_id)?.code;
   const isMensTeamCategory = categoryCode === 'MT';
   
   // Find the game by ?game=GAME_ID if present, else in_progress, else first
@@ -184,6 +178,39 @@ export default function PublicLiveScorePage() {
   if (!currentGame) {
     currentGame = games.find(g => (g as any)['status'] === 'in_progress') || games[0];
   }
+
+  // Load initial scores based on category
+  useEffect(() => {
+    if (!match || !games.length) return;
+
+    let initialScores = { team1_score: 0, team2_score: 0 };
+
+    if (isMensTeamCategory && currentGame) {
+      // For men's team category, use current game scores
+      initialScores = {
+        team1_score: (currentGame as any).team1_score || 0,
+        team2_score: (currentGame as any).team2_score || 0
+      };
+      console.log('🎯 Public: Loading initial scores from current game for men\'s team category:', initialScores);
+    } else {
+      // For other categories, use match scores
+      initialScores = {
+        team1_score: match.team1_score || 0,
+        team2_score: match.team2_score || 0
+      };
+      console.log('🎯 Public: Loading initial scores from match for other categories:', initialScores);
+    }
+
+    // Only update if scores are different to avoid unnecessary re-renders
+    if (scores.team1_score !== initialScores.team1_score || scores.team2_score !== initialScores.team2_score) {
+      setScores(initialScores);
+    }
+  }, [match, games, isMensTeamCategory, currentGame, gameIdParam, scores.team1_score, scores.team2_score]);
+
+  // These must be above the useEffect that uses them
+  const showCongrats1 = scores.team1_score === 30;
+  const showCongrats2 = scores.team2_score === 30;
+  const showCongrats = showCongrats1 || showCongrats2;
 
   useEffect(() => {
     async function fetchData() {
@@ -261,9 +288,22 @@ export default function PublicLiveScorePage() {
           (payload) => {
             console.log('📨 Public: Received broadcast:', payload);
             try {
-              const { scores: newScores, sidesSwitched: newSidesSwitched } = payload.payload;
+              const { scores: newScores, sidesSwitched: newSidesSwitched, gameId } = payload.payload;
+              
+              // Update global scores
               setScores(newScores);
               setSidesSwitched(newSidesSwitched);
+              
+              // If this is a game-specific update for men's team category, also update the game
+              if (isMensTeamCategory && gameId && currentGame?.id === gameId) {
+                setGames(prevGames => 
+                  prevGames.map(game => 
+                    game.id === gameId ? { ...game, team1_score: newScores.team1_score, team2_score: newScores.team2_score } : game
+                  )
+                );
+                console.log('✅ Public: Game scores updated from broadcast for men\'s team category:', gameId);
+              }
+              
               console.log('✅ Public: Scores updated from broadcast:', newScores);
             } catch (error) {
               console.error('❌ Public: Error processing broadcast:', error);
@@ -294,7 +334,7 @@ export default function PublicLiveScorePage() {
         channelRef.current = null;
       }
     };
-  }, [matchId]);
+  }, [matchId, isMensTeamCategory, currentGame?.id]);
 
   // Fetch games for the match
   useEffect(() => {
@@ -315,7 +355,62 @@ export default function PublicLiveScorePage() {
   }, [matchId, isMensTeamCategory, pools, categories]);
 
   // Subscribe to game live score updates
-  
+  useEffect(() => {
+    if (!matchId || !isMensTeamCategory) return;
+
+    const channelRef = { current: null as RealtimeChannel | null };
+    const timeout = setTimeout(() => {
+      const channelName = `game-updates-${matchId}`;
+      const channel = supabase.channel(channelName);
+      channelRef.current = channel;
+
+      channel
+        .on(
+          'broadcast',
+          { event: 'game-update' },
+          (payload) => {
+            console.log('📨 Public: Received game update broadcast:', payload);
+            try {
+              const { gameId, gameData } = payload.payload;
+              setGames(prevGames => 
+                prevGames.map(game => 
+                  game.id === gameId ? { ...game, ...gameData } : game
+                )
+              );
+              
+              // If this is the current game and it has score updates, also update global scores
+              if (gameId === currentGame?.id && (gameData.team1_score !== undefined || gameData.team2_score !== undefined)) {
+                setScores(prevScores => ({
+                  team1_score: gameData.team1_score ?? prevScores.team1_score,
+                  team2_score: gameData.team2_score ?? prevScores.team2_score
+                }));
+                console.log('✅ Public: Global scores updated from game update for current game:', gameId);
+              }
+              
+              console.log('✅ Public: Games updated from broadcast:', gameId);
+            } catch (error) {
+              console.error('❌ Public: Error processing game update broadcast:', error);
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log(`📊 Public: Game channel status changed to: ${status}`);
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ Public: Successfully connected to game WebSocket!');
+          }
+        });
+    }, 1500);
+
+    return () => {
+      console.log('🧹 Public: Cleaning up game WebSocket connection');
+      clearTimeout(timeout);
+      if (channelRef.current) {
+        channelRef.current.unsubscribe();
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [matchId, isMensTeamCategory, currentGame?.id]);
 
   useEffect(() => {
     if (showCongrats && !hasPlayed) {
