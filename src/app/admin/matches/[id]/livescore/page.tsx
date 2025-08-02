@@ -141,9 +141,9 @@ export default function LiveScorePage() {
 
 
   const getTeamName = (teamId?: string) => {
-    if (!teamId) return 'Unknown Team';
+    if (!teamId) return '';
     const team = teams.find(t => t.id === teamId);
-    return team?.brand_name || team?.name || 'Unknown Team';
+    return team?.brand_name || team?.name || '';
   };
 
   const getPlayerName = (playerId?: string) => {
@@ -169,15 +169,22 @@ export default function LiveScorePage() {
     // Broadcast the score update via WebSocket
     if (broadcastChannel) {
       console.log('📤 Admin: Broadcasting score update:', newScores);
+      const payload: any = {
+        scores: newScores,
+        sidesSwitched,
+        matchId,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Add gameId for men's team matches
+      if (isMensTeamCategory && currentGame) {
+        payload.gameId = currentGame.id;
+      }
+      
       broadcastChannel.send({
         type: 'broadcast',
         event: 'score-update',
-        payload: {
-          scores: newScores,
-          sidesSwitched,
-          matchId,
-          timestamp: new Date().toISOString()
-        }
+        payload
       });
       console.log('✅ Admin: Score broadcast sent');
     } else {
@@ -203,15 +210,22 @@ export default function LiveScorePage() {
       // Broadcast the reset
       if (broadcastChannel) {
         console.log('📤 Admin: Broadcasting score reset');
+        const payload: any = {
+          scores: newScores,
+          sidesSwitched,
+          matchId,
+          timestamp: new Date().toISOString()
+        };
+        
+        // Add gameId for men's team matches
+        if (isMensTeamCategory && currentGame) {
+          payload.gameId = currentGame.id;
+        }
+        
         broadcastChannel.send({
           type: 'broadcast',
           event: 'score-update',
-          payload: {
-            scores: newScores,
-            sidesSwitched,
-            matchId,
-            timestamp: new Date().toISOString()
-          }
+          payload
         });
         console.log('✅ Admin: Reset broadcast sent');
       }
@@ -231,15 +245,22 @@ export default function LiveScorePage() {
     // Broadcast the switch (scores remain the same)
     if (broadcastChannel) {
       console.log('📤 Admin: Broadcasting side switch');
+      const payload: any = {
+        scores, // scores are not swapped
+        sidesSwitched: newSidesSwitched,
+        matchId,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Add gameId for men's team matches
+      if (isMensTeamCategory && currentGame) {
+        payload.gameId = currentGame.id;
+      }
+      
       broadcastChannel.send({
         type: 'broadcast',
         event: 'score-update',
-        payload: {
-          scores, // scores are not swapped
-          sidesSwitched: newSidesSwitched,
-          matchId,
-          timestamp: new Date().toISOString()
-        }
+        payload
       });
       console.log('✅ Admin: Side switch broadcast sent');
     }
@@ -432,18 +453,33 @@ export default function LiveScorePage() {
     } else {
       // For non-men's team categories or when no games are available for men's team
       const teamName = side === 'team1' ? getTeamName(match?.team1_id) : getTeamName(match?.team2_id);
-      const playerName = side === 'team1' 
-        ? (match?.player1_id ? getPlayerName(match.player1_id) : '')
-        : (match?.player2_id ? getPlayerName(match.player2_id) : '');
+      const playerId = side === 'team1' ? match?.player1_id : match?.player2_id;
+      const player = playerId ? players.find(p => p.id === playerId) : undefined;
       
-      if (playerName && teamName) {
-        return `${playerName} (${teamName})`;
-      } else if (playerName) {
-        return playerName;
-      } else if (teamName) {
-        return teamName;
+      // Check if this is a pair category match
+      const matchCategory = match?.category_id ? categories.find(c => c.id === match.category_id) : undefined;
+      const isPairCategory = matchCategory?.type === 'pair';
+      
+      if (isPairCategory && player) {
+        // For pair categories, show player name with partner name if available
+        if (player.partner_name) {
+          return `${player.name} / ${player.partner_name}`;
+        } else {
+          return player.name;
+        }
       } else {
-        return 'Unknown';
+        // For non-pair categories, use the original logic
+        const playerName = player?.name || '';
+        
+        if (playerName && teamName) {
+          return `${playerName} (${teamName})`;
+        } else if (playerName) {
+          return playerName;
+        } else if (teamName) {
+          return teamName;
+        } else {
+          return 'Unknown';
+        }
       }
     }
   };

@@ -293,7 +293,6 @@ export default function PublicLiveScorePage() {
               // Update global scores
               setScores(newScores);
               setSidesSwitched(newSidesSwitched);
-              
               // If this is a game-specific update for men's team category, also update the game
               if (isMensTeamCategory && gameId && currentGame?.id === gameId) {
                 setGames(prevGames => 
