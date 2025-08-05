@@ -22,6 +22,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
     { href: '/gallery', label: '👥 Gallery' },
     { href: '/teams', label: '👥 Teams' },
     { href: '/players', label: '🧑‍🎾 Players' },
+    { href: '/organizers', label: '👨‍💼 Organizers' },
     { href: '/formats', label: '📊 Formats' },
     { href: '/rules', label: '📋 Rules' },
   ];
