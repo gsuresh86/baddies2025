@@ -20,6 +20,11 @@ const organizers: Organizer[] = [
   { id: 8, name: 'Saravanan M', image: '/organizers/placeholder.jpg', role: 'Technical Support' },
   { id: 9, name: 'Suresh', image: '/organizers/placeholder.jpg', role: 'Logistics Manager' },
   { id: 10, name: 'Sarada Reddy', image: '/organizers/placeholder.jpg', role: 'Administrative Head' },
+  { id: 11, name: 'Sraveen Kuchipudi', image: '/organizers/placeholder.jpg', role: 'Event Manager' },
+  { id: 12, name: 'Sudheer Reddy', image: '/organizers/placeholder.jpg', role: 'Tournament Coordinator' },
+  { id: 13, name: 'Vasu Chepuru', image: '/organizers/placeholder.jpg', role: 'Technical Manager' },
+  { id: 14, name: 'Saravanan', image: '/organizers/placeholder.jpg', role: 'Operations Coordinator' },
+  { id: 15, name: 'Girish', image: '/organizers/placeholder.jpg', role: 'Player Coordinator' },
 ];
 
 export default function OrganizersPage() {
