@@ -452,10 +452,10 @@ export default function FixturesPage() {
     const sortedGroups: { [dateTime: string]: Match[] } = {};
     Object.keys(groupedByDate)
       .sort((a, b) => {
-        // Sort by IST date
+        // Sort by IST date in descending order (newest first)
         const dateA = new Date(a.split('/').reverse().join('-'));
         const dateB = new Date(b.split('/').reverse().join('-'));
-        return dateA.getTime() - dateB.getTime(); // Ascending order by date
+        return dateB.getTime() - dateA.getTime(); // Descending order by date
       })
       .forEach(dateKey => {
         // Remove the _istDate property before returning
@@ -507,6 +507,8 @@ export default function FixturesPage() {
   const getNextUpcomingDateKey = (dateGroups: { [dateKey: string]: Match[] }, status: string) => {
     const now = new Date();
     const dateKeys = Object.keys(dateGroups);
+    
+    // Since dates are now in descending order, find the most recent upcoming date
     for (const dateKey of dateKeys) {
       const [date] = dateKey.split(' - ');
       const [day, month, year] = date.split('/');
@@ -517,7 +519,8 @@ export default function FixturesPage() {
         if (filtered.length > 0) return dateKey;
       }
     }
-    // fallback: first date with any matches for status
+    
+    // fallback: first date (most recent) with any matches for status
     for (const dateKey of dateKeys) {
       const matches = dateGroups[dateKey];
       const filtered = status === 'all' ? matches : matches.filter(m => m.status === status);
