@@ -25,6 +25,19 @@ const categoryLabels: Record<string, string> = {
   "FM": "Family Mixed",
 };
 
+// Helper function to get display name for pair games
+const getPlayerDisplayName = (player: Player | undefined, isPairGame: boolean) => {
+  if (!player) return '';
+  
+  if (isPairGame && player.partner_name) {
+    const firstName = player.name.split(' ')[0];
+    const partnerFirstName = player.partner_name.split(' ')[0];
+    return `${firstName} / ${partnerFirstName}`;
+  }
+  
+  return player.name;
+};
+
 export default function WinnersPage() {
   const { matches, teams, players, categories, pools } = useData();
   const [winners, setWinners] = useState<WinnerResult[]>([]);
@@ -116,25 +129,28 @@ export default function WinnersPage() {
             const player1 = players.find(p => p.id === finalMatch.player1_id);
             const player2 = players.find(p => p.id === finalMatch.player2_id);
             
+            // Check if this is a pair game
+            const isPairGame = ['WD', 'XD', 'FM'].includes(category.code);
+            
             if (finalMatch.winner === 'player1') {
               goldWinner = { 
-                name: player1?.name || 'Player 1', 
+                name: getPlayerDisplayName(player1, isPairGame) || 'Player 1', 
                 type: 'player', 
                 data: player1 
               };
               silverRunner = { 
-                name: player2?.name || 'Player 2', 
+                name: getPlayerDisplayName(player2, isPairGame) || 'Player 2', 
                 type: 'player', 
                 data: player2 
               };
             } else if (finalMatch.winner === 'player2') {
               goldWinner = { 
-                name: player2?.name || 'Player 2', 
+                name: getPlayerDisplayName(player2, isPairGame) || 'Player 2', 
                 type: 'player', 
                 data: player2 
               };
               silverRunner = { 
-                name: player1?.name || 'Player 1', 
+                name: getPlayerDisplayName(player1, isPairGame) || 'Player 1', 
                 type: 'player', 
                 data: player1 
               };
@@ -166,15 +182,18 @@ export default function WinnersPage() {
               const player1 = players.find(p => p.id === tpmMatch.player1_id);
               const player2 = players.find(p => p.id === tpmMatch.player2_id);
               
+              // Check if this is a pair game
+              const isPairGame = ['WD', 'XD', 'FM'].includes(category.code);
+              
               if (tpmMatch.winner === 'player1') {
                 bronzeWinner = { 
-                  name: player1?.name || 'Player 1', 
+                  name: getPlayerDisplayName(player1, isPairGame) || 'Player 1', 
                   type: 'player', 
                   data: player1 
                 };
               } else if (tpmMatch.winner === 'player2') {
                 bronzeWinner = { 
-                  name: player2?.name || 'Player 2', 
+                  name: getPlayerDisplayName(player2, isPairGame) || 'Player 2', 
                   type: 'player', 
                   data: player2 
                 };
