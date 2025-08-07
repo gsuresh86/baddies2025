@@ -17,7 +17,11 @@ export default function OrganizersPage() {
       try {
         setLoading(true);
         const dbOrganizers = await tournamentStore.getOrganizers();
-        setOrganizers(dbOrganizers || []);
+        // Sort organizers by name alphabetically
+        const sortedOrganizers = (dbOrganizers || []).sort((a, b) => 
+          a.name.localeCompare(b.name)
+        );
+        setOrganizers(sortedOrganizers);
       } catch (error) {
         console.error('Error loading organizers:', error);
         setOrganizers([]);
@@ -102,11 +106,14 @@ export default function OrganizersPage() {
             <div className="relative h-80 md:h-96 w-full overflow-hidden rounded-2xl p-4">
               <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-blue-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 rounded-2xl"></div>
               {currentOrganizer.image_url ? (
-                <img
-                  src={currentOrganizer.image_url}
-                  alt={currentOrganizer.name}
-                  className="w-full h-full object-contain rounded-xl"
-                />
+                <div className="flex items-center justify-center h-full pt-8">
+                  <img
+                    src={currentOrganizer.image_url}
+                    alt={currentOrganizer.name}
+                    className="w-[400px] h-[400px] object-cover rounded-xl"
+                    style={{ borderRadius: '12px' }}
+                  />
+                </div>
               ) : (
                 <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center rounded-xl">
                   <div className="text-center">
