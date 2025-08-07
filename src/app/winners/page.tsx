@@ -294,9 +294,15 @@ export default function WinnersPage() {
               className="group relative animate-fade-in-scale bg-gradient-to-br from-black/50 to-gray-900/50 backdrop-blur-sm rounded-3xl border border-white/20 hover:border-yellow-400/50 transition-all duration-500 hover-lift shadow-2xl hover:shadow-3xl overflow-hidden"
             >
               {/* Category Header */}
-              <div className="p-6 text-center border-b border-white/10">
-                <h3 className="text-2xl font-bold text-white mb-2">{winner.category.label}</h3>
-                <div className="h-1 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full w-16 mx-auto"></div>
+              <div className="p-2 border-b border-white/10">
+                <div className="flex items-center gap-4">
+                  <img 
+                    src="/baddies.png" 
+                    alt="Baddies Logo" 
+                    className="w-24 h-24"
+                  />
+                  <h3 className="text-2xl font-bold text-white">{winner.category.label}</h3>
+                </div>
               </div>
 
               {/* Podium Display */}

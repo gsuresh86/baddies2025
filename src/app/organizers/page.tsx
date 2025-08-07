@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { tournamentStore } from '@/lib/store';
 import { Organizer } from '@/types';
+import Link from 'next/link';
 
 
 export default function OrganizersPage() {
@@ -94,6 +95,18 @@ export default function OrganizersPage() {
         </p>
         <div className="w-24 h-1 bg-gradient-to-r from-green-500 to-blue-500 mx-auto mt-6 rounded-full"></div>
         
+        {/* Grid View Button */}
+        <div className="mt-8">
+          <Link 
+            href="/organizers/list"
+            className="inline-flex items-center px-6 py-3 bg-black/40 backdrop-blur-sm rounded-full border border-white/20 hover:border-green-400/50 transition-all duration-300 hover-lift text-white font-medium"
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+            </svg>
+            Grid View
+          </Link>
+        </div>
       </div>
 
       {/* Single Organizer Card */}
