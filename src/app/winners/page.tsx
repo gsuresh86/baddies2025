@@ -87,7 +87,6 @@ export default function WinnersPage() {
         const tpmMatches = categoryMatches.filter(match => 
           match.stage === 'TPM' && match.status === 'completed'
         );
-
         if (finalMatches.length > 0) {
           const finalMatch = finalMatches[0]; // Take the first final match
           
@@ -288,7 +287,7 @@ export default function WinnersPage() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 gap-8">
           {filteredWinners.map((winner) => (
             <div
               key={winner.id}
@@ -301,73 +300,50 @@ export default function WinnersPage() {
               </div>
 
               {/* Podium Display */}
-              <div className="p-6 space-y-6">
-                {/* Gold Medal - 1st Place */}
-                <div className="relative">
-                  <div className="flex items-center justify-center mb-4">
-                    <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center shadow-2xl animate-pulse">
-                      <span className="text-3xl">🥇</span>
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <h4 className="text-xl font-bold text-yellow-300 mb-1">GOLD</h4>
-                    <p className="text-white font-semibold text-lg">{winner.gold.name}</p>
-                    {winner.gold.data && (
-                      <p className="text-gray-400 text-sm mt-1">
-                        {winner.gold.type === 'team' ? 'Team' : 'Player'}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Silver Medal - 2nd Place */}
-                <div className="relative">
-                  <div className="flex items-center justify-center mb-4">
-                    <div className="w-14 h-14 bg-gradient-to-br from-gray-300 to-gray-500 rounded-full flex items-center justify-center shadow-xl">
-                      <span className="text-2xl">🥈</span>
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <h4 className="text-lg font-bold text-gray-300 mb-1">SILVER</h4>
-                    <p className="text-white font-semibold">{winner.silver.name}</p>
-                    {winner.silver.data && (
-                      <p className="text-gray-400 text-sm mt-1">
-                        {winner.silver.type === 'team' ? 'Team' : 'Player'}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Bronze Medal - 3rd Place */}
-                {winner.bronze && (
-                  <div className="relative">
-                    <div className="flex items-center justify-center mb-4">
-                      <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center shadow-lg">
-                        <span className="text-xl">🥉</span>
+              <div className="p-6">
+                <div className="flex flex-col md:flex-row items-center justify-between w-full gap-4 md:gap-2">
+                  {/* Gold Medal - 1st Place */}
+                  <div className="flex-1 text-center w-full md:w-auto">
+                    <div className="flex items-center justify-center mb-3">
+                      <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center shadow-2xl animate-pulse hover:scale-110 transition-transform duration-300 hover:shadow-yellow-500/50">
+                        <span className="text-xl filter drop-shadow-lg">🥇</span>
                       </div>
                     </div>
                     <div className="text-center">
-                      <h4 className="text-base font-bold text-orange-300 mb-1">BRONZE</h4>
-                      <p className="text-white font-semibold text-sm">{winner.bronze.name}</p>
-                      {winner.bronze.data && (
-                        <p className="text-gray-400 text-xs mt-1">
-                          {winner.bronze.type === 'team' ? 'Team' : 'Player'}
-                        </p>
+                      <h4 className="text-sm md:text-lg font-bold text-yellow-300 mb-1 drop-shadow-lg">GOLD</h4>
+                      <p className="text-white font-bold text-base md:text-xl lg:text-2xl drop-shadow-lg hover:text-yellow-300 transition-colors duration-300">{winner.gold.name}</p>
+                    </div>
+                  </div>
+
+                  {/* Silver Medal - 2nd Place */}
+                  <div className="flex-1 text-center w-full md:w-auto">
+                    <div className="flex items-center justify-center mb-3">
+                      <div className="w-12 h-12 bg-gradient-to-br from-gray-300 to-gray-500 rounded-full flex items-center justify-center shadow-xl hover:scale-110 transition-transform duration-300 hover:shadow-gray-400/50">
+                        <span className="text-xl filter drop-shadow-lg">🥈</span>
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <h4 className="text-xs md:text-base font-bold text-gray-300 mb-1 drop-shadow-lg">SILVER</h4>
+                      <p className="text-white font-bold text-base md:text-xl lg:text-2xl drop-shadow-lg hover:text-gray-300 transition-colors duration-300">{winner.silver.name}</p>
+                    </div>
+                  </div>
+
+                  {/* Bronze Medal - 3rd Place */}
+                  <div className="flex-1 text-center w-full md:w-auto">
+                    <div className="flex items-center justify-center mb-3">
+                      <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform duration-300 hover:shadow-orange-500/50">
+                        <span className="text-xl filter drop-shadow-lg">🥉</span>
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <h4 className="text-xs md:text-sm font-bold text-orange-300 mb-1 drop-shadow-lg">BRONZE</h4>
+                      {winner.bronze ? (
+                        <p className="text-white font-bold text-base md:text-xl lg:text-2xl drop-shadow-lg hover:text-orange-300 transition-colors duration-300">{winner.bronze.name}</p>
+                      ) : (
+                        <p className="text-gray-500 font-semibold text-base md:text-xl lg:text-2xl">TBD</p>
                       )}
                     </div>
                   </div>
-                )}
-              </div>
-
-              {/* Match Details */}
-              <div className="p-4 bg-black/20 border-t border-white/10">
-                <div className="text-center">
-                  <p className="text-gray-400 text-sm">Final Match</p>
-                  {winner.matchDetails.team1_score !== null && winner.matchDetails.team2_score !== null && (
-                    <p className="text-white font-bold text-lg mt-1">
-                      {winner.matchDetails.team1_score} - {winner.matchDetails.team2_score}
-                    </p>
-                  )}
                 </div>
               </div>
 

@@ -57,7 +57,8 @@ export const MatchFilters: React.FC<MatchFiltersProps> = ({
     { value: 'R16', label: 'R16' },
     { value: 'QF', label: 'QF' },
     { value: 'SF', label: 'SF' },
-    { value: 'F', label: 'F' }
+    { value: 'F', label: 'F' },
+    { value: 'TPM', label: 'TPM' }
   ];
 
   const actionButtons = [
