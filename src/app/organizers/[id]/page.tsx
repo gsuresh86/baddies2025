@@ -7,25 +7,6 @@ import AuthGuard from '@/components/AuthGuard';
 import { useToast } from '@/contexts/ToastContext';
 import { Organizer } from '@/types';
 
-// Fallback organizers data (in case database is not set up yet)
-const fallbackOrganizers = [
-  { id: '1', name: 'Amit Saxena', role: 'Tournament Director' },
-  { id: '2', name: 'Ram Dheeraj', role: 'Event Coordinator' },
-  { id: '3', name: 'Sumit Khatavkar', role: 'Technical Director' },
-  { id: '4', name: 'Kshitij Bhargava', role: 'Operations Manager' },
-  { id: '5', name: 'Surya Kiran Reddy', role: 'Venue Coordinator' },
-  { id: '6', name: 'Kambe R Gowda', role: 'Player Relations' },
-  { id: '7', name: 'Kishore Babu', role: 'Media Coordinator' },
-  { id: '8', name: 'Saravanan M', role: 'Technical Support' },
-  { id: '9', name: 'Suresh', role: 'Logistics Manager' },
-  { id: '10', name: 'Sarada Reddy', role: 'Administrative Head' },
-  { id: '11', name: 'Sraveen Kuchipudi', role: 'Event Manager' },
-  { id: '12', name: 'Sudheer Reddy', role: 'Tournament Coordinator' },
-  { id: '13', name: 'Vasu Chepuru', role: 'Technical Manager' },
-  { id: '14', name: 'Saravanan', role: 'Operations Coordinator' },
-  { id: '15', name: 'Girish', role: 'Player Coordinator' },
-];
-
 export default function OrganizerUploadPage() {
   const params = useParams();
   const router = useRouter();
@@ -48,44 +29,11 @@ export default function OrganizerUploadPage() {
         if (dbOrganizer) {
           setOrganizer(dbOrganizer);
           setRole(dbOrganizer.role || '');
-        } else {
-          // Fallback to static data
-          const fallbackOrganizer = fallbackOrganizers.find(o => o.id === organizerId);
-          if (fallbackOrganizer) {
-            setOrganizer({
-              id: fallbackOrganizer.id,
-              name: fallbackOrganizer.name,
-              role: fallbackOrganizer.role,
-              is_active: true,
-              display_order: parseInt(fallbackOrganizer.id),
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            });
-            setRole(fallbackOrganizer.role || '');
-                  } else {
-          showError('Organizer not found');
-          router.push('/organizers');
-        }
         }
       } catch (error) {
         console.error('Error loading organizer:', error);
-        // Fallback to static data
-        const fallbackOrganizer = fallbackOrganizers.find(o => o.id === organizerId);
-        if (fallbackOrganizer) {
-          setOrganizer({
-            id: fallbackOrganizer.id,
-            name: fallbackOrganizer.name,
-            role: fallbackOrganizer.role,
-            is_active: true,
-            display_order: parseInt(fallbackOrganizer.id),
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
-          setRole(fallbackOrganizer.role || '');
-        } else {
-          showError('Organizer not found');
-          router.push('/organizers');
-        }
+        showError('Organizer not found');
+        router.push('/organizers');
       } finally {
         setLoading(false);
       }
@@ -166,8 +114,7 @@ export default function OrganizerUploadPage() {
       await tournamentStore.updateOrganizer(organizerId, {
         role: role.trim()
       });
-      
-      toast('Role updated successfully!', 'success');
+      showSuccess('Role updated successfully!');
       
       // Redirect back to organizers page after a short delay
       setTimeout(() => {
@@ -176,7 +123,6 @@ export default function OrganizerUploadPage() {
 
     } catch (error) {
       console.error('Role update error:', error);
-      toast('Failed to update role', 'error');
     } finally {
       setIsUploading(false);
     }

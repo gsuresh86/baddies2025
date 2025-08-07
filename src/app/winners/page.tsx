@@ -7,9 +7,9 @@ import { Match, Category, Team, Player } from '@/types';
 interface WinnerResult {
   id: string;
   category: Category;
-  gold: { name: string; type: 'team' | 'player'; data?: Team | Player };
-  silver: { name: string; type: 'team' | 'player'; data?: Team | Player };
-  bronze?: { name: string; type: 'team' | 'player'; data?: Team | Player };
+  gold: { name: string; type: 'team' | 'player'; data?: Team | Player | undefined };
+  silver: { name: string; type: 'team' | 'player'; data?: Team | Player | undefined };
+  bronze?: { name: string; type: 'team' | 'player'; data?: Team | Player | undefined };
   matchDetails: Match;
 }
 
@@ -79,9 +79,9 @@ export default function WinnersPage() {
           const finalMatch = finalMatches[0]; // Take the first final match
           
           // Determine winner and runner-up
-          let goldWinner = { name: '', type: 'team' as const, data: undefined };
-          let silverRunner = { name: '', type: 'team' as const, data: undefined };
-          let bronzeWinner = { name: '', type: 'team' as const, data: undefined };
+          let goldWinner = { name: '', type: 'team' as 'team' | 'player', data: undefined as Team | Player | undefined };
+          let silverRunner = { name: '', type: 'team' as 'team' | 'player', data: undefined as Team | Player | undefined };
+          let bronzeWinner = { name: '', type: 'team' as 'team' | 'player', data: undefined as Team | Player | undefined };
 
           if (category.code === 'MT') {
             // Team matches
