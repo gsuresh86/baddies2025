@@ -5,6 +5,7 @@ const nextConfig = {
       'owiqmetvqciyphnjdaxy.supabase.co',
       // add other allowed domains here if needed
     ],
+    unoptimized: true, // Disable image optimization to avoid Vercel limits
   },
 };
 

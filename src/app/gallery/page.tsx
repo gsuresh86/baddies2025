@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { supabase } from '@/lib/store';
 import { MatchMedia } from '@/types';
-import Image from 'next/image';
 
 export default function PublicGalleryPage() {
   const [media, setMedia] = useState<MatchMedia[]>([]);
@@ -112,12 +111,11 @@ export default function PublicGalleryPage() {
                 onClick={() => setSelectedMedia(item)}
               >
                 {item.media_type === 'photo' ? (
-                  <Image
+                  <img
                     src={item.file_url}
                     alt={item.description || item.file_name}
-                    width={600}
-                    height={300}
                     className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-200"
+                    loading="lazy"
                   />
                 ) : (
                   <video
@@ -179,11 +177,9 @@ export default function PublicGalleryPage() {
             </button>
             <div className="p-4">
               {selectedMedia.media_type === 'photo' ? (
-                <Image
+                <img
                   src={selectedMedia.file_url}
                   alt={selectedMedia.description || selectedMedia.file_name}
-                  width={900}
-                  height={600}
                   className="w-full max-h-[70vh] object-contain"
                 />
               ) : (

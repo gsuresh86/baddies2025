@@ -1,6 +1,5 @@
 'use client';
 
-import Image from "next/image";
 import Link from 'next/link';
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
@@ -30,13 +29,18 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
     <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden">
       {/* Enhanced Badminton Background with multiple layers */}
       <div className="absolute inset-0 w-full h-full z-0">
-        <Image
+        <img
           src="/badminton3.png"
           alt="Badminton Background"
-          fill
-          style={{ objectFit: 'cover', position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: 0 }}
+          style={{ 
+            objectFit: 'cover', 
+            position: 'absolute', 
+            inset: 0, 
+            width: '100%', 
+            height: '100%', 
+            zIndex: 0 
+          }}
           draggable={false}
-          priority
         />
         {/* Solid dark overlay for clarity */}
         <div className="absolute inset-0 bg-black/85 pointer-events-none" style={{zIndex:1}} />
@@ -54,14 +58,15 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
         {/* Logo - Always on the left */}
         <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
           <div className="w-14 h-14 md:w-20 md:h-20 relative animate-float">
-            <Image
+            <img
               src="/pcbt.png"
               alt="PBEL City Badminton Tournament Logo"
-              fill
-              sizes="(max-width: 767px) 56px, 80px"
-              style={{ objectFit: 'contain' }}
+              style={{ 
+                objectFit: 'contain',
+                width: '100%',
+                height: '100%'
+              }}
               draggable={false}
-              priority
             />
           </div>
         </Link>
