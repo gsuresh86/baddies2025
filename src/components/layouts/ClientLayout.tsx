@@ -10,7 +10,7 @@ import { ToastProvider } from '@/contexts/ToastContext';
 import { DataProvider } from '@/contexts/DataContext';
 
 // Define route categories
-const PUBLIC_ROUTES = ['/', '/standings', '/teams', '/rules', '/tournaments', '/match', '/organizers'];
+const PUBLIC_ROUTES = ['/', '/standings', '/teams', '/rules', '/tournaments', '/match', '/organizers', '/winners'];
 const AUTH_ROUTES = ['/admin-login'];
 
 interface ClientLayoutProps {

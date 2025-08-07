@@ -1,4 +1,4 @@
-import { Pool, Team, Player, Match, Category, MatchMedia } from '@/types';
+import { Pool, Team, Player, Match, Category, MatchMedia, Organizer } from '@/types';
 import { createClient } from '@supabase/supabase-js';
 
 // TODO: Replace with your actual Supabase URL and anon key
@@ -1272,6 +1272,65 @@ class TournamentStore {
     }
 
     console.log('Media deleted successfully');
+  }
+
+  // Organizer management
+  async getOrganizers(): Promise<Organizer[]> {
+    const { data, error } = await supabase
+      .from('organizers')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order');
+    if (error) {
+      console.error('Error fetching organizers:', error);
+      throw error;
+    }
+    return data as Organizer[];
+  }
+
+  async getOrganizerById(id: string): Promise<Organizer | null> {
+    const { data, error } = await supabase
+      .from('organizers')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error) throw error;
+    return data as Organizer;
+  }
+
+  async updateOrganizer(id: string, updates: Partial<Organizer>): Promise<Organizer> {
+    const { data, error } = await supabase
+      .from('organizers')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as Organizer;
+  }
+
+  async uploadOrganizerImage(organizerId: string, file: File): Promise<{ url: string; path: string }> {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `organizer-${organizerId}-${Date.now()}.${fileExt}`;
+    const filePath = `organizers/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('tournament-media')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      throw uploadError;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('tournament-media')
+      .getPublicUrl(filePath);
+
+    return { url: publicUrl, path: filePath };
   }
 }
 
