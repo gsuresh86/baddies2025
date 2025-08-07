@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Image from 'next/image';
 import YouTubeGallery from '@/components/YouTubeGallery';
+import { PublicStatsCards } from '@/components/PublicStatsCards';
 
 export default function LandingPage() {
   // Tab configuration
@@ -99,7 +100,7 @@ export default function LandingPage() {
               Join us for an exciting, fun-filled badminton tournament open to all skill levels! Compete, connect, and celebrate the spirit of sportsmanship in our vibrant community event.
             </p>
           </div>
-          <div className="grid md:grid-cols-2 gap-6 text-white/90">
+          <div className="grid md:grid-cols-2 gap-6 text-white/90 mb-8">
             <div className="bg-white/5 rounded-xl p-6 text-center">
               <div className="text-2xl mb-2">📍</div>
               <div className="font-bold mb-1 font-heading">Location</div>
@@ -110,6 +111,16 @@ export default function LandingPage() {
               <div className="font-bold mb-1 font-heading">Tournament Dates</div>
               <div>12th Jul - 10th Aug 2025<br/><span className='text-white/60 text-sm'>(Weekend matches)</span></div>
             </div>
+          </div>
+          
+          {/* Tournament Statistics */}
+          <div className="mb-6">
+            <div className="text-center mb-6">
+              <div className="text-4xl mb-4">📊</div>
+              <h3 className="text-2xl font-bold text-white text-glow-white mb-2 font-heading">Tournament Statistics</h3>
+              <p className="text-white/80 text-lg">Live tournament progress and participation stats</p>
+            </div>
+            <PublicStatsCards />
           </div>
         </div>
 
